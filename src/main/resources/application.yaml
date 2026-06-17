@@ -1,0 +1,17 @@
+server:
+  port: 2508
+
+spring:
+  application:
+    name: peacehaven
+  datasource:
+    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db
+    username: peacehaven_server
+    password: XHJdashuaige2508@
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update # 开发环境自动建表
+    show-sql: true
+  thymeleaf:
+    cache: false # 开发阶段关闭缓存，方便调试 HTML
