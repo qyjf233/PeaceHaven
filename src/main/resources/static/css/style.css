@@ -1189,9 +1189,10 @@ a {
         flex-direction: column;
         padding: 16px 24px;
         gap: 4px;
-        transform: translateY(-120%);
+        transform: translateY(-200%);
         transition: transform 0.4s ease;
         border-bottom: 1px solid var(--border-color);
+        z-index: 999;
     }
 
     .nav-links.open {
