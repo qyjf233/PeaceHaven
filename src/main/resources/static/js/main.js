@@ -275,8 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // === Parallax on Hero ===
+    // === Parallax on Hero (PC only) ===
     window.addEventListener('scroll', () => {
+        if (window.innerWidth <= 768) return;
         const scrollY = window.scrollY;
         const heroContent = document.querySelector('.hero-content');
         if (heroContent && scrollY < window.innerHeight) {
