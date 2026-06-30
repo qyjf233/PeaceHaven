@@ -423,29 +423,6 @@ a {
     box-shadow: 0 8px 30px rgba(232, 131, 58, 0.5);
 }
 
-.hero-scroll-hint {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2;
-    color: rgba(255,255,255,0.6);
-    text-align: center;
-    font-size: 0.75rem;
-    letter-spacing: 2px;
-    animation: fadeInUp 0.8s ease 1s both;
-}
-
-.scroll-arrow {
-    width: 20px;
-    height: 20px;
-    border-right: 2px solid rgba(255,255,255,0.5);
-    border-bottom: 2px solid rgba(255,255,255,0.5);
-    transform: rotate(45deg);
-    margin: 8px auto 0;
-    animation: scrollBounce 2s infinite;
-}
-
 /* === Section Common === */
 .section {
     padding: 100px 0;
