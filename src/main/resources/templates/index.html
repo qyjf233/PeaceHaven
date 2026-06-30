@@ -1,11 +1,405 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Peace Haven</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PeaceHaven拾光录</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
-<body>
-    <h1>Welcome to Peace Haven</h1>
-    <p>测试接口获取: <span th:text="${test.message}">...</span></p>
+<body data-theme="day">
+
+<!-- 导航栏 -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <a href="#" class="nav-logo">
+            <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
+            <span class="logo-text">PeaceHaven · 长安营地</span>
+        </a>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="#hero" class="nav-link">首页</a></li>
+            <li><a href="#about" class="nav-link">营地简介</a></li>
+            <li><a href="#team" class="nav-link">管理组</a></li>
+            <li><a href="#activities" class="nav-link">活动</a></li>
+            <li><a href="#benefits" class="nav-link">福利</a></li>
+        </ul>
+        <div class="nav-actions">
+            <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                <span class="theme-icon-day">☀️</span>
+                <span class="theme-icon-night">🌙</span>
+            </button>
+            <button class="nav-hamburger" id="hamburger" aria-label="菜单">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero 轮播图区域 -->
+<section class="hero" id="hero">
+    <div class="hero-carousel" id="heroCarousel">
+        <div class="carousel-slides">
+            <div class="carousel-slide active" th:style="'background-image: url(' + @{/images/banner_1.png} + ')'">
+                <div class="slide-overlay"></div>
+            </div>
+            <div class="carousel-slide" style="background-image: url('https://placehold.co/1920x900/D4A574/ffffff?text=营地风景+合照2')">
+                <div class="slide-overlay"></div>
+            </div>
+            <div class="carousel-slide" style="background-image: url('https://placehold.co/1920x900/C4956A/ffffff?text=营地活动+合照3')">
+                <div class="slide-overlay"></div>
+            </div>
+            <div class="carousel-slide" style="background-image: url('https://placehold.co/1920x900/B8865A/ffffff?text=长安夜景+合照4')">
+                <div class="slide-overlay"></div>
+            </div>
+        </div>
+        <div class="carousel-controls">
+            <button class="carousel-btn carousel-prev" id="carouselPrev">❮</button>
+            <button class="carousel-btn carousel-next" id="carouselNext">❯</button>
+        </div>
+    </div>
+    <div class="hero-content">
+        <div class="hero-badge">明日之后 · 长安营地</div>
+        <h1 class="hero-title">
+            <span class="title-en">PeaceHaven</span>
+            <span class="title-cn">拾光录</span>
+        </h1>
+        <p class="hero-slogan">长安不问来路，唯迎同路之人</p>
+        <a href="#about" class="hero-cta">探索长安 ↓</a>
+    </div>
+    <div class="hero-scroll-hint">
+        <span>向下滑动</span>
+        <div class="scroll-arrow"></div>
+    </div>
+</section>
+
+<!-- 营地简介 -->
+<section class="section about" id="about">
+    <div class="container">
+        <div class="section-header fade-in">
+            <span class="section-tag">ABOUT US</span>
+            <h2 class="section-title">营地简介</h2>
+            <div class="section-divider"></div>
+        </div>
+        <div class="about-content fade-in">
+            <div class="about-text">
+                <p class="about-lead">在末日的废墟之上，我们建起了一座名为「长安」的家园。</p>
+                <p>这里没有硝烟与恐惧，只有温暖的灯火与并肩的伙伴。长安营地成立于末日降临之初，经历了无数风雨，始终坚守着「不问来路，唯迎同路」的信念。我们相信，即使在最黑暗的时刻，人与人之间最珍贵的，依然是信任与陪伴。</p>
+                <p>营地拥有完善的基础设施、活跃的日常活动和温馨的社区氛围。无论是资深幸存者还是初入末日的新人，长安都是你最温暖的归宿。</p>
+                <div class="about-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="128">0</span>
+                        <span class="stat-label">营地成员</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="365">0</span>
+                        <span class="stat-label">相伴天数</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="50">0</span>
+                        <span class="stat-label">活动举办</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="99">0</span>
+                        <span class="stat-label">幸福指数%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="about-image">
+                <div class="about-img-wrapper">
+                    <img th:src="@{/images/banner_1.png}" alt="长安营地全景">
+                    <div class="about-img-frame"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 管理组介绍 -->
+<section class="section team" id="team">
+    <div class="container">
+        <div class="section-header fade-in">
+            <span class="section-tag">OUR TEAM</span>
+            <h2 class="section-title">管理组</h2>
+            <div class="section-divider"></div>
+        </div>
+        <div class="team-grid">
+            <!-- 营长 -->
+            <div class="team-card fade-in" data-tilt>
+                <div class="card-glow"></div>
+                <div class="card-border"></div>
+                <div class="card-inner">
+                    <div class="card-avatar">
+                        <img src="https://placehold.co/200x200/F4A460/ffffff?text=营长" alt="营长">
+                        <div class="avatar-ring"></div>
+                    </div>
+                    <div class="card-role">营长</div>
+                    <h3 class="card-name">长安·暮雪</h3>
+                    <p class="card-desc">「守护每一盏灯火，是我不灭的信念。」</p>
+                    <div class="card-tags">
+                        <span class="tag">创始人</span>
+                        <span class="tag">战略指挥</span>
+                    </div>
+                </div>
+            </div>
+            <!-- 副营长 -->
+            <div class="team-card fade-in" data-tilt>
+                <div class="card-glow"></div>
+                <div class="card-border"></div>
+                <div class="card-inner">
+                    <div class="card-avatar">
+                        <img src="https://placehold.co/200x200/E8A87C/ffffff?text=副营长" alt="副营长">
+                        <div class="avatar-ring"></div>
+                    </div>
+                    <div class="card-role">副营长</div>
+                    <h3 class="card-name">长安·清风</h3>
+                    <p class="card-desc">「后勤无忧，前线无畏。」</p>
+                    <div class="card-tags">
+                        <span class="tag">日常管理</span>
+                        <span class="tag">外交联络</span>
+                    </div>
+                </div>
+            </div>
+            <!-- 指挥官 -->
+            <div class="team-card fade-in" data-tilt>
+                <div class="card-glow"></div>
+                <div class="card-border"></div>
+                <div class="card-inner">
+                    <div class="card-avatar">
+                        <img src="https://placehold.co/200x200/D4A574/ffffff?text=指挥官" alt="指挥官">
+                        <div class="avatar-ring"></div>
+                    </div>
+                    <div class="card-role">指挥官</div>
+                    <h3 class="card-name">长安·烈焰</h3>
+                    <p class="card-desc">「战场上，我从不落下一个同伴。」</p>
+                    <div class="card-tags">
+                        <span class="tag">战斗指挥</span>
+                        <span class="tag">副本攻略</span>
+                    </div>
+                </div>
+            </div>
+            <!-- 外交官 -->
+            <div class="team-card fade-in" data-tilt>
+                <div class="card-glow"></div>
+                <div class="card-border"></div>
+                <div class="card-inner">
+                    <div class="card-avatar">
+                        <img src="https://placehold.co/200x200/C4956A/ffffff?text=外交官" alt="外交官">
+                        <div class="avatar-ring"></div>
+                    </div>
+                    <div class="card-role">外交官</div>
+                    <h3 class="card-name">长安·星河</h3>
+                    <p class="card-desc">「以诚相待，化敌为友。」</p>
+                    <div class="card-tags">
+                        <span class="tag">营地外交</span>
+                        <span class="tag">招募审核</span>
+                    </div>
+                </div>
+            </div>
+            <!-- 活动管理 -->
+            <div class="team-card fade-in" data-tilt>
+                <div class="card-glow"></div>
+                <div class="card-border"></div>
+                <div class="card-inner">
+                    <div class="card-avatar">
+                        <img src="https://placehold.co/200x200/B8865A/ffffff?text=活动管理" alt="活动管理">
+                        <div class="avatar-ring"></div>
+                    </div>
+                    <div class="card-role">活动管理</div>
+                    <h3 class="card-name">长安·月影</h3>
+                    <p class="card-desc">「每一次相聚，都值得被铭记。」</p>
+                    <div class="card-tags">
+                        <span class="tag">活动策划</span>
+                        <span class="tag">福利发放</span>
+                    </div>
+                </div>
+            </div>
+            <!-- 后勤主管 -->
+            <div class="team-card fade-in" data-tilt>
+                <div class="card-glow"></div>
+                <div class="card-border"></div>
+                <div class="card-inner">
+                    <div class="card-avatar">
+                        <img src="https://placehold.co/200x200/A67B5B/ffffff?text=后勤主管" alt="后勤主管">
+                        <div class="avatar-ring"></div>
+                    </div>
+                    <div class="card-role">后勤主管</div>
+                    <h3 class="card-name">长安·暖阳</h3>
+                    <p class="card-desc">「物资充足，心安即归处。」</p>
+                    <div class="card-tags">
+                        <span class="tag">资源调配</span>
+                        <span class="tag">科技研发</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 活动板块 -->
+<section class="section activities" id="activities">
+    <div class="container">
+        <div class="section-header fade-in">
+            <span class="section-tag">EVENTS</span>
+            <h2 class="section-title">近期活动</h2>
+            <div class="section-divider"></div>
+        </div>
+        <div class="activities-grid">
+            <a href="#" class="activity-card fade-in" onclick="event.preventDefault()">
+                <div class="activity-img">
+                    <img src="https://placehold.co/400x250/E8A87C/ffffff?text=营地保卫战" alt="活动图片">
+                    <div class="activity-date-badge">
+                        <span class="date-month">6月</span>
+                        <span class="date-day">28</span>
+                    </div>
+                </div>
+                <div class="activity-info">
+                    <div class="activity-period">2026.06.28 - 2026.06.30</div>
+                    <h3 class="activity-title">营地保卫战·第三季</h3>
+                    <p class="activity-desc">全营集结，抵御丧尸潮入侵！分组防守四大城门，考验默契的时候到了。</p>
+                </div>
+            </a>
+            <a href="#" class="activity-card fade-in" onclick="event.preventDefault()">
+                <div class="activity-img">
+                    <img src="https://placehold.co/400x250/D4A574/ffffff?text=建筑大赛" alt="活动图片">
+                    <div class="activity-date-badge">
+                        <span class="date-month">7月</span>
+                        <span class="date-day">01</span>
+                    </div>
+                </div>
+                <div class="activity-info">
+                    <div class="activity-period">2026.07.01 - 2026.07.07</div>
+                    <h3 class="activity-title">长安建筑大赛</h3>
+                    <p class="activity-desc">发挥创意，打造你心目中的理想家园。前三名获得专属称号和丰厚奖励。</p>
+                </div>
+            </a>
+            <a href="#" class="activity-card fade-in" onclick="event.preventDefault()">
+                <div class="activity-img">
+                    <img src="https://placehold.co/400x250/C4956A/ffffff?text=篝火晚会" alt="活动图片">
+                    <div class="activity-date-badge">
+                        <span class="date-month">7月</span>
+                        <span class="date-day">10</span>
+                    </div>
+                </div>
+                <div class="activity-info">
+                    <div class="activity-period">2026.07.10</div>
+                    <h3 class="activity-title">周末篝火晚会</h3>
+                    <p class="activity-desc">围炉夜话，分享末日故事。小游戏互动环节，参与即有惊喜福利。</p>
+                </div>
+            </a>
+            <a href="#" class="activity-card fade-in" onclick="event.preventDefault()">
+                <div class="activity-img">
+                    <img src="https://placehold.co/400x250/B8865A/ffffff?text=副本挑战" alt="活动图片">
+                    <div class="activity-date-badge">
+                        <span class="date-month">7月</span>
+                        <span class="date-day">15</span>
+                    </div>
+                </div>
+                <div class="activity-info">
+                    <div class="activity-period">2026.07.15 - 2026.07.20</div>
+                    <h3 class="activity-title">深渊副本速通挑战</h3>
+                    <p class="activity-desc">组队挑战最高难度副本，竞速排行。最强队伍赢取传说级营地荣誉。</p>
+                </div>
+            </a>
+        </div>
+        <div class="activities-more fade-in">
+            <a href="#" class="btn-more" onclick="event.preventDefault()">查看更多活动 →</a>
+        </div>
+    </div>
+</section>
+
+<!-- 营地福利 -->
+<section class="section benefits" id="benefits">
+    <div class="container">
+        <div class="section-header fade-in">
+            <span class="section-tag">BENEFITS</span>
+            <h2 class="section-title">营地福利</h2>
+            <div class="section-divider"></div>
+        </div>
+        <div class="benefits-grid">
+            <div class="benefit-card fade-in">
+                <div class="benefit-icon">🧧</div>
+                <h3 class="benefit-title">月度红包雨</h3>
+                <p class="benefit-desc">每月15日，营地抽取两名幸运成员，各获得58元红包奖励！</p>
+                <div class="benefit-highlight">每月15日</div>
+            </div>
+            <div class="benefit-card fade-in">
+                <div class="benefit-icon">🎁</div>
+                <h3 class="benefit-title">新人礼包</h3>
+                <p class="benefit-desc">新加入的成员可获得营地精心准备的新人礼包，包含稀有资源和实用道具。</p>
+                <div class="benefit-highlight">入营即领</div>
+            </div>
+            <div class="benefit-card fade-in">
+                <div class="benefit-icon">🏆</div>
+                <h3 class="benefit-title">活动奖励</h3>
+                <p class="benefit-desc">参与营地活动即可获得积分，积分可兑换专属称号、头像框和稀有道具。</p>
+                <div class="benefit-highlight">积分兑换</div>
+            </div>
+            <div class="benefit-card fade-in">
+                <div class="benefit-icon">🤝</div>
+                <h3 class="benefit-title">互助基金</h3>
+                <p class="benefit-desc">营地设有互助基金，成员遇到困难时可申请援助，长安永远是你坚强的后盾。</p>
+                <div class="benefit-highlight">随时申请</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 页尾 -->
+<footer class="footer" id="footer">
+    <div class="footer-wave">
+        <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+            <path d="M0,60 C360,120 720,0 1080,60 C1260,90 1380,80 1440,60 L1440,120 L0,120 Z" fill="currentColor"/>
+        </svg>
+    </div>
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
+                    <span class="logo-text">PeaceHaven</span>
+                </div>
+                <p class="footer-motto">长安不问来路，唯迎同路之人</p>
+            </div>
+            <div class="footer-links">
+                <h4>快速导航</h4>
+                <ul>
+                    <li><a href="#about">营地简介</a></li>
+                    <li><a href="#team">管理组</a></li>
+                    <li><a href="#activities">活动</a></li>
+                    <li><a href="#benefits">福利</a></li>
+                </ul>
+            </div>
+            <div class="footer-contact">
+                <h4>加入我们</h4>
+                <p>游戏内搜索营地ID：<strong>PeaceHaven</strong></p>
+                <p>或联系管理组任意成员</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p class="footer-slogan">「 长安不在远方，在此一隅灯火未熄 」</p>
+            <p class="footer-copyright">© 2026 PeaceHaven · 长安营地 | 明日之后</p>
+            <p class="footer-icp">浙ICP备2025218889号-3</p>
+        </div>
+    </div>
+</footer>
+
+<!-- 滚动进度指示器 -->
+<nav class="scroll-dots" id="scrollDots">
+    <span class="scroll-dot active" data-target="hero" title="首页"></span>
+    <span class="scroll-dot" data-target="about" title="营地简介"></span>
+    <span class="scroll-dot" data-target="team" title="管理组"></span>
+    <span class="scroll-dot" data-target="activities" title="活动"></span>
+    <span class="scroll-dot" data-target="benefits" title="福利"></span>
+    <span class="scroll-dot" data-target="footer" title="页尾"></span>
+</nav>
+
+<!-- 回到顶部 -->
+<button class="back-to-top" id="backToTop" aria-label="回到顶部">↑</button>
+
+<!-- 粒子画布 -->
+<canvas id="particleCanvas"></canvas>
+
+<script th:src="@{/js/main.js}"></script>
 </body>
 </html>
