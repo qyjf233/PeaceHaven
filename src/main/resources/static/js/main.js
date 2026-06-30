@@ -112,13 +112,21 @@ document.addEventListener('DOMContentLoaded', () => {
     fadeEls.forEach(el => observerFade.observe(el));
 
     // === Counter Animation ===
-    const statNumbers = document.querySelectorAll('.stat-number[data-target]');
+    const statNumbers = document.querySelectorAll('.stat-number[data-target], .stat-number[data-start-date]');
 
     const observerCounter = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const el = entry.target;
-                const target = parseInt(el.dataset.target);
+                let target;
+                if (el.dataset.startDate) {
+                    // Calculate days from start date to now
+                    const start = new Date(el.dataset.startDate);
+                    const now = new Date();
+                    target = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+                } else {
+                    target = parseInt(el.dataset.target);
+                }
                 animateCounter(el, target);
                 observerCounter.unobserve(el);
             }
