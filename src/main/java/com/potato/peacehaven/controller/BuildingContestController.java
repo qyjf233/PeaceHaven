@@ -107,8 +107,38 @@ public class BuildingContestController {
 
         try {
             contestService.voteForWork(workId, user);
+            Activity activity = activityService.getActivityBySlug("building-master-1");
             result.put("success", true);
             result.put("message", "投票成功！");
+            result.put("remainingVotes", contestService.getRemainingVotes(activity.getId(), user.getId()));
+        } catch (RuntimeException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 撤回投票
+     */
+    @PostMapping("/unvote/{workId}")
+    public ResponseEntity<Map<String, Object>> unvote(@PathVariable Long workId, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录");
+            return ResponseEntity.ok(result);
+        }
+
+        try {
+            contestService.retractVote(workId, user);
+            Activity activity = activityService.getActivityBySlug("building-master-1");
+            result.put("success", true);
+            result.put("message", "已撤回投票");
+            result.put("remainingVotes", contestService.getRemainingVotes(activity.getId(), user.getId()));
         } catch (RuntimeException e) {
             result.put("success", false);
             result.put("message", e.getMessage());
@@ -149,12 +179,14 @@ public class BuildingContestController {
 
         result.put("works", workList);
 
-        // 当前用户投稿状态
+        // 当前用户投稿状态 + 剩余票数
         if (user != null) {
             BuildingContestWork myWork = contestService.getUserWork(activity.getId(), user.getId());
             if (myWork != null) {
                 result.put("myWorkStatus", myWork.getStatus().name());
             }
+            result.put("remainingVotes", contestService.getRemainingVotes(activity.getId(), user.getId()));
+            result.put("maxVotes", BuildingContestService.MAX_VOTES_PER_USER);
         }
 
         return ResponseEntity.ok(result);

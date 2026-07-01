@@ -22,6 +22,9 @@ public class BuildingContestService {
     private final BuildingContestWorkRepository workRepository;
     private final BuildingContestVoteRepository voteRepository;
 
+    /** 每人最多投票数 */
+    public static final int MAX_VOTES_PER_USER = 3;
+
     /**
      * 投稿作品
      */
@@ -59,6 +62,12 @@ public class BuildingContestService {
             throw new RuntimeException("你已经投过票了");
         }
 
+        // 检查总投票数限制
+        long totalVotes = getUserVoteCount(work.getActivityId(), user.getId());
+        if (totalVotes >= MAX_VOTES_PER_USER) {
+            throw new RuntimeException("每人最多只能投" + MAX_VOTES_PER_USER + "票，你的票数已用完");
+        }
+
         // 记录投票
         BuildingContestVote vote = BuildingContestVote.builder()
                 .work(work)
@@ -70,7 +79,28 @@ public class BuildingContestService {
         work.setVoteCount(work.getVoteCount() + 1);
         workRepository.save(work);
 
-        log.info("用户 {} 为作品 {} 投票", user.getNickname(), work.getTitle());
+        log.info("用户 {} 为作品 {} 投票，剩余票数: {}",
+                user.getNickname(), work.getTitle(), MAX_VOTES_PER_USER - totalVotes - 1);
+    }
+
+    /**
+     * 撤回投票
+     */
+    @Transactional
+    public void retractVote(Long workId, User user) {
+        BuildingContestVote vote = voteRepository.findByWorkIdAndUserId(workId, user.getId())
+                .orElseThrow(() -> new RuntimeException("你还没有对这个作品投票"));
+
+        BuildingContestWork work = vote.getWork();
+
+        // 删除投票记录
+        voteRepository.delete(vote);
+
+        // 更新票数
+        work.setVoteCount(Math.max(0, work.getVoteCount() - 1));
+        workRepository.save(work);
+
+        log.info("用户 {} 撤回了对作品 {} 的投票", user.getNickname(), work.getTitle());
     }
 
     /**
@@ -79,6 +109,21 @@ public class BuildingContestService {
     public List<BuildingContestWork> getApprovedWorks(Long activityId) {
         return workRepository.findByActivityIdAndStatusOrderByVoteCountDesc(
                 activityId, BuildingContestWork.WorkStatus.APPROVED);
+    }
+
+    /**
+     * 查询用户在指定活动的已用票数
+     */
+    public long getUserVoteCount(Long activityId, Long userId) {
+        return voteRepository.countByUserIdAndWorkActivityId(userId, activityId);
+    }
+
+    /**
+     * 查询用户在指定活动的剩余票数
+     */
+    public int getRemainingVotes(Long activityId, Long userId) {
+        long used = getUserVoteCount(activityId, userId);
+        return Math.max(0, MAX_VOTES_PER_USER - (int) used);
     }
 
     /**

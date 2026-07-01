@@ -336,7 +336,30 @@
             background: var(--bg-secondary);
             border-color: var(--border-color);
             color: var(--text-muted);
-            cursor: default;
+            cursor: pointer;
+        }
+        .btn-vote.voted:hover {
+            background: var(--danger, #e74c3c);
+            border-color: var(--danger, #e74c3c);
+            color: #fff;
+        }
+
+        /* Vote Info Bar */
+        .vote-info-bar {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 10px;
+        }
+        .vote-info-text {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+        }
+        .vote-info-text strong {
+            color: var(--accent-primary);
+            font-size: 1.1rem;
         }
 
         /* Submit Modal */
@@ -718,6 +741,9 @@
     <!-- 作品集锦 -->
     <section class="contest-section">
         <h2 class="section-title">作品集锦</h2>
+        <div class="vote-info-bar" id="voteInfoBar" style="display:none;">
+            <span class="vote-info-text">🗳 我的剩余票数：<strong id="remainingVotesCount">-</strong> / <span id="maxVotesCount">3</span></span>
+        </div>
         <div class="works-grid" id="worksGrid">
             <div class="empty-works">
                 <div class="empty-icon">🏗️</div>
@@ -767,6 +793,18 @@
     var submitBtn = document.getElementById('submitWorkBtn');
     var submitStatus = document.getElementById('submitStatus');
     var myWorkStatus = null;
+    var remainingVotes = null;
+
+    // === 更新剩余票数显示 ===
+    function updateVoteInfoBar(data) {
+        var bar = document.getElementById('voteInfoBar');
+        if (data.remainingVotes !== undefined) {
+            remainingVotes = data.remainingVotes;
+            document.getElementById('remainingVotesCount').textContent = remainingVotes;
+            document.getElementById('maxVotesCount').textContent = data.maxVotes || 3;
+            bar.style.display = 'block';
+        }
+    }
 
     // === 加载作品列表 ===
     function loadWorks() {
@@ -774,6 +812,7 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 myWorkStatus = data.myWorkStatus || null;
+                updateVoteInfoBar(data);
                 updateSubmitArea();
                 renderWorks(data.works || []);
             })
@@ -801,15 +840,22 @@
                     (w.description ? '<div class="work-card-desc">' + w.description + '</div>' : '') +
                     '<div class="work-card-footer">' +
                         '<span class="work-vote-count">🗳 ' + w.voteCount + ' 票</span>' +
-                        '<button class="' + voteBtnClass + '" data-work-id="' + w.id + '"' + (w.hasVoted ? ' disabled' : '') + '>' + voteBtnText + '</button>' +
+                        '<button class="' + voteBtnClass + '" data-work-id="' + w.id + '">' + voteBtnText + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';
         }).join('');
 
-        // 绑定投票事件
-        worksGrid.querySelectorAll('.btn-vote:not(.voted)').forEach(function(btn) {
-            btn.addEventListener('click', function() { handleVote(parseInt(this.dataset.workId), this); });
+        // 绑定投票事件（包括已投票按钮，点击可撤回）
+        worksGrid.querySelectorAll('.btn-vote').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var workId = parseInt(this.dataset.workId);
+                if (this.classList.contains('voted')) {
+                    handleUnvote(workId, this);
+                } else {
+                    handleVote(workId, this);
+                }
+            });
         });
     }
 
@@ -833,6 +879,11 @@
                         var current = parseInt(countEl.textContent.match(/\d+/)[0]);
                         countEl.textContent = '🗳 ' + (current + 1) + ' 票';
                     }
+                    // 更新剩余票数
+                    if (data.remainingVotes !== undefined) {
+                        remainingVotes = data.remainingVotes;
+                        document.getElementById('remainingVotesCount').textContent = remainingVotes;
+                    }
                 } else {
                     alert(data.message);
                     btn.disabled = false;
@@ -843,6 +894,44 @@
                 alert('网络错误，请重试');
                 btn.disabled = false;
                 btn.textContent = '投票';
+            });
+    }
+
+    // === 撤回投票 ===
+    function handleUnvote(workId, btn) {
+        if (!confirm('确定要撤回对这个作品的投票吗？')) return;
+        btn.disabled = true;
+        btn.textContent = '撤回中...';
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/unvote/' + workId, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    btn.classList.remove('voted');
+                    btn.textContent = '投票';
+                    // 更新票数
+                    var countEl = btn.parentElement.querySelector('.work-vote-count');
+                    if (countEl) {
+                        var current = parseInt(countEl.textContent.match(/\d+/)[0]);
+                        countEl.textContent = '🗳 ' + (current - 1) + ' 票';
+                    }
+                    // 更新剩余票数
+                    if (data.remainingVotes !== undefined) {
+                        remainingVotes = data.remainingVotes;
+                        document.getElementById('remainingVotesCount').textContent = remainingVotes;
+                    }
+                } else {
+                    alert(data.message);
+                }
+                btn.disabled = false;
+            })
+            .catch(function() {
+                alert('网络错误，请重试');
+                btn.disabled = false;
+                btn.textContent = '已投票';
             });
     }
 
