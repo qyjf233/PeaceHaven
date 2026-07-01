@@ -1122,6 +1122,16 @@
     };
 
     // === 初始化 ===
+    // === 监听登录/退出事件，自动刷新数据 ===
+    window.addEventListener('auth:login', function() {
+        loadWorks();
+    });
+    window.addEventListener('auth:logout', function() {
+        remainingVotes = null;
+        document.getElementById('voteInfoBar').style.display = 'none';
+        loadWorks();
+    });
+
     loadWorks();
 })();
 </script>

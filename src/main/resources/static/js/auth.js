@@ -80,7 +80,12 @@
             // 退出
             document.getElementById('logoutBtn').addEventListener('click', function() {
                 fetch('/api/auth/logout', { method: 'POST' })
-                    .then(() => { currentUser = null; updateNavbar(); });
+                    .then(() => {
+                        currentUser = null;
+                        updateNavbar();
+                        // 退出登录事件
+                        window.dispatchEvent(new CustomEvent('auth:logout'));
+                    });
             });
         } else {
             userArea.className = 'user-not-logged';
@@ -262,6 +267,8 @@
                 setTimeout(function() {
                     closeLoginModal();
                     checkLoginStatus(function() {
+                        // 登录成功事件，供其他页面监听刷新数据
+                        window.dispatchEvent(new CustomEvent('auth:login'));
                         // 新用户首次登录弹昵称设置框
                         if (isNewUser) {
                             openNicknameModal();
