@@ -1,8 +1,11 @@
 package com.potato.peacehaven.service;
 
+import com.potato.peacehaven.entity.BuildingContestConfig;
+import com.potato.peacehaven.entity.BuildingContestConfig.ContestPhase;
 import com.potato.peacehaven.entity.BuildingContestVote;
 import com.potato.peacehaven.entity.BuildingContestWork;
 import com.potato.peacehaven.entity.User;
+import com.potato.peacehaven.repository.BuildingContestConfigRepository;
 import com.potato.peacehaven.repository.BuildingContestVoteRepository;
 import com.potato.peacehaven.repository.BuildingContestWorkRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,15 +24,22 @@ public class BuildingContestService {
 
     private final BuildingContestWorkRepository workRepository;
     private final BuildingContestVoteRepository voteRepository;
+    private final BuildingContestConfigRepository configRepository;
 
     /** 每人最多投票数 */
     public static final int MAX_VOTES_PER_USER = 3;
 
     /**
-     * 投稿作品
+     * 投稿作品（受阶段控制）
      */
     @Transactional
     public BuildingContestWork submitWork(Long activityId, User user, String title, String description, String imageUrl) {
+        // 阶段检查
+        ContestPhase phase = getCurrentPhase(activityId);
+        if (phase != ContestPhase.SUBMISSION) {
+            throw new RuntimeException(getPhaseRestrictionMessage(phase, "投稿"));
+        }
+
         // 检查是否已投稿
         if (workRepository.findByActivityIdAndUserId(activityId, user.getId()).isPresent()) {
             throw new RuntimeException("你已经投稿过了，每位玩家仅限一次投稿");
@@ -47,12 +57,18 @@ public class BuildingContestService {
     }
 
     /**
-     * 为作品投票
+     * 为作品投票（受阶段控制）
      */
     @Transactional
     public void voteForWork(Long workId, User user) {
         BuildingContestWork work = workRepository.findById(workId)
                 .orElseThrow(() -> new RuntimeException("作品不存在"));
+
+        // 阶段检查
+        ContestPhase phase = getCurrentPhase(work.getActivityId());
+        if (phase != ContestPhase.VOTING) {
+            throw new RuntimeException(getPhaseRestrictionMessage(phase, "投票"));
+        }
 
         if (work.getStatus() != BuildingContestWork.WorkStatus.APPROVED) {
             throw new RuntimeException("该作品尚未通过审核");
@@ -142,10 +158,18 @@ public class BuildingContestService {
 
     /**
      * 删除用户自己的作品（及关联投票记录）
+     * 评委打分开始后不允许删除
      * @return true 如果作品之前是已通过状态（有投票记录被删除）
      */
     @Transactional
     public boolean deleteOwnWork(Long activityId, Long userId) {
+        // 阶段检查：评委打分开始后不允许删除
+        ContestPhase phase = getCurrentPhase(activityId);
+        if (phase == ContestPhase.JUDGING || phase == ContestPhase.PRE_VOTE
+                || phase == ContestPhase.VOTING || phase == ContestPhase.RESULTS) {
+            throw new RuntimeException("评委打分已开始，无法删除作品");
+        }
+
         BuildingContestWork work = workRepository.findByActivityIdAndUserId(activityId, userId)
                 .orElseThrow(() -> new RuntimeException("你还没有投稿作品"));
 
@@ -183,6 +207,54 @@ public class BuildingContestService {
         } else {
             return 15;
         }
+    }
+
+    // ==================== 阶段控制 ====================
+
+    /**
+     * 获取当前大赛阶段
+     */
+    public ContestPhase getCurrentPhase(Long activityId) {
+        return configRepository.findByActivityId(activityId)
+                .map(BuildingContestConfig::getCurrentPhase)
+                .orElse(ContestPhase.BEFORE_START);
+    }
+
+    /**
+     * 获取大赛时间配置
+     */
+    public BuildingContestConfig getConfig(Long activityId) {
+        return configRepository.findByActivityId(activityId).orElse(null);
+    }
+
+    /**
+     * 是否应该显示评委分数（仅 RESULTS 阶段）
+     */
+    public boolean shouldShowJudgeScore(Long activityId) {
+        return getCurrentPhase(activityId) == ContestPhase.RESULTS;
+    }
+
+    /**
+     * 是否应该显示投票数（VOTING 和 RESULTS 阶段）
+     */
+    public boolean shouldShowVoteCount(Long activityId) {
+        ContestPhase phase = getCurrentPhase(activityId);
+        return phase == ContestPhase.VOTING || phase == ContestPhase.RESULTS;
+    }
+
+    /**
+     * 获取阶段限制提示消息
+     */
+    private String getPhaseRestrictionMessage(ContestPhase phase, String action) {
+        return switch (phase) {
+            case BEFORE_START -> "活动尚未开始，暂不可" + action;
+            case SUBMISSION -> "投稿".equals(action) ? "投稿已截止" : "投票尚未开始";
+            case REVIEW -> "投稿已截止，评委审核中";
+            case JUDGING -> "评委打分中，暂不可" + action;
+            case PRE_VOTE -> "评委打分已结束，投票尚未开始";
+            case VOTING -> "投票".equals(action) ? "投票进行中" : "投稿已截止";
+            case RESULTS -> "活动已结束";
+        };
     }
 
     // ==================== 管理员审核功能 ====================

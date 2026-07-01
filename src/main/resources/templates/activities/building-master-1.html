@@ -223,6 +223,86 @@
             margin-bottom: 6px;
         }
 
+        /* Contest Timeline */
+        .timeline {
+            position: relative;
+            padding: 10px 0 20px;
+        }
+        .timeline-track {
+            position: absolute;
+            top: 24px;
+            left: 20px;
+            right: 20px;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+        .timeline-progress {
+            height: 100%;
+            background: var(--gradient-accent);
+            border-radius: 2px;
+            transition: width 0.6s ease;
+        }
+        .timeline-nodes {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+        .timeline-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 0;
+            flex-shrink: 0;
+        }
+        .timeline-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 3px solid var(--border-color);
+            z-index: 2;
+            transition: all 0.3s;
+        }
+        .timeline-node.passed .timeline-dot {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+        .timeline-node.active .timeline-dot {
+            background: #fff;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px rgba(232, 131, 58, 0.25);
+            width: 18px;
+            height: 18px;
+            margin-top: -2px;
+        }
+        .timeline-label {
+            margin-top: 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-align: center;
+            white-space: nowrap;
+        }
+        .timeline-node.passed .timeline-label,
+        .timeline-node.active .timeline-label {
+            color: var(--accent-primary);
+        }
+        .timeline-time {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .timeline { padding: 5px 0 15px; }
+            .timeline-track { left: 10px; right: 10px; top: 20px; }
+            .timeline-dot { width: 10px; height: 10px; border-width: 2px; }
+            .timeline-node.active .timeline-dot { width: 14px; height: 14px; margin-top: -2px; }
+            .timeline-label { font-size: 0.68rem; }
+            .timeline-time { font-size: 0.62rem; }
+        }
+
         /* Submit Button */
         .submit-area {
             text-align: center;
@@ -328,6 +408,13 @@
             align-items: center;
             justify-content: space-between;
         }
+        .work-scores {
+            display: flex;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
         .work-vote-count {
             font-size: 0.88rem;
             color: var(--text-muted);
@@ -367,6 +454,20 @@
             background: var(--bg-card);
             border: var(--border-card);
             border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .phase-label {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 16px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            background: var(--accent-primary);
+            color: #fff;
         }
         .vote-info-text {
             font-size: 0.92rem;
@@ -633,6 +734,17 @@
         </div>
     </section>
 
+    <!-- 活动进程条 -->
+    <section class="contest-section">
+        <h2 class="section-title">活动进程</h2>
+        <div class="timeline" id="timeline">
+            <div class="timeline-track">
+                <div class="timeline-progress" id="timelineProgress"></div>
+            </div>
+            <div class="timeline-nodes" id="timelineNodes"></div>
+        </div>
+    </section>
+
     <!-- 活动目的 -->
     <section class="contest-section">
         <h2 class="section-title">活动目的</h2>
@@ -757,7 +869,8 @@
     <section class="contest-section">
         <h2 class="section-title">作品集锦</h2>
         <div class="vote-info-bar" id="voteInfoBar" style="display:none;">
-            <span class="vote-info-text">🗳 我的剩余票数：<strong id="remainingVotesCount">-</strong> / <span id="maxVotesCount">3</span></span>
+            <span class="phase-label" id="phaseLabel"></span>
+            <span class="vote-info-text" id="voteInfoText" style="display:none;">🗳 我的剩余票数：<strong id="remainingVotesCount">-</strong> / <span id="maxVotesCount">3</span></span>
         </div>
         <div class="works-grid" id="worksGrid">
             <div class="empty-works">
@@ -809,15 +922,38 @@
     var submitStatus = document.getElementById('submitStatus');
     var myWorkStatus = null;
     var remainingVotes = null;
+    var currentPhase = 'BEFORE_START';
+    var canVote = false;
+    var canDelete = false;
+    var showVoteCount = false;
+    var showJudgeScore = false;
 
-    // === 更新剩余票数显示 ===
+    // === 更新阶段信息和票数显示 ===
     function updateVoteInfoBar(data) {
         var bar = document.getElementById('voteInfoBar');
-        if (data.remainingVotes !== undefined) {
+        var phaseLabel = document.getElementById('phaseLabel');
+        var voteInfoText = document.getElementById('voteInfoText');
+
+        currentPhase = data.phase || 'BEFORE_START';
+        canVote = data.canVote || false;
+        canDelete = data.canDelete || false;
+        showVoteCount = data.showVoteCount || false;
+        showJudgeScore = data.showJudgeScore || false;
+
+        // 显示阶段标签
+        if (data.phaseLabel) {
+            phaseLabel.textContent = data.phaseLabel;
+            bar.style.display = 'flex';
+        }
+
+        // 仅在投票阶段和结果阶段显示剩余票数
+        if (data.remainingVotes !== undefined && (canVote || currentPhase === 'RESULTS')) {
             remainingVotes = data.remainingVotes;
             document.getElementById('remainingVotesCount').textContent = remainingVotes;
             document.getElementById('maxVotesCount').textContent = data.maxVotes || 3;
-            bar.style.display = 'block';
+            voteInfoText.style.display = 'inline';
+        } else {
+            voteInfoText.style.display = 'none';
         }
     }
 
@@ -830,6 +966,7 @@
                 updateVoteInfoBar(data);
                 updateSubmitArea();
                 renderWorks(data.works || []);
+                renderTimeline(data.milestones, data.phase);
             })
             .catch(function() {
                 worksGrid.innerHTML = '<div class="empty-works"><div class="empty-icon">⚠️</div><p>加载失败，请刷新</p></div>';
@@ -843,8 +980,32 @@
             return;
         }
         worksGrid.innerHTML = works.map(function(w) {
-            var voteBtnClass = w.hasVoted ? 'btn-vote voted' : 'btn-vote';
-            var voteBtnText = w.hasVoted ? '已投票' : '投票';
+            // 根据阶段控制投票按钮
+            var voteBtnHtml = '';
+            if (canVote) {
+                var voteBtnClass = w.hasVoted ? 'btn-vote voted' : 'btn-vote';
+                var voteBtnText = w.hasVoted ? '已投票' : '投票';
+                voteBtnHtml = '<button class="' + voteBtnClass + '" data-work-id="' + w.id + '">' + voteBtnText + '</button>';
+            } else if (w.hasVoted) {
+                voteBtnHtml = '<span class="btn-vote voted" style="cursor:default">已投票</span>';
+            }
+
+            // 根据阶段控制票数显示
+            var voteCountText = showVoteCount
+                ? '🗳 ' + w.voteCount + ' 票'
+                : '🗳 票数未公开';
+
+            // 评委分数仅在 RESULTS 阶段显示
+            var scoreHtml = '';
+            if (showJudgeScore && w.judgeScore != null) {
+                scoreHtml = '<div class="work-scores">' +
+                    '<span>🏅 评委分: ' + w.judgeScore.toFixed(1) + '</span>' +
+                    (w.finalScore != null ? '<span>🏆 总分: ' + w.finalScore.toFixed(1) + '</span>' : '') +
+                    '</div>';
+            } else if (currentPhase === 'JUDGING' || currentPhase === 'PRE_VOTE') {
+                scoreHtml = '<div class="work-scores"><span>🏅 评委分: ?.?</span></div>';
+            }
+
             return '<div class="work-card">' +
                 '<div class="work-card-img" onclick="openLightbox(\'' + w.imageUrl + '\')">' +
                     '<img src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy">' +
@@ -853,25 +1014,65 @@
                     '<div class="work-card-title">' + w.title + '</div>' +
                     '<div class="work-card-author">by ' + w.authorName + '</div>' +
                     (w.description ? '<div class="work-card-desc">' + w.description + '</div>' : '') +
+                    scoreHtml +
                     '<div class="work-card-footer">' +
-                        '<span class="work-vote-count">🗳 ' + w.voteCount + ' 票</span>' +
-                        '<button class="' + voteBtnClass + '" data-work-id="' + w.id + '">' + voteBtnText + '</button>' +
+                        '<span class="work-vote-count">' + voteCountText + '</span>' +
+                        voteBtnHtml +
                     '</div>' +
                 '</div>' +
             '</div>';
         }).join('');
 
-        // 绑定投票事件（包括已投票按钮，点击可撤回）
-        worksGrid.querySelectorAll('.btn-vote').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var workId = parseInt(this.dataset.workId);
-                if (this.classList.contains('voted')) {
-                    handleUnvote(workId, this);
-                } else {
-                    handleVote(workId, this);
-                }
+        // 绑定投票事件（仅在 canVote 时）
+        if (canVote) {
+            worksGrid.querySelectorAll('.btn-vote').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var workId = parseInt(this.dataset.workId);
+                    if (this.classList.contains('voted')) {
+                        handleUnvote(workId, this);
+                    } else {
+                        handleVote(workId, this);
+                    }
+                });
             });
-        });
+        }
+    }
+
+    // === 渲染活动进程条 ===
+    function renderTimeline(milestones, phase) {
+        var container = document.getElementById('timelineNodes');
+        var progressBar = document.getElementById('timelineProgress');
+        if (!milestones || !milestones.length) {
+            document.getElementById('timeline').style.display = 'none';
+            return;
+        }
+
+        // 阶段对应关系：每个节点对应一个阶段边界
+        // 投稿开始 -> BEFORE_START/SUBMISSION 边界
+        // 投稿截止 -> SUBMISSION/REVIEW 边界
+        // 评委打分 -> REVIEW/JUDGING 边界
+        // 打分截止 -> JUDGING/PRE_VOTE 边界
+        // 投票开启 -> PRE_VOTE/VOTING 边界
+        // 投票截止 -> VOTING/RESULTS 边界
+        var phaseOrder = ['BEFORE_START', 'SUBMISSION', 'REVIEW', 'JUDGING', 'PRE_VOTE', 'VOTING', 'RESULTS'];
+        var currentIdx = phaseOrder.indexOf(phase);
+
+        // 渲染节点
+        container.innerHTML = milestones.map(function(m, i) {
+            var state = '';
+            if (i < currentIdx) state = 'passed';
+            else if (i === currentIdx) state = 'active';
+            return '<div class="timeline-node ' + state + '">' +
+                '<div class="timeline-dot"></div>' +
+                '<div class="timeline-label">' + m.label + '</div>' +
+                (m.time ? '<div class="timeline-time">' + m.time + '</div>' : '') +
+            '</div>';
+        }).join('');
+
+        // 计算进度条宽度
+        // 0个节点完成=0%, 全部完成=100%
+        var progress = currentIdx <= 0 ? 0 : Math.min(100, (currentIdx / milestones.length) * 100);
+        progressBar.style.width = progress + '%';
     }
 
     // === 投票 ===
@@ -956,31 +1157,49 @@
             .then(function(r) { return r.json(); })
             .then(function(user) {
                 if (!user.loggedIn) {
-                    submitStatus.textContent = '登录后可投稿，每人仅限1份作品';
-                    submitBtn.onclick = function() {
-                        var loginBtn = document.getElementById('loginBtn');
-                        if (loginBtn) loginBtn.click();
-                    };
+                    if (currentPhase === 'SUBMISSION') {
+                        submitStatus.textContent = '登录后可投稿，每人仅限1份作品';
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '投稿我的作品';
+                        submitBtn.onclick = function() {
+                            var loginBtn = document.getElementById('loginBtn');
+                            if (loginBtn) loginBtn.click();
+                        };
+                    } else {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '投稿已关闭';
+                        submitStatus.textContent = '当前不在投稿阶段';
+                    }
                 } else if (myWorkStatus === 'APPROVED') {
                     submitBtn.disabled = true;
                     submitBtn.textContent = '已投稿';
-                    submitStatus.innerHTML = '你的作品已通过审核 ✅ <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>';
-                    bindDeleteWork('APPROVED');
+                    var deleteBtn = canDelete ? ' <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>' : '';
+                    submitStatus.innerHTML = '你的作品已通过审核 ✅' + deleteBtn;
+                    if (canDelete) bindDeleteWork('APPROVED');
                 } else if (myWorkStatus === 'PENDING') {
                     submitBtn.disabled = true;
                     submitBtn.textContent = '已投稿';
-                    submitStatus.innerHTML = '你的作品正在审核中，请耐心等待 ⏳ <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>';
-                    bindDeleteWork('PENDING');
+                    var deleteBtn = canDelete ? ' <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>' : '';
+                    submitStatus.innerHTML = '你的作品正在审核中，请耐心等待 ⏳' + deleteBtn;
+                    if (canDelete) bindDeleteWork('PENDING');
                 } else if (myWorkStatus === 'REJECTED') {
                     submitBtn.disabled = true;
                     submitBtn.textContent = '已投稿';
-                    submitStatus.innerHTML = '你的作品未通过审核，请联系管理员 ❌ <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>';
-                    bindDeleteWork('REJECTED');
+                    var deleteBtn = canDelete ? ' <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>' : '';
+                    submitStatus.innerHTML = '你的作品未通过审核，请联系管理员 ❌' + deleteBtn;
+                    if (canDelete) bindDeleteWork('REJECTED');
                 } else {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '投稿我的作品';
-                    submitStatus.textContent = '登录后可投稿，每人仅限1份作品';
-                    submitBtn.onclick = openSubmitModal;
+                    // 未投稿
+                    if (currentPhase === 'SUBMISSION') {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '投稿我的作品';
+                        submitStatus.textContent = '登录后可投稿，每人仅限1份作品';
+                        submitBtn.onclick = openSubmitModal;
+                    } else {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '投稿已关闭';
+                        submitStatus.textContent = '当前不在投稿阶段';
+                    }
                 }
             });
     }

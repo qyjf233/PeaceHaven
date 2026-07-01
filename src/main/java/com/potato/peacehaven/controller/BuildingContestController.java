@@ -1,5 +1,7 @@
 package com.potato.peacehaven.controller;
 
+import com.potato.peacehaven.entity.BuildingContestConfig;
+import com.potato.peacehaven.entity.BuildingContestConfig.ContestPhase;
 import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.entity.BuildingContestWork;
@@ -182,9 +184,17 @@ public class BuildingContestController {
         Map<String, Object> result = new HashMap<>();
 
         Activity activity = activityService.getActivityBySlug("building-master-1");
-        List<BuildingContestWork> works = contestService.getApprovedWorks(activity.getId());
+        Long activityId = activity.getId();
+        List<BuildingContestWork> works = contestService.getApprovedWorks(activityId);
 
         User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        // 获取当前阶段
+        ContestPhase phase = contestService.getCurrentPhase(activityId);
+        boolean showVoteCount = contestService.shouldShowVoteCount(activityId);
+        boolean showJudgeScore = contestService.shouldShowJudgeScore(activityId);
+        boolean canVote = (phase == ContestPhase.VOTING);
+        boolean canDelete = (phase == ContestPhase.SUBMISSION || phase == ContestPhase.REVIEW);
 
         List<Map<String, Object>> workList = works.stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
@@ -193,7 +203,11 @@ public class BuildingContestController {
             m.put("description", w.getDescription());
             m.put("imageUrl", w.getImageUrl());
             m.put("authorName", w.getUser().getNickname());
-            m.put("voteCount", w.getVoteCount());
+            // 根据阶段控制票数显示
+            m.put("voteCount", showVoteCount ? w.getVoteCount() : -1);
+            // 评委分数仅在 RESULTS 阶段显示
+            m.put("judgeScore", showJudgeScore ? w.getJudgeScore() : null);
+            m.put("finalScore", showJudgeScore ? w.getFinalScore() : null);
             m.put("createdAt", w.getCreatedAt() != null ? w.getCreatedAt().toString() : null);
             // 标记当前用户是否已投票
             if (user != null) {
@@ -206,16 +220,56 @@ public class BuildingContestController {
 
         result.put("works", workList);
 
+        // 阶段信息
+        result.put("phase", phase.name());
+        result.put("phaseLabel", getPhaseLabel(phase));
+        result.put("canVote", canVote);
+        result.put("canDelete", canDelete);
+        result.put("showVoteCount", showVoteCount);
+        result.put("showJudgeScore", showJudgeScore);
+
+        // 时间节点（供进程条显示）
+        BuildingContestConfig config = contestService.getConfig(activityId);
+        if (config != null) {
+            List<Map<String, String>> milestones = new java.util.ArrayList<>();
+            milestones.add(milestone("投稿开始", config.getSubmitStart()));
+            milestones.add(milestone("投稿截止", config.getSubmitEnd()));
+            milestones.add(milestone("评委打分", config.getJudgeStart()));
+            milestones.add(milestone("打分截止", config.getJudgeEnd()));
+            milestones.add(milestone("投票开启", config.getVoteStart()));
+            milestones.add(milestone("投票截止", config.getVoteEnd()));
+            result.put("milestones", milestones);
+        }
+
         // 当前用户投稿状态 + 剩余票数
         if (user != null) {
-            BuildingContestWork myWork = contestService.getUserWork(activity.getId(), user.getId());
+            BuildingContestWork myWork = contestService.getUserWork(activityId, user.getId());
             if (myWork != null) {
                 result.put("myWorkStatus", myWork.getStatus().name());
             }
-            result.put("remainingVotes", contestService.getRemainingVotes(activity.getId(), user.getId()));
+            result.put("remainingVotes", contestService.getRemainingVotes(activityId, user.getId()));
             result.put("maxVotes", BuildingContestService.MAX_VOTES_PER_USER);
         }
 
         return ResponseEntity.ok(result);
+    }
+
+    private String getPhaseLabel(ContestPhase phase) {
+        return switch (phase) {
+            case BEFORE_START -> "活动未开始";
+            case SUBMISSION -> "投稿阶段";
+            case REVIEW -> "作品审核中";
+            case JUDGING -> "评委打分中";
+            case PRE_VOTE -> "等待投票";
+            case VOTING -> "投票进行中";
+            case RESULTS -> "结果已公布";
+        };
+    }
+
+    private Map<String, String> milestone(String label, java.time.LocalDateTime time) {
+        Map<String, String> m = new HashMap<>();
+        m.put("label", label);
+        m.put("time", time != null ? time.format(java.time.format.DateTimeFormatter.ofPattern("M/d HH:mm")) : null);
+        return m;
     }
 }
