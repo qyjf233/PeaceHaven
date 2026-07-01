@@ -362,6 +362,56 @@
             .tl-v-item.active .tl-v-now { display: inline-block; }
         }
 
+        /* Scoring Table */
+        .score-table {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .score-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(232,131,58,0.05);
+            border: 1px solid rgba(232,131,58,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .score-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        .score-rank {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 48px;
+            white-space: nowrap;
+        }
+        .score-pts {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--accent-primary);
+            line-height: 1;
+        }
+        .score-pts small {
+            font-size: 0.65rem;
+            font-weight: 600;
+            opacity: 0.7;
+        }
+        .score-item.top3 {
+            background: linear-gradient(135deg, rgba(232,131,58,0.12), rgba(245,200,66,0.08));
+            border-color: rgba(232,131,58,0.2);
+        }
+        .score-item.top3 .score-rank { color: var(--accent-primary); }
+        .score-item.top3 .score-pts { color: #e8833a; }
+        .score-medal {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
         /* Submit Button */
         .submit-area {
             text-align: center;
@@ -748,6 +798,10 @@
             .prize-amount { font-size: 1.1rem; }
             .works-grid { grid-template-columns: 1fr; gap: 16px; }
             .submit-area { padding: 28px 16px; }
+            .score-table { gap: 6px; }
+            .score-item { padding: 8px; gap: 6px; flex-direction: column; text-align: center; }
+            .score-rank { min-width: auto; font-size: 0.7rem; }
+            .score-pts { font-size: 1rem; }
         }
         @media (max-width: 1024px) and (min-width: 769px) {
             .works-grid { grid-template-columns: repeat(2, 1fr); }
@@ -831,8 +885,21 @@
         <div class="info-card" style="margin-bottom: 20px;">
             <h3>📊 最终成绩计算</h3>
             <p><strong>最终得分 = 裁判评分（70%）+ 网络投票（30%）</strong></p>
-            <p style="margin-top: 8px;">裁判评分：由5位裁判独立评分，每位裁判满分10分，去掉一个最高分和一个最低分，取平均分后乘以7，即裁判得分最高70分。</p>
-            <p>网络投票：按票数排名计分 —— 第1名30分，第2名28分，第3名26分，第4名24分，第5名22分，第6~10名20分，第11~20名18分，第21~30名16分，其余有效作品15分。</p>
+            <p style="margin-top: 8px;">裁判评分：由5位裁判独立评分，每位裁判满分10分，取平均分后乘以7，即裁判得分最高70分。</p>
+            <div style="margin-top: 16px;">
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 10px;">🗳️ <strong>网络投票</strong>：按票数排名计分</p>
+                <div class="score-table">
+                    <div class="score-item top3"><span class="score-medal">🥇</span><span class="score-rank">第1名</span><span class="score-pts">30<small>分</small></span></div>
+                    <div class="score-item top3"><span class="score-medal">🥈</span><span class="score-rank">第2名</span><span class="score-pts">28<small>分</small></span></div>
+                    <div class="score-item top3"><span class="score-medal">🥉</span><span class="score-rank">第3名</span><span class="score-pts">26<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">第4名</span><span class="score-pts">24<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">第5名</span><span class="score-pts">22<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">6~10名</span><span class="score-pts">20<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">11~20名</span><span class="score-pts">18<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">21~30名</span><span class="score-pts">16<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">其余</span><span class="score-pts">15<small>分</small></span></div>
+                </div>
+            </div>
         </div>
         <h3 style="font-size: 1rem; color: var(--text-primary); margin-bottom: 16px;">评分维度</h3>
         <ul class="rules-list">
