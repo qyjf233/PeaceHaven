@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf}">
+    <title>裁判评分 - 长安建筑大赛</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .judge-page { min-height: 100vh; padding-top: 64px; background: var(--bg-primary); }
+
+        /* Header */
+        .judge-header {
+            text-align: center;
+            padding: 40px 20px 20px;
+        }
+        .judge-header h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .judge-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Progress Bar */
+        .judge-progress {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .progress-bar-bg {
+            height: 8px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e8833a, #f5c842);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .progress-text strong { color: var(--accent-primary); }
+
+        /* Phase Warning */
+        .phase-warning {
+            text-align: center;
+            padding: 12px 20px;
+            margin: 0 auto 20px;
+            max-width: 600px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+        .phase-warning.active {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.2);
+        }
+        .phase-warning.inactive {
+            background: rgba(255, 152, 0, 0.1);
+            color: #FF9800;
+            border: 1px solid rgba(255, 152, 0, 0.2);
+        }
+
+        /* Access Denied */
+        .access-denied {
+            text-align: center;
+            padding: 80px 20px;
+        }
+        .access-denied .icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.5; }
+        .access-denied h2 { color: var(--text-primary); margin-bottom: 10px; }
+        .access-denied p { color: var(--text-muted); }
+
+        /* Works Grid */
+        .judge-works {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .judge-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .judge-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+        .judge-card.scored { border-color: rgba(76, 175, 80, 0.3); }
+
+        .judge-card-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .judge-card-body { padding: 16px; }
+        .judge-card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .judge-card-author {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+
+        /* Scoring Section */
+        .score-section { margin-top: 8px; }
+        .score-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .score-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .score-input:focus { border-color: var(--accent-primary); }
+        .score-input:invalid { border-color: #e74c3c; }
+
+        .btn-score {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #e8833a, #e8654a);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            white-space: nowrap;
+        }
+        .btn-score:hover { transform: scale(1.03); }
+        .btn-score:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Scored Display */
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(76, 175, 80, 0.08);
+            border: 1px solid rgba(76, 175, 80, 0.2);
+            border-radius: 8px;
+        }
+        .score-display .label {
+            font-size: 0.78rem;
+            color: #4CAF50;
+            font-weight: 600;
+        }
+        .score-display .value {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--accent-primary);
+        }
+        .score-display .value small {
+            font-size: 0.7rem;
+            font-weight: 600;
+            opacity: 0.7;
+        }
+
+        /* Empty state */
+        .judge-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .judge-empty .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+
+        /* Loading */
+        .judge-loading {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-muted);
+        }
+        .judge-loading .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .judge-header h1 { font-size: 1.4rem; }
+            .judge-works { grid-template-columns: 1fr; gap: 16px; padding: 12px; }
+            .judge-card-img { height: 180px; }
+        }
+    </style>
+</head>
+<body data-theme="day">
+
+<!-- 导航栏 -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <a href="/" class="nav-logo">
+            <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
+            <span class="logo-text"><span class="logo-full">PeaceHaven · </span>长安</span>
+        </a>
+        <div class="nav-actions">
+            <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                <span class="theme-icon-day">☀️</span>
+                <span class="theme-icon-night">🌙</span>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="judge-page">
+    <div class="judge-header">
+        <h1>🏛️ 裁判评分面板</h1>
+        <p>长安建筑大赛 · 裁判专属</p>
+    </div>
+
+    <!-- 内容区（JS 动态渲染） -->
+    <div id="judgeContent">
+        <div class="judge-loading">
+            <div class="spinner"></div>
+            <p>加载中...</p>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/main.js}"></script>
+<script th:src="@{/js/auth.js(v=2)}"></script>
+<script>
+(function() {
+    var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+    var contentEl = document.getElementById('judgeContent');
+
+    function loadJudgeWorks() {
+        fetch('/api/contest/judge/works', { credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success) {
+                    renderAccessDenied(data.message || '无权限访问');
+                    return;
+                }
+                renderJudgePanel(data);
+            })
+            .catch(function(e) {
+                renderAccessDenied('加载失败，请刷新重试');
+            });
+    }
+
+    function renderAccessDenied(msg) {
+        contentEl.innerHTML =
+            '<div class="access-denied">' +
+                '<div class="icon">🚫</div>' +
+                '<h2>无法访问</h2>' +
+                '<p>' + msg + '</p>' +
+                '<p style="margin-top: 16px;"><a href="/" style="color: var(--accent-primary);">返回首页</a></p>' +
+            '</div>';
+    }
+
+    function renderJudgePanel(data) {
+        var works = data.works || [];
+        var canScore = data.canScore;
+        var scoredCount = data.scoredCount;
+        var totalCount = data.totalCount;
+        var progress = totalCount > 0 ? Math.round((scoredCount / totalCount) * 100) : 0;
+
+        var html = '';
+
+        // 进度条
+        html += '<div class="judge-progress">';
+        html += '  <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ' + progress + '%"></div></div>';
+        html += '  <div class="progress-text">';
+        html += '    <span>已评分 <strong>' + scoredCount + '</strong> / ' + totalCount + ' 个作品</span>';
+        html += '    <span>' + progress + '%</span>';
+        html += '  </div>';
+        html += '</div>';
+
+        // 阶段提示
+        if (canScore) {
+            html += '<div class="phase-warning active">✅ 当前为评委打分阶段，请为每个作品评分</div>';
+        } else {
+            html += '<div class="phase-warning inactive">⏳ 当前不是打分阶段，评分功能暂不可用</div>';
+        }
+
+        // 作品网格
+        html += '<div class="judge-works">';
+        if (works.length === 0) {
+            html += '<div class="judge-empty"><div class="icon">📭</div><p>暂无已通过审核的作品</p></div>';
+        } else {
+            works.forEach(function(w) {
+                html += renderWorkCard(w, canScore);
+            });
+        }
+        html += '</div>';
+
+        contentEl.innerHTML = html;
+
+        // 绑定评分按钮事件
+        document.querySelectorAll('.btn-score').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var workId = btn.dataset.workId;
+                var input = document.getElementById('scoreInput_' + workId);
+                var val = parseFloat(input.value);
+                if (isNaN(val) || val < 0 || val > 10) {
+                    alert('请输入 0 ~ 10 之间的分数');
+                    return;
+                }
+                submitScore(workId, val, btn);
+            });
+        });
+    }
+
+    function renderWorkCard(w, canScore) {
+        var cardClass = w.hasScored ? 'judge-card scored' : 'judge-card';
+        var html = '<div class="' + cardClass + '">';
+        html += '  <img class="judge-card-img" src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy">';
+        html += '  <div class="judge-card-body">';
+        html += '    <div class="judge-card-title">' + w.title + '</div>';
+        html += '    <div class="judge-card-author">作者：' + w.authorName + (w.authorCampName ? ' · ' + w.authorCampName : '') + '</div>';
+
+        if (w.hasScored) {
+            // 已评分 - 显示分数
+            html += '  <div class="score-display">';
+            html += '    <span class="label">✅ 已评分</span>';
+            html += '    <span class="value">' + w.myScore + '<small> 分</small></span>';
+            html += '  </div>';
+        } else if (canScore) {
+            // 未评分 + 可评分
+            html += '  <div class="score-section">';
+            html += '    <div class="score-input-row">';
+            html += '      <input type="number" class="score-input" id="scoreInput_' + w.id + '" min="0" max="10" step="0.1" placeholder="0~10">';
+            html += '      <button class="btn-score" data-work-id="' + w.id + '">提交评分</button>';
+            html += '    </div>';
+            html += '  </div>';
+        } else {
+            // 未评分 + 不可评分
+            html += '  <div class="score-section"><p style="font-size:0.8rem;color:var(--text-muted);text-align:center;">当前不可评分</p></div>';
+        }
+
+        html += '  </div></div>';
+        return html;
+    }
+
+    function submitScore(workId, score, btn) {
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+
+        fetch('/api/contest/judge/score/' + workId, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ score: score })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                // 重新加载整个面板以更新进度
+                loadJudgeWorks();
+            } else {
+                alert(data.message || '评分失败');
+                btn.disabled = false;
+                btn.textContent = '提交评分';
+            }
+        })
+        .catch(function(e) {
+            alert('网络错误，请重试');
+            btn.disabled = false;
+            btn.textContent = '提交评分';
+        });
+    }
+
+    // 登录态同步
+    window.addEventListener('auth:login', loadJudgeWorks);
+    window.addEventListener('auth:logout', function() {
+        renderAccessDenied('请先登录');
+    });
+
+    // 初始化
+    loadJudgeWorks();
+})();
+</script>
+</body>
+</html>

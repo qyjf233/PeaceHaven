@@ -22,4 +22,9 @@ public class HomeController {
     public String agreement() {
         return "agreement";
     }
+
+    @GetMapping("/judge/building-master-1")
+    public String judgePanel() {
+        return "activities/judge-panel";
+    }
 }

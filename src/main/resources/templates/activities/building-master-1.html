@@ -1038,7 +1038,7 @@
 
 <button class="back-to-top" id="backToTop" aria-label="回到顶部">↑</button>
 <script th:src="@{/js/main.js}"></script>
-<script th:src="@{/js/auth.js}"></script>
+<script th:src="@{/js/auth.js(v=2)}"></script>
 <script>
 (function() {
     var worksGrid = document.getElementById('worksGrid');
@@ -1049,6 +1049,8 @@
     var currentPhase = 'BEFORE_START';
     var canVote = false;
     var canDelete = false;
+    var canSubmit = false;
+    var isJudge = false;
     var showVoteCount = false;
     var showJudgeScore = false;
 
@@ -1061,6 +1063,8 @@
         currentPhase = data.phase || 'BEFORE_START';
         canVote = data.canVote || false;
         canDelete = data.canDelete || false;
+        canSubmit = data.canSubmit || false;
+        isJudge = data.isJudge || false;
         showVoteCount = data.showVoteCount || false;
         showJudgeScore = data.showJudgeScore || false;
 
@@ -1327,7 +1331,11 @@
                     if (canDelete) bindDeleteWork('REJECTED');
                 } else {
                     // 未投稿
-                    if (currentPhase === 'SUBMISSION') {
+                    if (isJudge) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '裁判不可投稿';
+                        submitStatus.textContent = '您作为裁判，不可提交作品';
+                    } else if (currentPhase === 'SUBMISSION') {
                         submitBtn.disabled = false;
                         submitBtn.textContent = '投稿我的作品';
                         submitStatus.textContent = '登录后可投稿，每人仅限1份作品';

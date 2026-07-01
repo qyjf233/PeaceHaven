@@ -193,8 +193,13 @@ public class BuildingContestController {
         ContestPhase phase = contestService.getCurrentPhase(activityId);
         boolean showVoteCount = contestService.shouldShowVoteCount(activityId);
         boolean showJudgeScore = contestService.shouldShowJudgeScore(activityId);
-        boolean canVote = (phase == ContestPhase.VOTING);
-        boolean canDelete = (phase == ContestPhase.SUBMISSION || phase == ContestPhase.REVIEW);
+
+        // 裁判身份检查
+        boolean userIsJudge = (user != null && contestService.isJudge(activityId, user.getId()));
+
+        boolean canVote = (phase == ContestPhase.VOTING) && !userIsJudge;
+        boolean canSubmit = (phase == ContestPhase.SUBMISSION) && !userIsJudge;
+        boolean canDelete = (phase == ContestPhase.SUBMISSION || phase == ContestPhase.REVIEW) && !userIsJudge;
 
         List<Map<String, Object>> workList = works.stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
@@ -224,7 +229,9 @@ public class BuildingContestController {
         result.put("phase", phase.name());
         result.put("phaseLabel", getPhaseLabel(phase));
         result.put("canVote", canVote);
+        result.put("canSubmit", canSubmit);
         result.put("canDelete", canDelete);
+        result.put("isJudge", userIsJudge);
         result.put("showVoteCount", showVoteCount);
         result.put("showJudgeScore", showJudgeScore);
 
@@ -271,5 +278,104 @@ public class BuildingContestController {
         m.put("label", label);
         m.put("time", time != null ? time.format(java.time.format.DateTimeFormatter.ofPattern("M/d HH:mm")) : null);
         return m;
+    }
+
+    // ==================== 裁判评分 API ====================
+
+    /**
+     * 获取裁判视角的作品列表（含评分状态）
+     */
+    @GetMapping("/judge/works")
+    public ResponseEntity<Map<String, Object>> getJudgeWorks(HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录");
+            return ResponseEntity.ok(result);
+        }
+
+        Activity activity = activityService.getActivityBySlug("building-master-1");
+        Long activityId = activity.getId();
+
+        // 裁判身份检查
+        if (!contestService.isJudge(activityId, user.getId())) {
+            result.put("success", false);
+            result.put("message", "您不是本次活动的裁判");
+            return ResponseEntity.ok(result);
+        }
+
+        ContestPhase phase = contestService.getCurrentPhase(activityId);
+        List<BuildingContestWork> works = contestService.getApprovedWorks(activityId);
+
+        List<Map<String, Object>> workList = works.stream().map(w -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", w.getId());
+            m.put("title", w.getTitle());
+            m.put("description", w.getDescription());
+            m.put("imageUrl", w.getImageUrl());
+            m.put("authorName", w.getUser().getNickname());
+            m.put("authorCampName", w.getUser().getCampName());
+            // 该裁判是否已评分
+            Double myScore = contestService.getJudgeScoreForWork(w.getId(), user.getId());
+            m.put("myScore", myScore);
+            m.put("hasScored", myScore != null);
+            return m;
+        }).collect(Collectors.toList());
+
+        result.put("success", true);
+        result.put("works", workList);
+        result.put("phase", phase.name());
+        result.put("canScore", phase == ContestPhase.JUDGING);
+
+        // 评分进度
+        int[] progress = contestService.getJudgeProgress(activityId, user.getId());
+        result.put("scoredCount", progress[0]);
+        result.put("totalCount", progress[1]);
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 裁判提交评分
+     */
+    @PostMapping("/judge/score/{workId}")
+    public ResponseEntity<Map<String, Object>> submitScore(
+            @PathVariable Long workId,
+            @RequestBody Map<String, Object> body,
+            HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录");
+            return ResponseEntity.ok(result);
+        }
+
+        try {
+            Object scoreObj = body.get("score");
+            if (scoreObj == null) {
+                result.put("success", false);
+                result.put("message", "请输入分数");
+                return ResponseEntity.ok(result);
+            }
+
+            double score = Double.parseDouble(scoreObj.toString());
+            contestService.submitJudgeScore(workId, user, score);
+
+            result.put("success", true);
+            result.put("message", "评分成功");
+            result.put("score", score);
+        } catch (NumberFormatException e) {
+            result.put("success", false);
+            result.put("message", "分数格式错误，请输入 0~10 的数字");
+        } catch (RuntimeException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+
+        return ResponseEntity.ok(result);
     }
 }

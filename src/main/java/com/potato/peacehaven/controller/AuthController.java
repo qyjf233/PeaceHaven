@@ -2,6 +2,8 @@ package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.User;
+import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
+import com.potato.peacehaven.service.ActivityService;
 import com.potato.peacehaven.service.SmsService;
 import com.potato.peacehaven.service.UserService;
 import com.aliyun.sdk.service.dypnsapi20170525.models.SendSmsVerifyCodeResponse;
@@ -24,6 +26,8 @@ public class AuthController {
 
     private final SmsService smsService;
     private final UserService userService;
+    private final BuildingContestJudgeRepository judgeRepository;
+    private final ActivityService activityService;
 
     private static final Pattern PHONE_PATTERN = Pattern.compile("^1[3-9]\\d{9}$");
 
@@ -265,6 +269,17 @@ public class AuthController {
             result.put("avatar", user.getAvatar());
             result.put("role", user.getRole().name());
             result.put("status", user.getStatus().name());
+
+            // 检查是否为建筑大赛裁判
+            try {
+                Long activityId = activityService.getActivityBySlug("building-master-1").getId();
+                boolean isJudge = judgeRepository.existsByActivityIdAndUserId(activityId, user.getId());
+                result.put("isJudge", isJudge);
+                log.info("[裁判检查] 用户: {} (ID:{}), 活动ID: {}, isJudge: {}", user.getNickname(), user.getId(), activityId, isJudge);
+            } catch (Exception e) {
+                result.put("isJudge", false);
+                log.warn("[裁判检查] 查询失败: {}", e.getMessage());
+            }
         } else {
             result.put("loggedIn", false);
         }

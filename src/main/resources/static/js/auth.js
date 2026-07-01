@@ -50,6 +50,7 @@
                     '<button class="dropdown-item" id="editNicknameBtn">修改昵称</button>' +
                     '<button class="dropdown-item" id="editCampNameBtn">修改营地名</button>' +
                     (currentUser.role === 'ADMIN' ? '<a href="/admin/activities" class="dropdown-item">后台管理</a>' : '') +
+                    (currentUser.isJudge ? '<a href="/judge/building-master-1" class="dropdown-item">🏛 裁判评分</a>' : '') +
                     '<button class="dropdown-item dropdown-logout" id="logoutBtn">退出登录</button>' +
                 '</div>';
 

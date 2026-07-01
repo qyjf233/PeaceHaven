@@ -2,10 +2,14 @@ package com.potato.peacehaven.service;
 
 import com.potato.peacehaven.entity.BuildingContestConfig;
 import com.potato.peacehaven.entity.BuildingContestConfig.ContestPhase;
+import com.potato.peacehaven.entity.BuildingContestJudge;
+import com.potato.peacehaven.entity.BuildingContestJudgeScore;
 import com.potato.peacehaven.entity.BuildingContestVote;
 import com.potato.peacehaven.entity.BuildingContestWork;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.repository.BuildingContestConfigRepository;
+import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
+import com.potato.peacehaven.repository.BuildingContestJudgeScoreRepository;
 import com.potato.peacehaven.repository.BuildingContestVoteRepository;
 import com.potato.peacehaven.repository.BuildingContestWorkRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +29,8 @@ public class BuildingContestService {
     private final BuildingContestWorkRepository workRepository;
     private final BuildingContestVoteRepository voteRepository;
     private final BuildingContestConfigRepository configRepository;
+    private final BuildingContestJudgeRepository judgeRepository;
+    private final BuildingContestJudgeScoreRepository judgeScoreRepository;
 
     /** 每人最多投票数 */
     public static final int MAX_VOTES_PER_USER = 3;
@@ -34,6 +40,11 @@ public class BuildingContestService {
      */
     @Transactional
     public BuildingContestWork submitWork(Long activityId, User user, String title, String description, String imageUrl) {
+        // 裁判不可投稿
+        if (isJudge(activityId, user.getId())) {
+            throw new RuntimeException("裁判不可投稿");
+        }
+
         // 阶段检查
         ContestPhase phase = getCurrentPhase(activityId);
         if (phase != ContestPhase.SUBMISSION) {
@@ -63,6 +74,11 @@ public class BuildingContestService {
     public void voteForWork(Long workId, User user) {
         BuildingContestWork work = workRepository.findById(workId)
                 .orElseThrow(() -> new RuntimeException("作品不存在"));
+
+        // 裁判不可投票
+        if (isJudge(work.getActivityId(), user.getId())) {
+            throw new RuntimeException("裁判不可投票");
+        }
 
         // 阶段检查
         ContestPhase phase = getCurrentPhase(work.getActivityId());
@@ -285,5 +301,103 @@ public class BuildingContestService {
         work.setStatus(newStatus);
         workRepository.save(work);
         log.info("作品 {} 审核结果: {}", workId, newStatus);
+    }
+
+    // ==================== 裁判评分功能 ====================
+
+    /**
+     * 判断用户是否为指定活动的裁判
+     */
+    public boolean isJudge(Long activityId, Long userId) {
+        return judgeRepository.existsByActivityIdAndUserId(activityId, userId);
+    }
+
+    /**
+     * 裁判提交评分（受阶段控制，打分后不可修改）
+     */
+    @Transactional
+    public void submitJudgeScore(Long workId, User judge, double score) {
+        BuildingContestWork work = workRepository.findById(workId)
+                .orElseThrow(() -> new RuntimeException("作品不存在"));
+
+        // 裁判身份检查
+        if (!isJudge(work.getActivityId(), judge.getId())) {
+            throw new RuntimeException("您不是本次活动的裁判");
+        }
+
+        // 阶段检查
+        ContestPhase phase = getCurrentPhase(work.getActivityId());
+        if (phase != ContestPhase.JUDGING) {
+            throw new RuntimeException("当前不是评委打分阶段");
+        }
+
+        // 是否已评分
+        if (judgeScoreRepository.existsByWorkIdAndJudgeId(workId, judge.getId())) {
+            throw new RuntimeException("您已对该作品评分，不可修改");
+        }
+
+        // 分数范围校验
+        if (score < 0 || score > 10) {
+            throw new RuntimeException("分数必须在 0 ~ 10 之间");
+        }
+
+        // 精度控制：最多小数后1位
+        double roundedScore = Math.round(score * 10.0) / 10.0;
+
+        BuildingContestJudgeScore judgeScore = BuildingContestJudgeScore.builder()
+                .work(work)
+                .judge(judge)
+                .score(roundedScore)
+                .build();
+        judgeScoreRepository.save(judgeScore);
+
+        // 重新计算作品裁判平均分
+        recalculateJudgeScore(workId);
+
+        log.info("裁判 {} 为作品 {} 评分: {}", judge.getNickname(), work.getTitle(), roundedScore);
+    }
+
+    /**
+     * 获取某裁判对某作品的评分
+     * @return 评分值，未评分返回 null
+     */
+    public Double getJudgeScoreForWork(Long workId, Long judgeId) {
+        return judgeScoreRepository.findByWorkIdAndJudgeId(workId, judgeId)
+                .map(BuildingContestJudgeScore::getScore)
+                .orElse(null);
+    }
+
+    /**
+     * 获取裁判评分进度（已评数 / 总作品数）
+     */
+    public int[] getJudgeProgress(Long activityId, Long judgeId) {
+        List<BuildingContestWork> approvedWorks = getApprovedWorks(activityId);
+        int total = approvedWorks.size();
+        List<BuildingContestJudgeScore> scored = judgeScoreRepository.findByJudgeIdAndWorkActivityId(judgeId, activityId);
+        int scoredCount = scored.size();
+        return new int[]{scoredCount, total};
+    }
+
+    /**
+     * 重新计算作品的裁判平均分
+     * 更新 BuildingContestWork.judgeScore 字段
+     */
+    @Transactional
+    public void recalculateJudgeScore(Long workId) {
+        List<BuildingContestJudgeScore> scores = judgeScoreRepository.findByWorkId(workId);
+        BuildingContestWork work = workRepository.findById(workId).orElse(null);
+        if (work == null) return;
+
+        if (scores.isEmpty()) {
+            work.setJudgeScore(null);
+        } else {
+            double avg = scores.stream()
+                    .mapToDouble(BuildingContestJudgeScore::getScore)
+                    .average()
+                    .orElse(0.0);
+            // 保留1位小数
+            work.setJudgeScore(Math.round(avg * 10.0) / 10.0);
+        }
+        workRepository.save(work);
     }
 }
