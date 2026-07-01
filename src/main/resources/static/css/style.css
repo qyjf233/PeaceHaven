@@ -172,6 +172,14 @@ a {
     font-weight: 700;
 }
 
+.logo-full {
+    /* 默认显示完整名称，移动端隐藏 */
+}
+
+@media (max-width: 768px) {
+    .logo-full { display: none; }
+}
+
 .nav-links {
     display: flex;
     list-style: none;

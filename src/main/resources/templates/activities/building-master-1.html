@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长安建筑大赛 - PeaceHaven · 长安</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        /* === Contest Page Styles === */
+        .contest-page { min-height: 100vh; padding-top: 64px; }
+
+        /* Hero Banner */
+        .contest-hero {
+            position: relative;
+            height: 520px;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
+        }
+        .contest-hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 120px;
+            background: linear-gradient(to top, var(--bg-primary), transparent);
+        }
+        .contest-hero-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 0 20px;
+        }
+        .contest-badge {
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 50px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            backdrop-filter: blur(6px);
+        }
+        .contest-hero h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 2.8rem;
+            color: #fff;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.3);
+        }
+        .contest-hero p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            max-width: 500px;
+            margin: 0 auto;
+            text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+        }
+
+        /* Sections */
+        .contest-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+        .section-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.6rem;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 36px;
+            position: relative;
+        }
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 3px;
+            background: var(--gradient-accent);
+            margin: 12px auto 0;
+            border-radius: 2px;
+        }
+
+        /* Info Cards */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .info-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+        .info-card h3 {
+            font-size: 1.05rem;
+            color: var(--accent-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-card p {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Rules */
+        .rules-list {
+            list-style: none;
+            padding: 0;
+        }
+        .rules-list li {
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .rules-list li .rule-num {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--gradient-accent);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Judge Panel */
+        .judge-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            text-align: center;
+        }
+        .judge-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            padding: 24px 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        .judge-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--gradient-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 1.4rem;
+            color: #fff;
+        }
+        .judge-name {
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--text-primary);
+        }
+        .judge-title {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Prize */
+        .prize-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .prize-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            padding: 32px 20px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.3s;
+        }
+        .prize-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .prize-rank {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        .prize-place {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .prize-amount {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        /* Submit Button */
+        .submit-area {
+            text-align: center;
+            padding: 40px 24px;
+        }
+        .btn-submit-work {
+            display: inline-block;
+            padding: 14px 48px;
+            border-radius: 50px;
+            border: none;
+            background: var(--gradient-accent);
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(232, 131, 58, 0.3);
+        }
+        .btn-submit-work:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(232, 131, 58, 0.45);
+        }
+        .btn-submit-work:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .submit-status {
+            margin-top: 12px;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+
+        /* Works Gallery */
+        .works-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .work-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s;
+        }
+        .work-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .work-card-img {
+            height: 200px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .work-card-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s;
+        }
+        .work-card:hover .work-card-img img { transform: scale(1.05); }
+        .work-card-body {
+            padding: 20px;
+        }
+        .work-card-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .work-card-author {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .work-card-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 14px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .work-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .work-vote-count {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .btn-vote {
+            padding: 6px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--accent-primary);
+            background: transparent;
+            color: var(--accent-primary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-vote:hover {
+            background: var(--accent-primary);
+            color: #fff;
+        }
+        .btn-vote.voted {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: default;
+        }
+
+        /* Submit Modal */
+        .submit-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .submit-modal-overlay.show { opacity: 1; }
+        .submit-modal {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 32px;
+            width: 90%;
+            max-width: 440px;
+            box-shadow: var(--shadow-lg);
+        }
+        .submit-modal h2 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin: 0 0 20px;
+        }
+        .submit-modal label {
+            display: block;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .submit-modal input[type="text"],
+        .submit-modal textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.92rem;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+        .submit-modal input:focus,
+        .submit-modal textarea:focus { border-color: var(--accent-primary); }
+        .submit-modal textarea { resize: vertical; min-height: 60px; }
+        .submit-modal .readonly-field {
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+        }
+        .image-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .image-upload-area:hover { border-color: var(--accent-primary); }
+        .image-upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .image-upload-area .upload-text {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .image-upload-area .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            display: none;
+        }
+        .submit-modal .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .submit-modal .btn-row button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .submit-modal .btn-cancel {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .submit-modal .btn-confirm {
+            background: var(--gradient-accent);
+            color: #fff;
+        }
+        .submit-modal .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+        .submit-modal .modal-message {
+            text-align: center;
+            font-size: 0.85rem;
+            margin-top: 12px;
+            min-height: 1.2em;
+        }
+        .submit-modal .modal-message.msg-error { color: #e74c3c; }
+        .submit-modal .modal-message.msg-success { color: var(--accent-primary); }
+
+        /* Image Lightbox */
+        .lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .lightbox-overlay.show { opacity: 1; }
+        .lightbox-overlay img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+        }
+
+        /* Notice */
+        .notice-box {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+        .notice-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .notice-box li {
+            padding: 8px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .notice-box li:last-child { border-bottom: none; }
+        .notice-box li::before {
+            content: '•';
+            color: var(--accent-primary);
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        /* Empty State */
+        .empty-works {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+        }
+        .empty-works .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .contest-hero { height: 340px; }
+            .contest-hero h1 { font-size: 2rem; }
+            .info-grid { grid-template-columns: 1fr; }
+            .judge-grid { grid-template-columns: repeat(3, 1fr); }
+            .prize-grid { grid-template-columns: 1fr; }
+            .works-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .works-grid { grid-template-columns: repeat(2, 1fr); }
+            .judge-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body data-theme="day">
+
+<!-- 导航栏 -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <a href="/" class="nav-logo">
+            <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
+            <span class="logo-text"><span class="logo-full">PeaceHaven · </span>长安</span>
+        </a>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="/#hero" class="nav-link">首页</a></li>
+            <li><a href="/#about" class="nav-link">营地简介</a></li>
+            <li><a href="/#team" class="nav-link">管理组</a></li>
+            <li><a href="/activities" class="nav-link active">活动</a></li>
+            <li><a href="/#benefits" class="nav-link">福利</a></li>
+        </ul>
+        <div class="nav-actions">
+            <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                <span class="theme-icon-day">☀️</span>
+                <span class="theme-icon-night">🌙</span>
+            </button>
+            <button class="nav-hamburger" id="hamburger" aria-label="菜单">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="contest-page">
+    <!-- Hero Banner -->
+    <section class="contest-hero" th:style="'background-image: url(' + @{/images/banner_building-master-1.png} + ')'">
+        <div class="contest-hero-content">
+            <div class="contest-badge">🏗️ 建筑大赛</div>
+            <h1>长安建筑大赛</h1>
+            <p>展示建筑创意，交流建造技巧，评选最具创意与观赏性的庄园作品</p>
+        </div>
+    </section>
+
+    <!-- 活动目的 -->
+    <section class="contest-section">
+        <h2 class="section-title">活动目的</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>💡 展示创意</h3>
+                <p>展示营地成员的建筑创意，让每一位建造者的才华被看见</p>
+            </div>
+            <div class="info-card">
+                <h3>🤝 交流技巧</h3>
+                <p>交流建造技巧，相互学习，共同提升建筑水平</p>
+            </div>
+            <div class="info-card">
+                <h3>🏆 评选佳作</h3>
+                <p>评选出本期最具创意、最具观赏性的庄园作品</p>
+            </div>
+            <div class="info-card">
+                <h3>🎁 赢取奖励</h3>
+                <p>前三名可获得现金红包奖励，第一名38.88元</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 评选规则 -->
+    <section class="contest-section">
+        <h2 class="section-title">评选方式</h2>
+        <div class="info-card" style="margin-bottom: 20px;">
+            <h3>📊 最终成绩计算</h3>
+            <p><strong>最终得分 = 裁判评分（70%）+ 网络投票（30%）</strong></p>
+            <p style="margin-top: 8px;">裁判评分：由5位裁判独立评分，每位裁判满分10分，去掉一个最高分和一个最低分，取平均分后乘以7，即裁判得分最高70分。</p>
+            <p>网络投票：按票数排名计分 —— 第1名30分，第2名28分，第3名26分，第4名24分，第5名22分，第6~10名20分，第11~20名18分，第21~30名16分，其余有效作品15分。</p>
+        </div>
+        <h3 style="font-size: 1rem; color: var(--text-primary); margin-bottom: 16px;">评分维度</h3>
+        <ul class="rules-list">
+            <li><span class="rule-num">1</span><span><strong>建筑美观</strong> — 整体视觉效果，色彩搭配与建筑风格协调性</span></li>
+            <li><span class="rule-num">2</span><span><strong>创意设计</strong> — 独特的设计理念，创新性与想象力</span></li>
+            <li><span class="rule-num">3</span><span><strong>整体布局</strong> — 空间规划合理，功能分区明确，动线流畅</span></li>
+            <li><span class="rule-num">4</span><span><strong>细节完成度</strong> — 装饰精细，灯光/家具等细节处理到位</span></li>
+        </ul>
+    </section>
+
+    <!-- 裁判组 -->
+    <section class="contest-section">
+        <h2 class="section-title">裁判组</h2>
+        <div class="judge-grid">
+            <div class="judge-card">
+                <div class="judge-avatar">👷</div>
+                <div class="judge-name">裁判 1</div>
+                <div class="judge-title">待公布</div>
+            </div>
+            <div class="judge-card">
+                <div class="judge-avatar">👷</div>
+                <div class="judge-name">裁判 2</div>
+                <div class="judge-title">待公布</div>
+            </div>
+            <div class="judge-card">
+                <div class="judge-avatar">👷</div>
+                <div class="judge-name">裁判 3</div>
+                <div class="judge-title">待公布</div>
+            </div>
+            <div class="judge-card">
+                <div class="judge-avatar">👷</div>
+                <div class="judge-name">裁判 4</div>
+                <div class="judge-title">待公布</div>
+            </div>
+            <div class="judge-card">
+                <div class="judge-avatar">👷</div>
+                <div class="judge-name">裁判 5</div>
+                <div class="judge-title">待公布</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 奖项设置 -->
+    <section class="contest-section">
+        <h2 class="section-title">奖项设置</h2>
+        <div class="prize-grid">
+            <div class="prize-card">
+                <div class="prize-rank">🥇</div>
+                <div class="prize-place">第一名</div>
+                <div class="prize-amount">¥38.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">🥈</div>
+                <div class="prize-place">第二名</div>
+                <div class="prize-amount">¥18.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">🥉</div>
+                <div class="prize-place">第三名</div>
+                <div class="prize-amount">¥8.88</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 投稿区域 -->
+    <section class="contest-section submit-area">
+        <h2 class="section-title">我要投稿</h2>
+        <button class="btn-submit-work" id="submitWorkBtn">投稿我的作品</button>
+        <div class="submit-status" id="submitStatus">登录后可投稿，每人仅限一次</div>
+    </section>
+
+    <!-- 作品集锦 -->
+    <section class="contest-section">
+        <h2 class="section-title">作品集锦</h2>
+        <div class="works-grid" id="worksGrid">
+            <div class="empty-works">
+                <div class="empty-icon">🏗️</div>
+                <p>暂无作品，快来投稿吧！</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 活动须知 -->
+    <section class="contest-section">
+        <h2 class="section-title">活动须知</h2>
+        <div class="notice-box">
+            <ul>
+                <li>投稿作品须为本人庄园</li>
+                <li>不得盗用、冒用他人作品</li>
+                <li>不得恶意拉票、刷票或使用作弊行为</li>
+                <li>主办方有权取消违规作品参赛资格</li>
+                <li>投稿即视为同意活动期间展示作品</li>
+                <li>本活动最终解释权归营地主办方所有</li>
+            </ul>
+        </div>
+    </section>
+</div>
+
+<!-- 页尾 -->
+<footer class="footer" id="footer">
+    <div class="footer-wave">
+        <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+            <path d="M0,60 C360,120 720,0 1080,60 C1260,90 1380,80 1440,60 L1440,120 L0,120 Z" fill="currentColor"/>
+        </svg>
+    </div>
+    <div class="container">
+        <div class="footer-bottom">
+            <p class="footer-slogan">「 长安不在远方，在此一隅灯火未熄 」</p>
+            <p class="footer-copyright">© 2026 PeaceHaven · 长安营地 | 明日之后</p>
+            <p class="footer-icp"><a href="https://beian.miit.gov.cn/">浙ICP备2025218889号-3</a></p>
+        </div>
+    </div>
+</footer>
+
+<button class="back-to-top" id="backToTop" aria-label="回到顶部">↑</button>
+<script th:src="@{/js/main.js}"></script>
+<script th:src="@{/js/auth.js}"></script>
+<script>
+(function() {
+    var worksGrid = document.getElementById('worksGrid');
+    var submitBtn = document.getElementById('submitWorkBtn');
+    var submitStatus = document.getElementById('submitStatus');
+    var myWorkStatus = null;
+
+    // === 加载作品列表 ===
+    function loadWorks() {
+        fetch('/api/contest/works')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                myWorkStatus = data.myWorkStatus || null;
+                updateSubmitArea();
+                renderWorks(data.works || []);
+            })
+            .catch(function() {
+                worksGrid.innerHTML = '<div class="empty-works"><div class="empty-icon">⚠️</div><p>加载失败，请刷新</p></div>';
+            });
+    }
+
+    // === 渲染作品卡片 ===
+    function renderWorks(works) {
+        if (!works.length) {
+            worksGrid.innerHTML = '<div class="empty-works"><div class="empty-icon">🏗️</div><p>暂无作品，快来投稿吧！</p></div>';
+            return;
+        }
+        worksGrid.innerHTML = works.map(function(w) {
+            var voteBtnClass = w.hasVoted ? 'btn-vote voted' : 'btn-vote';
+            var voteBtnText = w.hasVoted ? '已投票' : '投票';
+            return '<div class="work-card">' +
+                '<div class="work-card-img" onclick="openLightbox(\'' + w.imageUrl + '\')">' +
+                    '<img src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy">' +
+                '</div>' +
+                '<div class="work-card-body">' +
+                    '<div class="work-card-title">' + w.title + '</div>' +
+                    '<div class="work-card-author">by ' + w.authorName + '</div>' +
+                    (w.description ? '<div class="work-card-desc">' + w.description + '</div>' : '') +
+                    '<div class="work-card-footer">' +
+                        '<span class="work-vote-count">🗳 ' + w.voteCount + ' 票</span>' +
+                        '<button class="' + voteBtnClass + '" data-work-id="' + w.id + '"' + (w.hasVoted ? ' disabled' : '') + '>' + voteBtnText + '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        // 绑定投票事件
+        worksGrid.querySelectorAll('.btn-vote:not(.voted)').forEach(function(btn) {
+            btn.addEventListener('click', function() { handleVote(parseInt(this.dataset.workId), this); });
+        });
+    }
+
+    // === 投票 ===
+    function handleVote(workId, btn) {
+        btn.disabled = true;
+        btn.textContent = '投票中...';
+        fetch('/api/contest/vote/' + workId, { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    btn.classList.add('voted');
+                    btn.textContent = '已投票';
+                    // 更新票数
+                    var countEl = btn.parentElement.querySelector('.work-vote-count');
+                    if (countEl) {
+                        var current = parseInt(countEl.textContent.match(/\d+/)[0]);
+                        countEl.textContent = '🗳 ' + (current + 1) + ' 票';
+                    }
+                } else {
+                    alert(data.message);
+                    btn.disabled = false;
+                    btn.textContent = '投票';
+                }
+            })
+            .catch(function() {
+                alert('网络错误，请重试');
+                btn.disabled = false;
+                btn.textContent = '投票';
+            });
+    }
+
+    // === 更新投稿区域状态 ===
+    function updateSubmitArea() {
+        // 依赖 auth.js 暴露的 currentUser — 通过 /api/auth/me 判断
+        fetch('/api/auth/me')
+            .then(function(r) { return r.json(); })
+            .then(function(user) {
+                if (!user.loggedIn) {
+                    submitStatus.textContent = '登录后可投稿，每人仅限一次';
+                    submitBtn.onclick = function() {
+                        var loginBtn = document.getElementById('loginBtn');
+                        if (loginBtn) loginBtn.click();
+                    };
+                } else if (myWorkStatus === 'APPROVED') {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已投稿';
+                    submitStatus.textContent = '你的作品已通过审核 ✅';
+                } else if (myWorkStatus === 'PENDING') {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已投稿';
+                    submitStatus.textContent = '你的作品正在审核中，请耐心等待 ⏳';
+                } else if (myWorkStatus === 'REJECTED') {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已投稿';
+                    submitStatus.textContent = '你的作品未通过审核，请联系管理员 ❌';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '投稿我的作品';
+                    submitStatus.textContent = '登录后可投稿，每人仅限一次';
+                    submitBtn.onclick = openSubmitModal;
+                }
+            });
+    }
+
+    // === 投稿弹窗 ===
+    function openSubmitModal() {
+        if (document.getElementById('submitModalOverlay')) return;
+
+        var overlay = document.createElement('div');
+        overlay.id = 'submitModalOverlay';
+        overlay.className = 'submit-modal-overlay show';
+        overlay.innerHTML =
+            '<div class="submit-modal">' +
+                '<h2>投稿作品</h2>' +
+                '<label>投稿人</label>' +
+                '<div class="readonly-field" id="modalNickname">加载中...</div>' +
+                '<label>作品图片 *</label>' +
+                '<div class="image-upload-area" id="imageUploadArea">' +
+                    '<div class="upload-icon">📷</div>' +
+                    '<div class="upload-text">点击或拖拽上传图片（最大10MB）</div>' +
+                    '<img class="image-preview" id="imagePreview">' +
+                    '<input type="file" id="imageInput" accept="image/*">' +
+                '</div>' +
+                '<label>作品标题 *</label>' +
+                '<input type="text" id="workTitle" maxlength="50" placeholder="给你的作品取个名字">' +
+                '<label>作品简介（选填）</label>' +
+                '<textarea id="workDesc" rows="2" maxlength="200" placeholder="介绍一下你的建筑理念..."></textarea>' +
+                '<div class="btn-row">' +
+                    '<button class="btn-cancel" id="modalCancelBtn">取消</button>' +
+                    '<button class="btn-confirm" id="modalConfirmBtn" disabled>提交投稿</button>' +
+                '</div>' +
+                '<div class="modal-message" id="modalMessage"></div>' +
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        // 获取昵称
+        fetch('/api/auth/me')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('modalNickname').textContent = data.nickname || '未知';
+            });
+
+        var selectedFile = null;
+        var imageInput = document.getElementById('imageInput');
+        var imagePreview = document.getElementById('imagePreview');
+        var uploadArea = document.getElementById('imageUploadArea');
+        var confirmBtn = document.getElementById('modalConfirmBtn');
+
+        // 图片选择
+        imageInput.addEventListener('change', function() {
+            var file = this.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showModalMessage('请选择图片文件', false);
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showModalMessage('图片不能超过10MB', false);
+                return;
+            }
+            selectedFile = file;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                uploadArea.querySelector('.upload-icon').style.display = 'none';
+                uploadArea.querySelector('.upload-text').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+            checkSubmitReady();
+        });
+
+        // 标题输入监听
+        document.getElementById('workTitle').addEventListener('input', checkSubmitReady);
+
+        function checkSubmitReady() {
+            var title = document.getElementById('workTitle').value.trim();
+            confirmBtn.disabled = !selectedFile || !title;
+        }
+
+        // 取消
+        document.getElementById('modalCancelBtn').addEventListener('click', closeSubmitModal);
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closeSubmitModal();
+        });
+
+        // 提交
+        confirmBtn.addEventListener('click', function() {
+            var title = document.getElementById('workTitle').value.trim();
+            var desc = document.getElementById('workDesc').value.trim();
+
+            if (!title) { showModalMessage('请输入作品标题', false); return; }
+            if (!selectedFile) { showModalMessage('请上传图片', false); return; }
+
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '上传中...';
+
+            var formData = new FormData();
+            formData.append('image', selectedFile);
+            formData.append('title', title);
+            formData.append('description', desc);
+
+            fetch('/api/contest/submit', { method: 'POST', body: formData })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        showModalMessage('投稿成功！等待审核', true);
+                        setTimeout(function() {
+                            closeSubmitModal();
+                            loadWorks();
+                        }, 1500);
+                    } else {
+                        showModalMessage(data.message, false);
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = '提交投稿';
+                    }
+                })
+                .catch(function() {
+                    showModalMessage('网络错误，请重试', false);
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '提交投稿';
+                });
+        });
+    }
+
+    function closeSubmitModal() {
+        var overlay = document.getElementById('submitModalOverlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+            setTimeout(function() { overlay.remove(); }, 300);
+        }
+    }
+
+    function showModalMessage(msg, success) {
+        var el = document.getElementById('modalMessage');
+        if (!el) return;
+        el.textContent = msg;
+        el.className = 'modal-message ' + (success ? 'msg-success' : 'msg-error');
+    }
+
+    // === 图片灯箱 ===
+    window.openLightbox = function(src) {
+        var overlay = document.createElement('div');
+        overlay.className = 'lightbox-overlay show';
+        overlay.innerHTML = '<img src="' + src + '" alt="作品大图">';
+        overlay.addEventListener('click', function() {
+            overlay.classList.remove('show');
+            setTimeout(function() { overlay.remove(); }, 300);
+        });
+        document.body.appendChild(overlay);
+    };
+
+    // === 初始化 ===
+    loadWorks();
+})();
+</script>
+</body>
+</html>
