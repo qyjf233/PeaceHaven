@@ -102,7 +102,7 @@
                     '<div class="login-field login-code-field">' +
                         '<label for="loginCode">验证码</label>' +
                         '<div class="code-input-wrapper">' +
-                            '<input type="text" id="loginCode" maxlength="6" placeholder="6位验证码" inputmode="numeric" autocomplete="one-time-code">' +
+                            '<input type="text" id="loginCode" maxlength="4" placeholder="4位验证码" inputmode="numeric" autocomplete="one-time-code">' +
                             '<button class="btn-send-code" id="sendCodeBtn">获取验证码</button>' +
                         '</div>' +
                     '</div>' +
@@ -220,8 +220,8 @@
             return;
         }
 
-        if (code.length !== 6) {
-            showLoginMessage('请输入6位验证码', false);
+        if (code.length !== 4) {
+            showLoginMessage('请输入4位验证码', false);
             return;
         }
 

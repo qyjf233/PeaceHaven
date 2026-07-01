@@ -2,11 +2,12 @@ package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.User;
-import com.potato.peacehaven.enums.UserStatus;
 import com.potato.peacehaven.service.SmsService;
 import com.potato.peacehaven.service.UserService;
+import com.aliyun.sdk.service.dypnsapi20170525.models.SendSmsVerifyCodeResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -39,13 +41,19 @@ public class AuthController {
             return ResponseEntity.ok(result);
         }
 
-        String error = smsService.sendCode(phone);
-        if (error != null) {
+        try {
+            SendSmsVerifyCodeResponse response = smsService.sendVerifyCode(phone).join();
+            if (response.getBody().getSuccess()) {
+                result.put("success", true);
+                result.put("message", "验证码已发送");
+            } else {
+                result.put("success", false);
+                result.put("message", "验证码发送失败，请稍后重试");
+            }
+        } catch (Exception e) {
+            log.error("发送验证码异常: {}", e.getMessage(), e);
             result.put("success", false);
-            result.put("message", error);
-        } else {
-            result.put("success", true);
-            result.put("message", "验证码已发送");
+            result.put("message", "验证码发送失败，请稍后重试");
         }
         return ResponseEntity.ok(result);
     }
@@ -67,9 +75,9 @@ public class AuthController {
             return ResponseEntity.ok(result);
         }
 
-        if (code == null || code.length() != 6) {
+        if (code == null || code.length() != 4) {
             result.put("success", false);
-            result.put("message", "请输入6位验证码");
+            result.put("message", "请输入4位验证码");
             return ResponseEntity.ok(result);
         }
 
@@ -80,9 +88,17 @@ public class AuthController {
         }
 
         // 校验验证码
-        if (!smsService.verifyCode(phone, code)) {
+        try {
+            Boolean valid = smsService.checkVerifyCode(phone, code).join();
+            if (!valid) {
+                result.put("success", false);
+                result.put("message", "验证码错误或已过期");
+                return ResponseEntity.ok(result);
+            }
+        } catch (Exception e) {
+            log.error("验证码校验异常: {}", e.getMessage(), e);
             result.put("success", false);
-            result.put("message", "验证码错误或已过期");
+            result.put("message", "验证码校验失败，请稍后重试");
             return ResponseEntity.ok(result);
         }
 
