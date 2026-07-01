@@ -44,9 +44,11 @@
                 '<div class="user-dropdown" id="userDropdown">' +
                     '<div class="dropdown-header">' +
                         '<div class="dropdown-nickname">' + currentUser.nickname + '</div>' +
+                        (currentUser.campName ? '<div class="dropdown-campname">🏕 ' + currentUser.campName + '</div>' : '') +
                         '<div class="dropdown-role">' + (currentUser.role === 'ADMIN' ? '管理员' : '用户') + '</div>' +
                     '</div>' +
                     '<button class="dropdown-item" id="editNicknameBtn">修改昵称</button>' +
+                    '<button class="dropdown-item" id="editCampNameBtn">修改营地名</button>' +
                     (currentUser.role === 'ADMIN' ? '<a href="/admin/activities" class="dropdown-item">后台管理</a>' : '') +
                     '<button class="dropdown-item dropdown-logout" id="logoutBtn">退出登录</button>' +
                 '</div>';
@@ -75,6 +77,13 @@
                 dropdown.classList.remove('show');
                 arrow.classList.remove('open');
                 openNicknameModal(true);
+            });
+
+            // 修改营地名
+            document.getElementById('editCampNameBtn').addEventListener('click', function() {
+                dropdown.classList.remove('show');
+                arrow.classList.remove('open');
+                openCampNameModal();
             });
 
             // 退出
@@ -295,22 +304,32 @@
         el.className = 'login-message ' + (success ? 'msg-success' : 'msg-error');
     }
 
-    // === 昵称设置弹窗 ===
+    // === 昵称设置弹窗（新用户注册时同时填写昵称和营地名） ===
     function openNicknameModal(isEdit) {
         if (document.getElementById('nicknameModal')) return;
 
         var overlay = document.createElement('div');
         overlay.id = 'nicknameModal';
         overlay.className = 'nickname-modal-overlay show';
-        overlay.innerHTML =
-            '<div class="nickname-modal">' +
+
+        var html = '<div class="nickname-modal">' +
                 '<h2>' + (isEdit ? '修改昵称' : '游戏昵称') + '</h2>' +
                 '<p>' + (isEdit ? '给自己换个名字吧' : '给自己取个名字吧') + '</p>' +
-                '<input type="text" id="nicknameInput" maxlength="14" placeholder="输入游戏昵称" value="' + (isEdit ? (currentUser.nickname || '') : '') + '" autofocus>' +
-                '<button class="btn-nickname-submit" id="nicknameSubmitBtn">' + (isEdit ? '保存修改' : '确认设置') + '</button>' +
+                '<input type="text" id="nicknameInput" maxlength="14" placeholder="输入游戏昵称" value="' + (isEdit ? (currentUser.nickname || '') : '') + '" autofocus>';
+
+        // 新用户注册时增加营地名字段
+        if (!isEdit) {
+            html += '<div class="camp-autocomplete-wrapper">' +
+                    '<input type="text" id="campNameInput" maxlength="20" placeholder="输入你的营地名" autocomplete="off">' +
+                    '<div class="camp-suggestions" id="campSuggestions" style="display:none;"></div>' +
+                    '</div>';
+        }
+
+        html += '<button class="btn-nickname-submit" id="nicknameSubmitBtn">' + (isEdit ? '保存修改' : '确认设置') + '</button>' +
                 '<div class="nickname-message" id="nicknameMessage"></div>' +
             '</div>';
 
+        overlay.innerHTML = html;
         document.body.appendChild(overlay);
 
         // 点击背景关闭（仅编辑模式）
@@ -326,6 +345,12 @@
         var input = document.getElementById('nicknameInput');
         var submitBtn = document.getElementById('nicknameSubmitBtn');
 
+        // 新用户注册时初始化自动补全
+        var campInput = document.getElementById('campNameInput');
+        if (campInput) {
+            initCampAutocomplete(campInput, document.getElementById('campSuggestions'));
+        }
+
         function submitNickname() {
             var nickname = input.value.trim();
             if (!nickname) {
@@ -337,19 +362,36 @@
                 return;
             }
 
+            var payload = { nickname: nickname };
+
+            // 新用户注册时同时提交营地名
+            if (campInput) {
+                var campName = campInput.value.trim();
+                if (!campName) {
+                    showNicknameMessage('请输入营地名', false);
+                    return;
+                }
+                if (campName.length > 20) {
+                    showNicknameMessage('营地名不能超过20个字符', false);
+                    return;
+                }
+                payload.campName = campName;
+            }
+
             submitBtn.disabled = true;
             submitBtn.textContent = '设置中...';
 
             fetch('/api/auth/nickname', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nickname: nickname })
+                body: JSON.stringify(payload)
             })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
                     showNicknameMessage('设置成功！', true);
                     currentUser.nickname = data.nickname;
+                    if (data.campName) currentUser.campName = data.campName;
                     setTimeout(function() {
                         overlay.classList.remove('show');
                         setTimeout(function() { overlay.remove(); }, 300);
@@ -370,12 +412,171 @@
 
         submitBtn.addEventListener('click', submitNickname);
         input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') submitNickname();
+            if (e.key === 'Enter') {
+                // 如果光标在昵称输入框且有营地名字段，跳到营地名
+                if (!isEdit && campInput && input === document.activeElement) {
+                    campInput.focus();
+                    return;
+                }
+                submitNickname();
+            }
         });
+        if (campInput) {
+            campInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    // 如果下拉列表有选中项，不提交
+                    var suggestions = document.getElementById('campSuggestions');
+                    if (suggestions && suggestions.style.display !== 'none' && suggestions.children.length > 0) {
+                        return;
+                    }
+                    submitNickname();
+                }
+            });
+        }
     }
 
     function showNicknameMessage(msg, success) {
         var el = document.getElementById('nicknameMessage');
+        if (!el) return;
+        el.textContent = msg;
+        el.className = 'nickname-message ' + (success ? 'msg-success' : 'msg-error');
+    }
+
+    // === 营地名自动补全组件 ===
+    function initCampAutocomplete(inputEl, suggestionsEl) {
+        var debounceTimer = null;
+
+        inputEl.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            var query = inputEl.value.trim();
+            if (query.length < 1) {
+                suggestionsEl.style.display = 'none';
+                suggestionsEl.innerHTML = '';
+                return;
+            }
+            debounceTimer = setTimeout(function() {
+                fetch('/api/auth/camps?q=' + encodeURIComponent(query))
+                    .then(r => r.json())
+                    .then(data => {
+                        var list = data.suggestions || [];
+                        if (list.length === 0) {
+                            suggestionsEl.style.display = 'none';
+                            suggestionsEl.innerHTML = '';
+                            return;
+                        }
+                        suggestionsEl.innerHTML = list.map(function(name) {
+                            return '<div class="camp-suggestion-item" data-value="' + name + '">' + name + '</div>';
+                        }).join('');
+                        suggestionsEl.style.display = 'block';
+
+                        // 绑定点击事件
+                        suggestionsEl.querySelectorAll('.camp-suggestion-item').forEach(function(item) {
+                            item.addEventListener('click', function() {
+                                inputEl.value = this.dataset.value;
+                                suggestionsEl.style.display = 'none';
+                            });
+                        });
+                    })
+                    .catch(() => {});
+            }, 200);
+        });
+
+        // 点击外部隐藏
+        document.addEventListener('click', function(e) {
+            if (!inputEl.contains(e.target) && !suggestionsEl.contains(e.target)) {
+                suggestionsEl.style.display = 'none';
+            }
+        });
+    }
+
+    // === 修改营地名弹窗 ===
+    function openCampNameModal() {
+        if (document.getElementById('campNameModal')) return;
+
+        var overlay = document.createElement('div');
+        overlay.id = 'campNameModal';
+        overlay.className = 'nickname-modal-overlay show';
+        overlay.innerHTML =
+            '<div class="nickname-modal">' +
+                '<h2>修改营地名</h2>' +
+                '<p>换个新营地吧</p>' +
+                '<div class="camp-autocomplete-wrapper">' +
+                    '<input type="text" id="campNameEditInput" maxlength="20" placeholder="输入营地名" value="' + (currentUser.campName || '') + '" autocomplete="off" autofocus>' +
+                    '<div class="camp-suggestions" id="campEditSuggestions" style="display:none;"></div>' +
+                '</div>' +
+                '<button class="btn-nickname-submit" id="campNameSubmitBtn">保存修改</button>' +
+                '<div class="nickname-message" id="campNameMessage"></div>' +
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        // 点击背景关闭
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.classList.remove('show');
+                setTimeout(function() { overlay.remove(); }, 300);
+            }
+        });
+
+        var input = document.getElementById('campNameEditInput');
+        var submitBtn = document.getElementById('campNameSubmitBtn');
+
+        initCampAutocomplete(input, document.getElementById('campEditSuggestions'));
+
+        function submitCampName() {
+            var campName = input.value.trim();
+            if (!campName) {
+                showCampNameMessage('请输入营地名', false);
+                return;
+            }
+            if (campName.length > 20) {
+                showCampNameMessage('营地名不能超过20个字符', false);
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '保存中...';
+
+            fetch('/api/auth/camp-name', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ campName: campName })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showCampNameMessage('修改成功！', true);
+                    currentUser.campName = data.campName;
+                    setTimeout(function() {
+                        overlay.classList.remove('show');
+                        setTimeout(function() { overlay.remove(); }, 300);
+                        updateNavbar();
+                    }, 600);
+                } else {
+                    showCampNameMessage(data.message, false);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '保存修改';
+                }
+            })
+            .catch(() => {
+                showCampNameMessage('网络错误，请重试', false);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '保存修改';
+            });
+        }
+
+        submitBtn.addEventListener('click', submitCampName);
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                var suggestions = document.getElementById('campEditSuggestions');
+                if (suggestions && suggestions.style.display !== 'none' && suggestions.children.length > 0) return;
+                submitCampName();
+            }
+        });
+    }
+
+    function showCampNameMessage(msg, success) {
+        var el = document.getElementById('campNameMessage');
         if (!el) return;
         el.textContent = msg;
         el.className = 'nickname-message ' + (success ? 'msg-success' : 'msg-error');

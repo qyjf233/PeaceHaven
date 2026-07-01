@@ -92,6 +92,24 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public void updateCampName(Long id, String campName) {
+        User user = getUserById(id);
+        user.setCampName(campName);
+        userRepository.save(user);
+    }
+
+    /**
+     * 获取营地名建议列表（前缀匹配，最多返回10条）
+     */
+    public List<String> getCampSuggestions(String prefix) {
+        if (prefix == null || prefix.trim().isEmpty()) {
+            return List.of();
+        }
+        return userRepository.findDistinctCampNamesByPrefix(prefix.trim())
+                .stream().limit(10).toList();
+    }
+
     /**
      * 检查手机号是否在管理员列表中
      */

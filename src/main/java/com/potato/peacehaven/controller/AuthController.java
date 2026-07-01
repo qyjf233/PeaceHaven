@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -122,7 +123,7 @@ public class AuthController {
     }
 
     /**
-     * 设置昵称（新用户首次登录后调用）
+     * 设置昵称和营地名（新用户首次登录后调用）
      */
     @PostMapping("/nickname")
     public ResponseEntity<Map<String, Object>> updateNickname(@RequestBody Map<String, String> body, HttpSession session) {
@@ -150,17 +151,83 @@ public class AuthController {
 
         try {
             userService.updateNickname(user.getId(), nickname.trim());
-            // 更新 session 中的用户
             user.setNickname(nickname.trim());
+
+            // 同时保存营地名（如果提供了）
+            String campName = body.get("campName");
+            if (campName != null && !campName.trim().isEmpty()) {
+                if (campName.trim().length() > 20) {
+                    result.put("success", false);
+                    result.put("message", "营地名不能超过20个字符");
+                    return ResponseEntity.ok(result);
+                }
+                userService.updateCampName(user.getId(), campName.trim());
+                user.setCampName(campName.trim());
+                result.put("campName", campName.trim());
+            }
+
             session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
 
             result.put("success", true);
-            result.put("message", "昵称设置成功");
+            result.put("message", "设置成功");
             result.put("nickname", nickname.trim());
         } catch (RuntimeException e) {
             result.put("success", false);
             result.put("message", e.getMessage());
         }
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 修改营地名
+     */
+    @PostMapping("/camp-name")
+    public ResponseEntity<Map<String, Object>> updateCampName(@RequestBody Map<String, String> body, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录");
+            return ResponseEntity.ok(result);
+        }
+
+        String campName = body.get("campName");
+        if (campName == null || campName.trim().isEmpty()) {
+            result.put("success", false);
+            result.put("message", "营地名不能为空");
+            return ResponseEntity.ok(result);
+        }
+
+        if (campName.trim().length() > 20) {
+            result.put("success", false);
+            result.put("message", "营地名不能超过20个字符");
+            return ResponseEntity.ok(result);
+        }
+
+        try {
+            userService.updateCampName(user.getId(), campName.trim());
+            user.setCampName(campName.trim());
+            session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
+
+            result.put("success", true);
+            result.put("message", "营地名修改成功");
+            result.put("campName", campName.trim());
+        } catch (RuntimeException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 获取营地名建议（自动补全）
+     */
+    @GetMapping("/camps")
+    public ResponseEntity<Map<String, Object>> campSuggestions(@RequestParam(required = false, defaultValue = "") String q) {
+        Map<String, Object> result = new HashMap<>();
+        List<String> suggestions = userService.getCampSuggestions(q);
+        result.put("suggestions", suggestions);
         return ResponseEntity.ok(result);
     }
 
@@ -194,6 +261,7 @@ public class AuthController {
                     : phone;
             result.put("phone", maskedPhone);
             result.put("nickname", user.getNickname());
+            result.put("campName", user.getCampName());
             result.put("avatar", user.getAvatar());
             result.put("role", user.getRole().name());
             result.put("status", user.getStatus().name());

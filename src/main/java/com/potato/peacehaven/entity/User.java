@@ -31,10 +31,15 @@ public class User {
     @Comment("手机号，登录凭证")
     private String phone;
 
-    /** 用户昵称，默认"用户+手机后四位" */
+    /** 用户昵称，默认“用户+手机后四位” */
     @Column(length = 50)
     @Comment("用户昵称")
     private String nickname;
+    
+    /** 营地名称 */
+    @Column(name = "camp_name", length = 50)
+    @Comment("营地名称")
+    private String campName;
 
     /** 头像URL */
     @Column(length = 500)
