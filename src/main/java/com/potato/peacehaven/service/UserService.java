@@ -24,12 +24,17 @@ public class UserService {
     @Value("${app.admin-phones:}")
     private String adminPhones;
 
+    /** 登录结果，包含用户对象和是否为新用户标识 */
+    public record LoginResult(User user, boolean isNewUser) {}
+
     /**
      * 登录（自动注册新用户）
      */
     @Transactional
-    public User login(String phone) {
+    public LoginResult login(String phone) {
+        final boolean[] isNew = {false};
         User user = userRepository.findByPhone(phone).orElseGet(() -> {
+            isNew[0] = true;
             // 自动注册新用户
             String defaultNickname = "用户" + phone.substring(phone.length() - 4);
             User newUser = User.builder()
@@ -54,7 +59,7 @@ public class UserService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        return user;
+        return new LoginResult(user, isNew[0]);
     }
 
     public User getUserById(Long id) {

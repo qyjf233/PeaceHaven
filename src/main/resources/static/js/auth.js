@@ -11,12 +11,13 @@
         checkLoginStatus();
     });
 
-    function checkLoginStatus() {
+    function checkLoginStatus(callback) {
         fetch('/api/auth/me')
             .then(r => r.json())
             .then(data => {
                 currentUser = data.loggedIn ? data : null;
                 updateNavbar();
+                if (callback) callback();
             })
             .catch(() => { currentUser = null; });
     }
@@ -36,14 +37,16 @@
         if (currentUser) {
             userArea.className = 'user-logged';
             userArea.innerHTML =
-                '<div class="user-avatar-btn" id="userAvatarBtn">' +
-                    '<span class="user-avatar-text">' + (currentUser.nickname || '?').charAt(0) + '</span>' +
+                '<div class="user-nickname-btn" id="userNicknameBtn">' +
+                    '<span class="user-nickname-text">' + (currentUser.nickname || '用户') + '</span>' +
+                    '<span class="user-dropdown-arrow" id="dropdownArrow">&#9662;</span>' +
                 '</div>' +
                 '<div class="user-dropdown" id="userDropdown">' +
                     '<div class="dropdown-header">' +
                         '<div class="dropdown-nickname">' + currentUser.nickname + '</div>' +
                         '<div class="dropdown-role">' + (currentUser.role === 'ADMIN' ? '管理员' : '用户') + '</div>' +
                     '</div>' +
+                    '<button class="dropdown-item" id="editNicknameBtn">修改昵称</button>' +
                     (currentUser.role === 'ADMIN' ? '<a href="/admin/activities" class="dropdown-item">后台管理</a>' : '') +
                     '<button class="dropdown-item dropdown-logout" id="logoutBtn">退出登录</button>' +
                 '</div>';
@@ -51,15 +54,27 @@
             navActions.appendChild(userArea);
 
             // 下拉菜单切换
-            document.getElementById('userAvatarBtn').addEventListener('click', function(e) {
+            var nicknameBtn = document.getElementById('userNicknameBtn');
+            var dropdown = document.getElementById('userDropdown');
+            var arrow = document.getElementById('dropdownArrow');
+
+            nicknameBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                document.getElementById('userDropdown').classList.toggle('show');
+                var isOpen = dropdown.classList.toggle('show');
+                arrow.classList.toggle('open', isOpen);
             });
 
             // 点击其他地方关闭下拉
             document.addEventListener('click', function() {
-                var dd = document.getElementById('userDropdown');
-                if (dd) dd.classList.remove('show');
+                dropdown.classList.remove('show');
+                arrow.classList.remove('open');
+            });
+
+            // 修改昵称
+            document.getElementById('editNicknameBtn').addEventListener('click', function() {
+                dropdown.classList.remove('show');
+                arrow.classList.remove('open');
+                openNicknameModal(true);
             });
 
             // 退出
@@ -243,9 +258,15 @@
         .then(data => {
             if (data.success) {
                 showLoginMessage('登录成功！', true);
+                var isNewUser = data.isNewUser;
                 setTimeout(function() {
                     closeLoginModal();
-                    checkLoginStatus(); // 刷新导航栏
+                    checkLoginStatus(function() {
+                        // 新用户首次登录弹昵称设置框
+                        if (isNewUser) {
+                            openNicknameModal();
+                        }
+                    });
                 }, 600);
             } else {
                 showLoginMessage(data.message, false);
@@ -265,5 +286,91 @@
         if (!el) return;
         el.textContent = msg;
         el.className = 'login-message ' + (success ? 'msg-success' : 'msg-error');
+    }
+
+    // === 昵称设置弹窗 ===
+    function openNicknameModal(isEdit) {
+        if (document.getElementById('nicknameModal')) return;
+
+        var overlay = document.createElement('div');
+        overlay.id = 'nicknameModal';
+        overlay.className = 'nickname-modal-overlay show';
+        overlay.innerHTML =
+            '<div class="nickname-modal">' +
+                '<h2>' + (isEdit ? '修改昵称' : '游戏昵称') + '</h2>' +
+                '<p>' + (isEdit ? '给自己换个名字吧' : '给自己取个名字吧') + '</p>' +
+                '<input type="text" id="nicknameInput" maxlength="14" placeholder="输入游戏昵称" value="' + (isEdit ? (currentUser.nickname || '') : '') + '" autofocus>' +
+                '<button class="btn-nickname-submit" id="nicknameSubmitBtn">' + (isEdit ? '保存修改' : '确认设置') + '</button>' +
+                '<div class="nickname-message" id="nicknameMessage"></div>' +
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        // 点击背景关闭（仅编辑模式）
+        if (isEdit) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    overlay.classList.remove('show');
+                    setTimeout(function() { overlay.remove(); }, 300);
+                }
+            });
+        }
+
+        var input = document.getElementById('nicknameInput');
+        var submitBtn = document.getElementById('nicknameSubmitBtn');
+
+        function submitNickname() {
+            var nickname = input.value.trim();
+            if (!nickname) {
+                showNicknameMessage('请输入昵称', false);
+                return;
+            }
+            if (nickname.length > 14) {
+                showNicknameMessage('昵称不能超过14个字符', false);
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '设置中...';
+
+            fetch('/api/auth/nickname', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nickname: nickname })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNicknameMessage('设置成功！', true);
+                    currentUser.nickname = data.nickname;
+                    setTimeout(function() {
+                        overlay.classList.remove('show');
+                        setTimeout(function() { overlay.remove(); }, 300);
+                        updateNavbar();
+                    }, 600);
+                } else {
+                    showNicknameMessage(data.message, false);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '确认设置';
+                }
+            })
+            .catch(() => {
+                showNicknameMessage('网络错误，请重试', false);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '确认设置';
+            });
+        }
+
+        submitBtn.addEventListener('click', submitNickname);
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') submitNickname();
+        });
+    }
+
+    function showNicknameMessage(msg, success) {
+        var el = document.getElementById('nicknameMessage');
+        if (!el) return;
+        el.textContent = msg;
+        el.className = 'nickname-message ' + (success ? 'msg-success' : 'msg-error');
     }
 })();

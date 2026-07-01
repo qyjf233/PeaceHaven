@@ -104,7 +104,8 @@ public class AuthController {
 
         // 登录（自动注册）
         try {
-            User user = userService.login(phone);
+            UserService.LoginResult loginResult = userService.login(phone);
+            User user = loginResult.user();
             // 存入 session
             session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
 
@@ -112,6 +113,50 @@ public class AuthController {
             result.put("message", "登录成功");
             result.put("nickname", user.getNickname());
             result.put("role", user.getRole().name());
+            result.put("isNewUser", loginResult.isNewUser());
+        } catch (RuntimeException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 设置昵称（新用户首次登录后调用）
+     */
+    @PostMapping("/nickname")
+    public ResponseEntity<Map<String, Object>> updateNickname(@RequestBody Map<String, String> body, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录");
+            return ResponseEntity.ok(result);
+        }
+
+        String nickname = body.get("nickname");
+        if (nickname == null || nickname.trim().isEmpty()) {
+            result.put("success", false);
+            result.put("message", "昵称不能为空");
+            return ResponseEntity.ok(result);
+        }
+
+        if (nickname.trim().length() > 14) {
+            result.put("success", false);
+            result.put("message", "昵称不能超过14个字符");
+            return ResponseEntity.ok(result);
+        }
+
+        try {
+            userService.updateNickname(user.getId(), nickname.trim());
+            // 更新 session 中的用户
+            user.setNickname(nickname.trim());
+            session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
+
+            result.put("success", true);
+            result.put("message", "昵称设置成功");
+            result.put("nickname", nickname.trim());
         } catch (RuntimeException e) {
             result.put("success", false);
             result.put("message", e.getMessage());
