@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户服务协议 - PeaceHaven · 长安</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .agreement-page {
+            min-height: 100vh;
+            padding: 120px 20px 60px;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .agreement-page h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .agreement-update {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+
+        .agreement-content {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: var(--border-card);
+            box-shadow: var(--shadow-sm);
+            padding: 36px;
+            color: var(--text-primary);
+            line-height: 1.9;
+            font-size: 0.95rem;
+        }
+
+        .agreement-content h2 {
+            font-size: 1.15rem;
+            color: var(--accent-primary);
+            margin: 28px 0 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .agreement-content h2:first-child { margin-top: 0; }
+
+        .agreement-content p {
+            margin-bottom: 14px;
+            color: var(--text-secondary);
+        }
+
+        .agreement-content ul {
+            padding-left: 24px;
+            margin-bottom: 14px;
+        }
+
+        .agreement-content li {
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .agreement-back {
+            display: inline-block;
+            margin-top: 30px;
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .agreement-back:hover { text-decoration: underline; }
+
+        @media (max-width: 768px) {
+            .agreement-page { padding: 100px 16px 40px; }
+            .agreement-content { padding: 24px; }
+        }
+    </style>
+</head>
+<body data-theme="day">
+
+<!-- 导航栏 -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <a href="/" class="nav-logo">
+            <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
+            <span class="logo-text">PeaceHaven · 长安</span>
+        </a>
+        <div class="nav-actions">
+            <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                <span class="theme-icon-day">☀️</span>
+                <span class="theme-icon-night">🌙</span>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="agreement-page">
+    <h1>用户服务协议</h1>
+    <p class="agreement-update">最后更新：2026年7月1日</p>
+
+    <div class="agreement-content">
+        <h2>一、总则</h2>
+        <p>欢迎使用 PeaceHaven · 长安营地官方网站（以下简称"本站"）。本协议是您与本站之间关于使用本站服务所订立的协议。请您在使用本站服务前，仔细阅读并充分理解本协议各条款内容。</p>
+        <p>如您不同意本协议的任何内容，请勿注册或使用本站服务。您通过手机验证码登录本站即视为您已同意本协议的全部内容。</p>
+
+        <h2>二、服务内容</h2>
+        <p>本站为明日之后游戏"长安"营地（英文名 PeaceHaven）的营地官网，提供以下服务：</p>
+        <ul>
+            <li>营地信息展示（营地简介、管理组介绍、营地福利等）</li>
+            <li>活动信息发布与参与（投票、排行榜等互动功能）</li>
+            <li>营地成员注册与交流</li>
+        </ul>
+
+        <h2>三、账号注册与管理</h2>
+        <p>您通过手机号验证码登录时，系统将自动为您创建账号。您承诺：</p>
+        <ul>
+            <li>提供真实、准确的手机号码</li>
+            <li>妥善保管账号信息，因您个人原因导致的账号安全问题由您自行承担</li>
+            <li>不得将账号转让、出借给他人使用</li>
+            <li>不得利用本站服务从事违法违规活动</li>
+        </ul>
+
+        <h2>四、个人信息保护</h2>
+        <p>本站重视您的个人信息保护：</p>
+        <ul>
+            <li>本站仅收集您注册时提供的手机号码</li>
+            <li>您的手机号码仅用于账号登录验证，不会用于其他用途</li>
+            <li>未经您的同意，本站不会向第三方披露您的个人信息</li>
+            <li>本站会采取合理的技术措施保护您的信息安全</li>
+        </ul>
+
+        <h2>五、用户行为规范</h2>
+        <p>您在使用本站服务时，应遵守以下规范：</p>
+        <ul>
+            <li>遵守国家法律法规和社会公德</li>
+            <li>不得发布违法、违规、低俗等不良信息</li>
+            <li>不得恶意攻击、骚扰其他用户</li>
+            <li>不得利用技术手段干扰本站正常运行</li>
+            <li>投票功能每人每活动限投一票，禁止刷票行为</li>
+        </ul>
+
+        <h2>六、免责声明</h2>
+        <p>本站作为游戏营地社区网站，以下情况不承担责任：</p>
+        <ul>
+            <li>因不可抗力导致的服务中断</li>
+            <li>因网络故障、系统维护等技术原因导致的短暂服务中断</li>
+            <li>用户因个人原因造成的账号丢失或信息泄露</li>
+            <li>用户之间的交易、纠纷等行为</li>
+        </ul>
+
+        <h2>七、协议变更</h2>
+        <p>本站有权根据需要修改本协议内容，修改后的协议将在本站公布后立即生效。如您继续使用本站服务，即视为您已同意修改后的协议。</p>
+
+        <h2>八、联系方式</h2>
+        <p>如您对本协议有任何疑问，可通过游戏内联系营地管理组任意成员进行咨询。</p>
+    </div>
+
+    <a href="javascript:history.back()" class="agreement-back">← 返回上一页</a>
+</div>
+
+<script th:src="@{/js/main.js}"></script>
+</body>
+</html>

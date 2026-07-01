@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>👥 用户管理</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin/activities" class="btn-back">活动管理</a>
+            <a href="/" class="btn-back">← 返回前台</a>
+        </div>
+    </header>
+
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+
+    <table class="admin-table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>手机号</th>
+            <th>昵称</th>
+            <th>角色</th>
+            <th>状态</th>
+            <th>注册时间</th>
+            <th>最后登录</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${userPage.content}">
+            <td th:text="${u.id}"></td>
+            <td th:text="${u.phone}"></td>
+            <td th:text="${u.nickname}"></td>
+            <td>
+                <span class="badge" th:classappend="${u.role.name() == 'ADMIN' ? 'badge-vote' : 'badge-basic'}"
+                      th:text="${u.role}"></span>
+            </td>
+            <td>
+                <span class="badge" th:classappend="${u.status.name() == 'ACTIVE' ? 'status-ongoing' : 'status-ended'}"
+                      th:text="${u.status.name() == 'ACTIVE' ? '正常' : '封禁'}"></span>
+            </td>
+            <td th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'yyyy-MM-dd HH:mm') : '-'}"></td>
+            <td th:text="${u.lastLoginAt != null ? #temporals.format(u.lastLoginAt, 'yyyy-MM-dd HH:mm') : '-'}"></td>
+            <td class="actions">
+                <!-- 修改角色 -->
+                <form th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post" style="display:inline">
+                    <input type="hidden" name="role" th:value="${u.role.name() == 'ADMIN' ? 'USER' : 'ADMIN'}">
+                    <button type="submit" class="btn btn-sm btn-info"
+                            th:text="${u.role.name() == 'ADMIN' ? '降级为USER' : '提升为ADMIN'}"
+                            onclick="return confirm('确定修改角色吗？')"></button>
+                </form>
+                <!-- 修改状态 -->
+                <form th:action="@{/admin/users/{id}/status(id=${u.id})}" method="post" style="display:inline">
+                    <input type="hidden" name="status" th:value="${u.status.name() == 'ACTIVE' ? 'BANNED' : 'ACTIVE'}">
+                    <button type="submit" class="btn btn-sm"
+                            th:classappend="${u.status.name() == 'ACTIVE' ? 'btn-danger' : 'btn-warning'}"
+                            th:text="${u.status.name() == 'ACTIVE' ? '封禁' : '解封'}"
+                            onclick="return confirm('确定操作吗？')"></button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(userPage.content)}">
+            <td colspan="8" class="empty-state">暂无用户</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- 简单分页 -->
+    <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;" th:if="${userPage.totalPages > 1}">
+        <a th:if="${currentPage > 0}" th:href="@{/admin/users(page=${currentPage - 1})}" class="btn btn-sm btn-secondary">上一页</a>
+        <span style="padding:8px 16px; font-size:0.9rem; color:#777;"
+              th:text="'第 ' + (${currentPage + 1}) + ' / ' + ${userPage.totalPages} + ' 页'"></span>
+        <a th:if="${currentPage < userPage.totalPages - 1}" th:href="@{/admin/users(page=${currentPage + 1})}" class="btn btn-sm btn-secondary">下一页</a>
+    </div>
+</div>
+</body>
+</html>

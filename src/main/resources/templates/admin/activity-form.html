@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? '编辑活动' : '创建活动'} + ' - PeaceHaven Admin'">活动表单</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1 th:text="${isEdit ? '编辑活动' : '创建活动'}">活动表单</h1>
+        <a href="/admin/activities" class="btn-back">← 返回列表</a>
+    </header>
+
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+
+    <form th:action="${isEdit ? '/admin/activities/' + form.id : '/admin/activities'}" method="post" class="admin-form">
+        <div class="form-group">
+            <label for="title">活动标题 *</label>
+            <input type="text" id="title" name="title" th:value="${form.title}" required maxlength="100" placeholder="如：长安建筑大赛">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="templateType">模板类型 *</label>
+                <select id="templateType" name="templateType" required>
+                    <option th:each="type : ${templateTypes}" th:value="${type}" th:text="${type}"
+                            th:selected="${form.templateType == type}"></option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="status">活动状态</label>
+                <select id="status" name="status">
+                    <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"
+                            th:selected="${form.status == s}"></option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="summary">活动简介（列表页展示）</label>
+            <textarea id="summary" name="summary" rows="2" maxlength="500" th:text="${form.summary}" placeholder="一句话描述活动"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="content">活动详情（支持HTML）</label>
+            <textarea id="content" name="content" rows="8" th:text="${form.content}" placeholder="详细描述活动内容..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="thumbnail">缩略图URL</label>
+            <input type="text" id="thumbnail" name="thumbnail" th:value="${form.thumbnail}" placeholder="https://... 或 /images/...">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="startDate">开始时间</label>
+                <input type="datetime-local" id="startDate" name="startDate" th:value="${form.startDate}">
+            </div>
+            <div class="form-group">
+                <label for="endDate">结束时间</label>
+                <input type="datetime-local" id="endDate" name="endDate" th:value="${form.endDate}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="configJson">模板配置 (JSON)</label>
+            <textarea id="configJson" name="configJson" rows="3" th:text="${form.configJson}" placeholder='{"sortOrder": "asc"}'></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" th:text="${isEdit ? '保存修改' : '创建活动'}">提交</button>
+            <a href="/admin/activities" class="btn btn-secondary">取消</a>
+        </div>
+    </form>
+
+    <!-- Vote Options Section (only shown when editing a VOTE type activity) -->
+    <div th:if="${isEdit and voteOptions != null}" class="admin-section">
+        <h2>投票选项管理</h2>
+        <table class="admin-table" th:if="${!#lists.isEmpty(voteOptions)}">
+            <thead><tr><th>排序</th><th>选项名称</th><th>图片</th><th>当前票数</th><th>操作</th></tr></thead>
+            <tbody>
+            <tr th:each="opt : ${voteOptions}">
+                <td th:text="${opt.sortOrder}"></td>
+                <td th:text="${opt.optionName}"></td>
+                <td><img th:if="${opt.optionImage}" th:src="${opt.optionImage}" class="thumb-preview" alt=""></td>
+                <td th:text="${opt.voteCount}"></td>
+                <td>
+                    <form th:action="@{/admin/activities/vote-options/{id}/delete(id=${opt.id})}" method="post" style="display:inline">
+                        <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <form th:action="@{/admin/activities/{id}/vote-options(id=${form.id})}" method="post" class="inline-form">
+            <input type="text" name="optionName" placeholder="选项名称" required>
+            <input type="text" name="optionImage" placeholder="图片URL（可选）">
+            <input type="number" name="sortOrder" placeholder="排序" value="0" min="0">
+            <button type="submit" class="btn btn-sm btn-primary">添加选项</button>
+        </form>
+    </div>
+
+    <!-- Leaderboard Section (only shown when editing a LEADERBOARD type activity) -->
+    <div th:if="${isEdit and leaderboardEntries != null}" class="admin-section">
+        <h2>排行榜管理</h2>
+        <table class="admin-table" th:if="${!#lists.isEmpty(leaderboardEntries)}">
+            <thead><tr><th>排名</th><th>玩家</th><th>成绩</th><th>提交时间</th><th>操作</th></tr></thead>
+            <tbody>
+            <tr th:each="entry : ${leaderboardEntries}">
+                <td th:text="${entry.rankPosition}"></td>
+                <td th:text="${entry.playerName}"></td>
+                <td th:text="${entry.score}"></td>
+                <td th:text="${entry.submittedAt != null ? #temporals.format(entry.submittedAt, 'MM-dd HH:mm') : '-'}"></td>
+                <td>
+                    <form th:action="@{/admin/activities/leaderboard/{id}/delete(id=${entry.id})}" method="post" style="display:inline">
+                        <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <form th:action="@{/admin/activities/{id}/leaderboard(id=${form.id})}" method="post" class="inline-form">
+            <input type="text" name="playerName" placeholder="玩家名称" required>
+            <input type="number" name="score" placeholder="成绩" step="0.01" required>
+            <input type="number" name="rankPosition" placeholder="排名" min="1" required>
+            <button type="submit" class="btn btn-sm btn-primary">添加记录</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

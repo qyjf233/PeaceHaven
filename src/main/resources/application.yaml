@@ -15,3 +15,23 @@ spring:
     show-sql: true
   thymeleaf:
     cache: false # 开发阶段关闭缓存，方便调试 HTML
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 60MB
+
+# 阿里云配置
+aliyun:
+  access-key-id: ${ALIYUN_AK_ID}
+  access-key-secret: ${ALIYUN_AK_SECRET}
+  sms:
+    sign-name: ${ALIYUN_SMS_SIGN}
+    template-code: ${ALIYUN_SMS_TEMPLATE}
+  oss:
+    endpoint: oss-cn-hangzhou.aliyuncs.com
+    bucket-name: ${ALIYUN_OSS_BUCKET}
+    url-prefix: ${ALIYUN_OSS_URL_PREFIX}
+
+# 应用配置
+app:
+  admin-phones: "13586619697"  # 逗号分隔，注册时自动提升为ADMIN

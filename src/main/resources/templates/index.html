@@ -241,66 +241,32 @@
             <h2 class="section-title">近期活动</h2>
             <div class="section-divider"></div>
         </div>
-        <div class="activities-grid">
-            <a href="#" class="activity-card fade-in" onclick="event.preventDefault()">
+
+        <div class="activities-grid" th:if="${!#lists.isEmpty(recentActivities)}">
+            <a th:each="act : ${recentActivities}" th:href="@{/activities/{id}(id=${act.id})}" class="activity-card fade-in">
                 <div class="activity-img">
-                    <img src="https://placehold.co/400x250/E8A87C/ffffff?text=营地保卫战" alt="活动图片">
-                    <div class="activity-date-badge">
-                        <span class="date-month">6月</span>
-                        <span class="date-day">28</span>
+                    <img th:src="${act.thumbnail != null and !act.thumbnail.isEmpty() ? act.thumbnail : '/images/banner_1.png'}" th:alt="${act.title}">
+                    <div class="activity-date-badge" th:if="${act.startDate != null}">
+                        <span class="date-month" th:text="${#temporals.format(act.startDate, 'M月')}"></span>
+                        <span class="date-day" th:text="${#temporals.format(act.startDate, 'dd')}"></span>
                     </div>
                 </div>
                 <div class="activity-info">
-                    <div class="activity-period">2026.06.28 - 2026.06.30</div>
-                    <h3 class="activity-title">营地保卫战·第三季</h3>
-                    <p class="activity-desc">全营集结，抵御丧尸潮入侵！分组防守四大城门，考验默契的时候到了。</p>
-                </div>
-            </a>
-            <a href="#" class="activity-card fade-in" onclick="event.preventDefault()">
-                <div class="activity-img">
-                    <img src="https://placehold.co/400x250/D4A574/ffffff?text=建筑大赛" alt="活动图片">
-                    <div class="activity-date-badge">
-                        <span class="date-month">7月</span>
-                        <span class="date-day">01</span>
-                    </div>
-                </div>
-                <div class="activity-info">
-                    <div class="activity-period">2026.07.01 - 2026.07.07</div>
-                    <h3 class="activity-title">长安建筑大赛</h3>
-                    <p class="activity-desc">发挥创意，打造你心目中的理想家园。前三名获得专属称号和丰厚奖励。</p>
-                </div>
-            </a>
-            <a href="#" class="activity-card fade-in" onclick="event.preventDefault()">
-                <div class="activity-img">
-                    <img src="https://placehold.co/400x250/C4956A/ffffff?text=篝火晚会" alt="活动图片">
-                    <div class="activity-date-badge">
-                        <span class="date-month">7月</span>
-                        <span class="date-day">10</span>
-                    </div>
-                </div>
-                <div class="activity-info">
-                    <div class="activity-period">2026.07.10</div>
-                    <h3 class="activity-title">周末篝火晚会</h3>
-                    <p class="activity-desc">围炉夜话，分享末日故事。小游戏互动环节，参与即有惊喜福利。</p>
-                </div>
-            </a>
-            <a href="#" class="activity-card fade-in" onclick="event.preventDefault()">
-                <div class="activity-img">
-                    <img src="https://placehold.co/400x250/B8865A/ffffff?text=副本挑战" alt="活动图片">
-                    <div class="activity-date-badge">
-                        <span class="date-month">7月</span>
-                        <span class="date-day">15</span>
-                    </div>
-                </div>
-                <div class="activity-info">
-                    <div class="activity-period">2026.07.15 - 2026.07.20</div>
-                    <h3 class="activity-title">深渊副本速通挑战</h3>
-                    <p class="activity-desc">组队挑战最高难度副本，竞速排行。最强队伍赢取传说级营地荣誉。</p>
+                    <div class="activity-period"
+                         th:text="${(act.startDate != null ? #temporals.format(act.startDate, 'yyyy.MM.dd') : '') + (act.endDate != null ? ' - ' + #temporals.format(act.endDate, 'yyyy.MM.dd') : '')}"></div>
+                    <h3 class="activity-title" th:text="${act.title}"></h3>
+                    <p class="activity-desc" th:text="${act.summary}"></p>
                 </div>
             </a>
         </div>
+
+        <!-- 无活动时显示 -->
+        <div class="activities-grid" th:if="${#lists.isEmpty(recentActivities)}" style="text-align:center; padding: 40px 0;">
+            <p style="color: var(--text-muted); font-size: 1.1rem;">🗓️ 暂无进行中的活动，敬请期待！</p>
+        </div>
+
         <div class="activities-more fade-in">
-            <a href="#" class="btn-more" onclick="event.preventDefault()">查看更多活动 →</a>
+            <a href="/activities" class="btn-more">查看更多活动 →</a>
         </div>
     </div>
 </section>
@@ -398,5 +364,6 @@
 <canvas id="particleCanvas"></canvas>
 
 <script th:src="@{/js/main.js}"></script>
+<script th:src="@{/js/auth.js}"></script>
 </body>
 </html>

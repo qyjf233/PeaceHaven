@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活动管理 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>🏮 PeaceHaven 活动管理</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin/users" class="btn-back">用户管理</a>
+            <a href="/" class="btn-back">← 返回前台</a>
+        </div>
+    </header>
+
+    <!-- Flash Message -->
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+
+    <div class="admin-toolbar">
+        <a href="/admin/activities/new" class="btn btn-primary">+ 创建活动</a>
+    </div>
+
+    <table class="admin-table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>缩略图</th>
+            <th>标题</th>
+            <th>模板类型</th>
+            <th>状态</th>
+            <th>开始时间</th>
+            <th>结束时间</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="activity : ${activities}">
+            <td th:text="${activity.id}"></td>
+            <td>
+                <img th:if="${activity.thumbnail}" th:src="${activity.thumbnail}" class="thumb-preview" alt="">
+                <span th:unless="${activity.thumbnail}">-</span>
+            </td>
+            <td th:text="${activity.title}"></td>
+            <td>
+                <span class="badge" th:classappend="'badge-' + ${activity.templateType.name().toLowerCase()}"
+                      th:text="${activity.templateType}"></span>
+            </td>
+            <td>
+                <span class="badge" th:classappend="'status-' + ${activity.status.name().toLowerCase()}"
+                      th:text="${activity.status}"></span>
+            </td>
+            <td th:text="${activity.startDate != null ? #temporals.format(activity.startDate, 'yyyy-MM-dd HH:mm') : '-'}"></td>
+            <td th:text="${activity.endDate != null ? #temporals.format(activity.endDate, 'yyyy-MM-dd HH:mm') : '-'}"></td>
+            <td class="actions">
+                <a th:href="@{/admin/activities/{id}/edit(id=${activity.id})}" class="btn btn-sm btn-info">编辑</a>
+                <form th:if="${activity.status != 'ENDED'}" th:action="@{/admin/activities/{id}/end(id=${activity.id})}" method="post" style="display:inline">
+                    <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('确定要结束此活动吗？')">结束</button>
+                </form>
+                <form th:action="@{/admin/activities/{id}/delete(id=${activity.id})}" method="post" style="display:inline">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('确定要删除此活动吗？此操作不可恢复！')">删除</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(activities)}">
+            <td colspan="8" class="empty-state">暂无活动，点击上方按钮创建</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
