@@ -31,4 +31,12 @@ public class AdminAuthController {
         }
         return "admin/login";
     }
+
+    /**
+     * 建筑大赛作品审核页
+     */
+    @GetMapping("/contest-works")
+    public String contestWorksPage() {
+        return "admin/contest-works";
+    }
 }

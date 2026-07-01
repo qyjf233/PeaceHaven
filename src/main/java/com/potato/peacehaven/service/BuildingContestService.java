@@ -7,6 +7,8 @@ import com.potato.peacehaven.repository.BuildingContestVoteRepository;
 import com.potato.peacehaven.repository.BuildingContestWorkRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -115,5 +117,35 @@ public class BuildingContestService {
         } else {
             return 15;
         }
+    }
+
+    // ==================== 管理员审核功能 ====================
+
+    /**
+     * 分页查询作品（供管理员审核）
+     * @param activityId 活动ID
+     * @param status 状态筛选，null表示全部
+     * @param page 页码（从0开始）
+     * @param size 每页数量
+     */
+    public Page<BuildingContestWork> getWorksForReview(Long activityId, String status, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        if (status != null && !status.isEmpty() && !"ALL".equalsIgnoreCase(status)) {
+            BuildingContestWork.WorkStatus workStatus = BuildingContestWork.WorkStatus.valueOf(status.toUpperCase());
+            return workRepository.findByActivityIdAndStatusOrderByCreatedAtDesc(activityId, workStatus, pageRequest);
+        }
+        return workRepository.findByActivityIdOrderByCreatedAtDesc(activityId, pageRequest);
+    }
+
+    /**
+     * 审核作品（通过/拒绝）
+     */
+    @Transactional
+    public void reviewWork(Long workId, BuildingContestWork.WorkStatus newStatus) {
+        BuildingContestWork work = workRepository.findById(workId)
+                .orElseThrow(() -> new RuntimeException("作品不存在"));
+        work.setStatus(newStatus);
+        workRepository.save(work);
+        log.info("作品 {} 审核结果: {}", workId, newStatus);
     }
 }

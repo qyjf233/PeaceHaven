@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf}">
+    <title>建筑大赛作品审核 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <style>
+        /* === 筛选标签 === */
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-tab {
+            padding: 8px 20px;
+            border: 1px solid var(--admin-border);
+            border-radius: 20px;
+            background: var(--admin-surface);
+            color: var(--admin-text);
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-tab:hover { border-color: var(--admin-primary); color: var(--admin-primary); }
+        .filter-tab.active {
+            background: var(--admin-primary);
+            color: #fff;
+            border-color: var(--admin-primary);
+        }
+        .filter-tab .count {
+            display: inline-block;
+            margin-left: 4px;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            background: rgba(0,0,0,0.08);
+        }
+        .filter-tab.active .count { background: rgba(255,255,255,0.25); }
+
+        /* === 作品卡片网格 === */
+        .works-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .work-card {
+            background: var(--admin-surface);
+            border-radius: var(--admin-radius);
+            box-shadow: var(--admin-shadow);
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .work-card:hover { transform: translateY(-2px); }
+
+        .work-card-image {
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            object-fit: cover;
+            display: block;
+            background: #f0f0f0;
+            cursor: pointer;
+        }
+
+        .work-card-body {
+            padding: 14px 16px;
+        }
+        .work-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--admin-text);
+            margin-bottom: 4px;
+        }
+        .work-card-desc {
+            font-size: 0.82rem;
+            color: var(--admin-text-muted);
+            margin-bottom: 8px;
+            line-height: 1.4;
+            max-height: 2.8em;
+            overflow: hidden;
+        }
+        .work-card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--admin-text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* === 状态徽章 === */
+        .work-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .work-status.PENDING { background: #fff3e0; color: #E65100; }
+        .work-status.APPROVED { background: #e8f5e9; color: #2E7D32; }
+        .work-status.REJECTED { background: #ffebee; color: #C62828; }
+
+        /* === 操作按钮 === */
+        .work-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .work-actions .btn { flex: 1; justify-content: center; }
+
+        /* === 加载更多 === */
+        .load-more-area {
+            text-align: center;
+            padding: 24px;
+        }
+        .load-more-btn {
+            padding: 12px 40px;
+            border: 1px solid var(--admin-border);
+            border-radius: 24px;
+            background: var(--admin-surface);
+            color: var(--admin-text);
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .load-more-btn:hover { border-color: var(--admin-primary); color: var(--admin-primary); }
+        .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .no-works {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--admin-text-muted);
+            font-size: 1rem;
+        }
+        .no-works .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.4; }
+
+        /* === 图片预览弹窗 === */
+        .image-preview-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+        .image-preview-overlay.active { display: flex; }
+        .image-preview-overlay img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        /* === Responsive === */
+        @media (max-width: 1024px) {
+            .works-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .works-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>🏗️ 建筑大赛作品审核</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin/activities" class="btn-back">← 活动管理</a>
+            <a href="/" class="btn-back">返回前台</a>
+        </div>
+    </header>
+
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+
+    <!-- 状态筛选标签 -->
+    <div class="filter-tabs" id="filterTabs">
+        <button class="filter-tab active" data-status="ALL">全部 <span class="count" id="countAll">0</span></button>
+        <button class="filter-tab" data-status="PENDING">待审核 <span class="count" id="countPending">-</span></button>
+        <button class="filter-tab" data-status="APPROVED">已通过 <span class="count" id="countApproved">-</span></button>
+        <button class="filter-tab" data-status="REJECTED">已拒绝 <span class="count" id="countRejected">-</span></button>
+    </div>
+
+    <!-- 作品卡片网格 -->
+    <div class="works-grid" id="worksGrid"></div>
+
+    <!-- 加载更多 -->
+    <div class="load-more-area" id="loadMoreArea" style="display:none;">
+        <button class="load-more-btn" id="loadMoreBtn">加载更多作品</button>
+    </div>
+</div>
+
+<!-- 图片预览弹窗 -->
+<div class="image-preview-overlay" id="imagePreview" onclick="this.classList.remove('active')">
+    <img id="previewImg" src="" alt="预览">
+</div>
+
+<script>
+(function() {
+    var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+    var currentPage = 0;
+    var currentStatus = 'ALL';
+    var hasNext = false;
+    var grid = document.getElementById('worksGrid');
+    var loadMoreArea = document.getElementById('loadMoreArea');
+    var loadMoreBtn = document.getElementById('loadMoreBtn');
+
+    // === 筛选标签切换 ===
+    document.getElementById('filterTabs').addEventListener('click', function(e) {
+        var tab = e.target.closest('.filter-tab');
+        if (!tab) return;
+        document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        currentStatus = tab.dataset.status;
+        resetAndLoad();
+    });
+
+    // === 加载更多 ===
+    loadMoreBtn.addEventListener('click', function() {
+        if (hasNext) loadWorks();
+    });
+
+    // === 图片预览 ===
+    function showPreview(url) {
+        document.getElementById('previewImg').src = url;
+        document.getElementById('imagePreview').classList.add('active');
+    }
+
+    // === 重置并加载 ===
+    function resetAndLoad() {
+        currentPage = 0;
+        grid.innerHTML = '';
+        loadWorks();
+    }
+
+    // === 加载作品 ===
+    function loadWorks() {
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = '加载中...';
+
+        var url = '/admin/api/contest/works?page=' + currentPage;
+        if (currentStatus !== 'ALL') url += '&status=' + currentStatus;
+
+        fetch(url, { headers: { 'X-CSRF-TOKEN': csrfToken } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                hasNext = data.hasNext;
+
+                if (data.works.length === 0 && currentPage === 0) {
+                    grid.innerHTML = '<div class="no-works" style="grid-column:1/-1"><div class="empty-icon">📭</div><p>暂无投稿作品</p></div>';
+                    loadMoreArea.style.display = 'none';
+                    return;
+                }
+
+                data.works.forEach(function(w) {
+                    grid.appendChild(createWorkCard(w));
+                });
+
+                // 更新计数（仅首次全部加载时）
+                if (currentStatus === 'ALL' && currentPage === 0) {
+                    document.getElementById('countAll').textContent = data.totalElements;
+                }
+
+                // 显示/隐藏加载更多
+                loadMoreArea.style.display = hasNext ? 'block' : 'none';
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = '加载更多作品';
+                currentPage++;
+            })
+            .catch(function(err) {
+                console.error('加载失败:', err);
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = '加载失败，点击重试';
+            });
+    }
+
+    // === 创建作品卡片 ===
+    function createWorkCard(w) {
+        var card = document.createElement('div');
+        card.className = 'work-card';
+        card.id = 'work-' + w.id;
+
+        var statusText = { PENDING: '待审核', APPROVED: '已通过', REJECTED: '已拒绝' };
+        var createdAt = w.createdAt ? w.createdAt.substring(0, 16).replace('T', ' ') : '-';
+
+        card.innerHTML =
+            '<img class="work-card-image" src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy" onclick="showPreview(\'' + w.imageUrl + '\')">' +
+            '<div class="work-card-body">' +
+                '<div class="work-card-title">' + escapeHtml(w.title) + '</div>' +
+                (w.description ? '<div class="work-card-desc">' + escapeHtml(w.description) + '</div>' : '') +
+                '<div class="work-card-meta">' +
+                    '<span>👤 ' + escapeHtml(w.authorName) + '</span>' +
+                    '<span>🗳 ' + w.voteCount + '票</span>' +
+                '</div>' +
+                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+                    '<span class="work-status ' + w.status + '">' + statusText[w.status] + '</span>' +
+                    '<span style="font-size:0.78rem; color:#999;">' + createdAt + '</span>' +
+                '</div>' +
+                '<div class="work-actions">' +
+                    (w.status !== 'APPROVED' ? '<button class="btn btn-sm btn-info" onclick="reviewWork(' + w.id + ', \'approve\')">✓ 通过</button>' : '') +
+                    (w.status !== 'REJECTED' ? '<button class="btn btn-sm btn-danger" onclick="reviewWork(' + w.id + ', \'reject\')">✗ 拒绝</button>' : '') +
+                    (w.status === 'APPROVED' ? '<span style="font-size:0.82rem; color:#4CAF50;">已通过审核</span>' : '') +
+                    (w.status === 'REJECTED' ? '<span style="font-size:0.82rem; color:#999;">已拒绝</span>' : '') +
+                '</div>' +
+            '</div>';
+
+        return card;
+    }
+
+    // === 审核操作 ===
+    window.reviewWork = function(workId, action) {
+        if (!confirm(action === 'approve' ? '确认通过该作品？' : '确认拒绝该作品？')) return;
+
+        fetch('/admin/api/contest/works/' + workId + '/review', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ action: action })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                // 重新加载当前页
+                resetAndLoad();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(function() { alert('操作失败，请重试'); });
+    };
+
+    // === 图片预览 ===
+    window.showPreview = showPreview;
+
+    // === HTML转义 ===
+    function escapeHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // === 初始加载 ===
+    loadWorks();
+})();
+</script>
+</body>
+</html>

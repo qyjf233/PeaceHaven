@@ -1,6 +1,8 @@
 package com.potato.peacehaven.repository;
 
 import com.potato.peacehaven.entity.BuildingContestWork;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -19,4 +21,11 @@ public interface BuildingContestWorkRepository extends JpaRepository<BuildingCon
 
     /** 查询指定活动的所有投稿 */
     List<BuildingContestWork> findByActivityIdOrderByCreatedAtDesc(Long activityId);
+
+    /** 分页查询指定活动的作品（按状态筛选） */
+    Page<BuildingContestWork> findByActivityIdAndStatusOrderByCreatedAtDesc(
+            Long activityId, BuildingContestWork.WorkStatus status, Pageable pageable);
+
+    /** 分页查询指定活动的所有作品 */
+    Page<BuildingContestWork> findByActivityIdOrderByCreatedAtDesc(Long activityId, Pageable pageable);
 }
