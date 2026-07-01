@@ -187,6 +187,20 @@ public class BuildingContestController {
         Long activityId = activity.getId();
         List<BuildingContestWork> works = contestService.getApprovedWorks(activityId);
 
+        // 按投稿时间排序，生成作品编号
+        List<BuildingContestWork> sortedByTime = works.stream()
+                .sorted((a, b) -> {
+                    if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
+                    if (a.getCreatedAt() == null) return 1;
+                    if (b.getCreatedAt() == null) return -1;
+                    return a.getCreatedAt().compareTo(b.getCreatedAt());
+                })
+                .collect(Collectors.toList());
+        Map<Long, Integer> workNumberMap = new HashMap<>();
+        for (int i = 0; i < sortedByTime.size(); i++) {
+            workNumberMap.put(sortedByTime.get(i).getId(), i + 1);
+        }
+
         User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
 
         // 获取当前阶段
@@ -214,6 +228,7 @@ public class BuildingContestController {
             m.put("judgeScore", showJudgeScore ? w.getJudgeScore() : null);
             m.put("finalScore", showJudgeScore ? w.getFinalScore() : null);
             m.put("createdAt", w.getCreatedAt() != null ? w.getCreatedAt().toString() : null);
+            m.put("workNumber", workNumberMap.getOrDefault(w.getId(), 0));
             // 标记当前用户是否已投票
             if (user != null) {
                 m.put("hasVoted", contestService.hasVoted(w.getId(), user.getId()));
@@ -309,6 +324,20 @@ public class BuildingContestController {
         ContestPhase phase = contestService.getCurrentPhase(activityId);
         List<BuildingContestWork> works = contestService.getApprovedWorks(activityId);
 
+        // 按投稿时间排序，生成作品编号
+        List<BuildingContestWork> sortedByTimeJ = works.stream()
+                .sorted((a, b) -> {
+                    if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
+                    if (a.getCreatedAt() == null) return 1;
+                    if (b.getCreatedAt() == null) return -1;
+                    return a.getCreatedAt().compareTo(b.getCreatedAt());
+                })
+                .collect(Collectors.toList());
+        Map<Long, Integer> workNumberMapJ = new HashMap<>();
+        for (int i = 0; i < sortedByTimeJ.size(); i++) {
+            workNumberMapJ.put(sortedByTimeJ.get(i).getId(), i + 1);
+        }
+
         List<Map<String, Object>> workList = works.stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", w.getId());
@@ -317,6 +346,7 @@ public class BuildingContestController {
             m.put("imageUrl", w.getImageUrl());
             m.put("authorName", w.getUser().getNickname());
             m.put("authorCampName", w.getUser().getCampName());
+            m.put("workNumber", workNumberMapJ.getOrDefault(w.getId(), 0));
             // 该裁判是否已评分
             Double myScore = contestService.getJudgeScoreForWork(w.getId(), user.getId());
             m.put("myScore", myScore);

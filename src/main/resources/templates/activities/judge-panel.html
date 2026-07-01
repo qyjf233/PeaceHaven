@@ -110,6 +110,24 @@
             object-fit: cover;
             display: block;
         }
+        .judge-card-img-wrap {
+            position: relative;
+            overflow: hidden;
+        }
+        .judge-card-number {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            z-index: 2;
+            line-height: 1;
+        }
 
         .judge-card-body { padding: 16px; }
         .judge-card-title {
@@ -341,7 +359,7 @@
     function renderWorkCard(w, canScore) {
         var cardClass = w.hasScored ? 'judge-card scored' : 'judge-card';
         var html = '<div class="' + cardClass + '">';
-        html += '  <img class="judge-card-img" src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy">';
+        html += '  <div class="judge-card-img-wrap"><span class="judge-card-number">NO.' + w.workNumber + '</span><img class="judge-card-img" src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy"></div>';
         html += '  <div class="judge-card-body">';
         html += '    <div class="judge-card-title">' + w.title + '</div>';
         html += '    <div class="judge-card-author">作者：' + w.authorName + (w.authorCampName ? ' · ' + w.authorCampName : '') + '</div>';
