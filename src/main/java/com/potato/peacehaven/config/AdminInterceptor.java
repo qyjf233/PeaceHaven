@@ -28,7 +28,14 @@ public class AdminInterceptor implements HandlerInterceptor {
             }
         }
 
-        // 未登录或非管理员，重定向到管理员登录页
+        // API 路径返回 JSON 401，页面路径重定向到登录页
+        if (request.getRequestURI().startsWith("/admin/api/")) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"success\":false,\"message\":\"未登录或无管理员权限\"}");
+            return false;
+        }
+
         response.sendRedirect("/admin/login");
         return false;
     }

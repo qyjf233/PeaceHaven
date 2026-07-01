@@ -49,6 +49,7 @@
             <td class="actions">
                 <!-- 修改角色 -->
                 <form th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post" style="display:inline">
+                    <input type="hidden" name="_csrf" th:value="${_csrf}">
                     <input type="hidden" name="role" th:value="${u.role.name() == 'ADMIN' ? 'USER' : 'ADMIN'}">
                     <button type="submit" class="btn btn-sm btn-info"
                             th:text="${u.role.name() == 'ADMIN' ? '降级为USER' : '提升为ADMIN'}"
@@ -56,6 +57,7 @@
                 </form>
                 <!-- 修改状态 -->
                 <form th:action="@{/admin/users/{id}/status(id=${u.id})}" method="post" style="display:inline">
+                    <input type="hidden" name="_csrf" th:value="${_csrf}">
                     <input type="hidden" name="status" th:value="${u.status.name() == 'ACTIVE' ? 'BANNED' : 'ACTIVE'}">
                     <button type="submit" class="btn btn-sm"
                             th:classappend="${u.status.name() == 'ACTIVE' ? 'btn-danger' : 'btn-warning'}"

@@ -11,11 +11,25 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
 @Service
 public class OssService {
+
+    /** 允许的图片 MIME 类型白名单 */
+    private static final Set<String> ALLOWED_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/webp", "image/gif"
+    );
+
+    /** 允许的文件扩展名白名单 */
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+            ".jpg", ".jpeg", ".png", ".webp", ".gif"
+    );
+
+    /** 最大文件大小 5MB */
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     private final OSS ossClient;
     private final String bucketName;
@@ -51,20 +65,20 @@ public class OssService {
             throw new IllegalArgumentException("文件不能为空");
         }
 
-        // 验证文件类型
+        // 验证文件类型（白名单）
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("只能上传图片文件");
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("仅支持 JPG/PNG/WebP/GIF 格式的图片");
         }
 
-        // 验证文件大小（10MB）
-        if (file.getSize() > 10 * 1024 * 1024) {
-            throw new IllegalArgumentException("图片大小不能超过10MB");
+        // 验证文件大小
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("图片大小不能超过5MB");
         }
 
         // 生成OSS对象key：folder/yyyy/MM/dd/uuid.ext
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-        String ext = getExtension(file.getOriginalFilename());
+        String ext = getSafeExtension(file.getOriginalFilename());
         String objectKey = folder + "/" + datePath + "/" + UUID.randomUUID() + ext;
 
         // 上传
@@ -74,9 +88,17 @@ public class OssService {
         return urlPrefix + objectKey;
     }
 
-    private String getExtension(String filename) {
+    /**
+     * 提取并验证文件扩展名（白名单校验，防止伪装扩展名攻击）
+     */
+    private String getSafeExtension(String filename) {
         if (filename == null) return ".jpg";
         int dotIndex = filename.lastIndexOf('.');
-        return dotIndex >= 0 ? filename.substring(dotIndex) : ".jpg";
+        if (dotIndex < 0) return ".jpg";
+        String ext = filename.substring(dotIndex).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new IllegalArgumentException("不支持的文件扩展名: " + ext);
+        }
+        return ext;
     }
 }

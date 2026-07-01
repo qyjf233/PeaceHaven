@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf}">
     <title>长安建筑大赛 - PeaceHaven · 长安</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
@@ -816,7 +817,11 @@
     function handleVote(workId, btn) {
         btn.disabled = true;
         btn.textContent = '投票中...';
-        fetch('/api/contest/vote/' + workId, { method: 'POST' })
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/vote/' + workId, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.success) {
@@ -973,7 +978,11 @@
             formData.append('title', title);
             formData.append('description', desc);
 
-            fetch('/api/contest/submit', { method: 'POST', body: formData })
+            fetch('/api/contest/submit', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content') }
+            })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success) {

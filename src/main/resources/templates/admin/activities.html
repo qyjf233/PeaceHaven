@@ -54,6 +54,7 @@
             <td class="actions">
                 <a th:href="@{/admin/activities/{id}/edit(id=${activity.id})}" class="btn btn-sm btn-info">编辑</a>
                 <form th:action="@{/admin/activities/{id}/delete(id=${activity.id})}" method="post" style="display:inline">
+                    <input type="hidden" name="_csrf" th:value="${_csrf}">
                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('确定要删除此活动吗？此操作不可恢复！')">删除</button>
                 </form>
             </td>

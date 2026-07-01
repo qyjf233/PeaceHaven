@@ -187,7 +187,12 @@ public class AuthController {
         if (user != null) {
             result.put("loggedIn", true);
             result.put("id", user.getId());
-            result.put("phone", user.getPhone());
+            // 手机号脱敏：138****1234
+            String phone = user.getPhone();
+            String maskedPhone = phone != null && phone.length() >= 7
+                    ? phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4)
+                    : phone;
+            result.put("phone", maskedPhone);
             result.put("nickname", user.getNickname());
             result.put("avatar", user.getAvatar());
             result.put("role", user.getRole().name());

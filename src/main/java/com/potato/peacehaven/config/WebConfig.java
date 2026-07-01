@@ -10,11 +10,18 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final AdminInterceptor adminInterceptor;
+    private final CsrfInterceptor csrfInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 管理员鉴权拦截器
         registry.addInterceptor(adminInterceptor)
                 .addPathPatterns("/admin/**")
-                .excludePathPatterns("/admin/login", "/admin/api/**"); // 管理员登录页不拦截
+                .excludePathPatterns("/admin/login");
+
+        // CSRF Token 校验拦截器
+        registry.addInterceptor(csrfInterceptor)
+                .addPathPatterns("/admin/**", "/api/contest/**")
+                .excludePathPatterns("/admin/login", "/api/auth/**");
     }
 }

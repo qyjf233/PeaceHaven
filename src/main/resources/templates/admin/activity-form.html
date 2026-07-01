@@ -16,6 +16,7 @@
     <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
 
     <form th:action="${isEdit ? '/admin/activities/' + form.id : '/admin/activities'}" method="post" class="admin-form">
+        <input type="hidden" name="_csrf" th:value="${_csrf}">
         <div class="form-group">
             <label for="slug">活动标识 (slug) *</label>
             <input type="text" id="slug" name="slug" th:value="${form.slug}" required maxlength="100" placeholder="如：changan-building-contest（用于URL和模板映射）">
