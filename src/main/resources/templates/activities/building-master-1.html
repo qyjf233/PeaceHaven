@@ -216,6 +216,11 @@
             font-weight: 700;
             color: var(--accent-primary);
         }
+        .prize-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
 
         /* Submit Button */
         .submit-area {
@@ -521,12 +526,29 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .contest-hero { height: 340px; }
-            .contest-hero h1 { font-size: 2rem; }
-            .info-grid { grid-template-columns: 1fr; }
-            .judge-grid { grid-template-columns: repeat(3, 1fr); }
-            .prize-grid { grid-template-columns: 1fr; }
-            .works-grid { grid-template-columns: 1fr; }
+            .contest-hero { height: 280px; }
+            .contest-hero h1 { font-size: 1.6rem; }
+            .contest-hero p { font-size: 0.9rem; }
+            .contest-section { padding: 28px 16px; }
+            .section-title { font-size: 1.3rem; margin-bottom: 20px; }
+            .info-grid { grid-template-columns: 1fr; gap: 12px; }
+            .info-card { padding: 16px; }
+            .info-card h3 { font-size: 0.95rem; margin-bottom: 8px; }
+            .info-card p { font-size: 0.85rem; line-height: 1.5; }
+            .rules-list li { padding: 10px 14px; margin-bottom: 8px; font-size: 0.85rem; }
+            .judge-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .judge-card { padding: 14px 8px; }
+            .judge-avatar { width: 42px; height: 42px; font-size: 1.1rem; margin-bottom: 8px; }
+            .judge-name { font-size: 0.82rem; }
+            .judge-title { font-size: 0.72rem; }
+            .prize-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .prize-card { padding: 16px 8px; border-radius: 10px; }
+            .prize-rank { font-size: 1.4rem; margin-bottom: 4px; }
+            .prize-place { font-size: 0.85rem; margin-bottom: 4px; }
+            .prize-desc { font-size: 0.72rem; }
+            .prize-amount { font-size: 1.1rem; }
+            .works-grid { grid-template-columns: 1fr; gap: 16px; }
+            .submit-area { padding: 28px 16px; }
         }
         @media (max-width: 1024px) and (min-width: 769px) {
             .works-grid { grid-template-columns: repeat(2, 1fr); }
@@ -662,6 +684,24 @@
             <div class="prize-card">
                 <div class="prize-rank">🥉</div>
                 <div class="prize-place">第三名</div>
+                <div class="prize-amount">¥8.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">🔥</div>
+                <div class="prize-place">最佳人气奖</div>
+                <div class="prize-desc">票数最多</div>
+                <div class="prize-amount">¥8.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">💡</div>
+                <div class="prize-place">最佳创意奖</div>
+                <div class="prize-desc">评委评定</div>
+                <div class="prize-amount">¥8.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">🎭</div>
+                <div class="prize-place">抽象达人奖</div>
+                <div class="prize-desc">评委评定</div>
                 <div class="prize-amount">¥8.88</div>
             </div>
         </div>
