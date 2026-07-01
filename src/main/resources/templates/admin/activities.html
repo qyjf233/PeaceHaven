@@ -27,9 +27,9 @@
         <thead>
         <tr>
             <th>ID</th>
+            <th>Slug</th>
             <th>缩略图</th>
             <th>标题</th>
-            <th>模板类型</th>
             <th>状态</th>
             <th>开始时间</th>
             <th>结束时间</th>
@@ -39,26 +39,20 @@
         <tbody>
         <tr th:each="activity : ${activities}">
             <td th:text="${activity.id}"></td>
+            <td th:text="${activity.slug}"></td>
             <td>
                 <img th:if="${activity.thumbnail}" th:src="${activity.thumbnail}" class="thumb-preview" alt="">
                 <span th:unless="${activity.thumbnail}">-</span>
             </td>
             <td th:text="${activity.title}"></td>
             <td>
-                <span class="badge" th:classappend="'badge-' + ${activity.templateType.name().toLowerCase()}"
-                      th:text="${activity.templateType}"></span>
-            </td>
-            <td>
-                <span class="badge" th:classappend="'status-' + ${activity.status.name().toLowerCase()}"
-                      th:text="${activity.status}"></span>
+                <span class="badge" th:classappend="'status-' + ${activityService.getStatus(activity).toLowerCase()}"
+                      th:text="${activityService.getStatus(activity)}"></span>
             </td>
             <td th:text="${activity.startDate != null ? #temporals.format(activity.startDate, 'yyyy-MM-dd HH:mm') : '-'}"></td>
             <td th:text="${activity.endDate != null ? #temporals.format(activity.endDate, 'yyyy-MM-dd HH:mm') : '-'}"></td>
             <td class="actions">
                 <a th:href="@{/admin/activities/{id}/edit(id=${activity.id})}" class="btn btn-sm btn-info">编辑</a>
-                <form th:if="${activity.status != 'ENDED'}" th:action="@{/admin/activities/{id}/end(id=${activity.id})}" method="post" style="display:inline">
-                    <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('确定要结束此活动吗？')">结束</button>
-                </form>
                 <form th:action="@{/admin/activities/{id}/delete(id=${activity.id})}" method="post" style="display:inline">
                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('确定要删除此活动吗？此操作不可恢复！')">删除</button>
                 </form>

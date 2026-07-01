@@ -389,7 +389,7 @@
 
     // === 状态文本映射 ===
     const statusMap = { ONGOING: '进行中', UPCOMING: '即将开始', ENDED: '已结束' };
-    const typeMap = { VOTE: '🗳 投票', LEADERBOARD: '🏆 排行', BASIC: '📋 基础' };
+    
 
     // === 渲染卡片 ===
     function renderCards(activities) {
@@ -401,12 +401,12 @@
             var imgSrc = a.thumbnail || '/images/banner_1.png';
             var period = formatDate(a.startDate) + (a.endDate ? ' - ' + formatDate(a.endDate) : '');
             var statusLabel = statusMap[a.status] || a.status;
-            var typeLabel = typeMap[a.templateType] || '📋 基础';
-            return '<a href="/activities/' + a.id + '" class="activity-list-card" style="animation-delay:' + (i * 0.06) + 's">' +
+            
+            return '<a href="/activities/' + a.slug + '" class="activity-list-card" style="animation-delay:' + (i * 0.06) + 's">' +
                 '<div class="activity-list-img">' +
                     '<img src="' + imgSrc + '" alt="' + a.title + '">' +
                     '<span class="activity-status-badge badge-' + a.status.toLowerCase() + '">' + statusLabel + '</span>' +
-                    '<span class="activity-type-tag">' + typeLabel + '</span>' +
+                    
                 '</div>' +
                 '<div class="activity-list-info">' +
                     '<div class="activity-list-period">' + period + '</div>' +

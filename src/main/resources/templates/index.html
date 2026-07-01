@@ -243,7 +243,7 @@
         </div>
 
         <div class="activities-grid" th:if="${!#lists.isEmpty(recentActivities)}">
-            <a th:each="act : ${recentActivities}" th:href="@{/activities/{id}(id=${act.id})}" class="activity-card fade-in">
+            <a th:each="act : ${recentActivities}" th:href="@{/activities/{slug}(slug=${act.slug})}" class="activity-card fade-in">
                 <div class="activity-img">
                     <img th:src="${act.thumbnail != null and !act.thumbnail.isEmpty() ? act.thumbnail : '/images/banner_1.png'}" th:alt="${act.title}">
                     <div class="activity-date-badge" th:if="${act.startDate != null}">
