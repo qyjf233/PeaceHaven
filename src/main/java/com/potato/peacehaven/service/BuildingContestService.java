@@ -141,6 +141,27 @@ public class BuildingContestService {
     }
 
     /**
+     * 删除用户自己的作品（及关联投票记录）
+     * @return true 如果作品之前是已通过状态（有投票记录被删除）
+     */
+    @Transactional
+    public boolean deleteOwnWork(Long activityId, Long userId) {
+        BuildingContestWork work = workRepository.findByActivityIdAndUserId(activityId, userId)
+                .orElseThrow(() -> new RuntimeException("你还没有投稿作品"));
+
+        boolean wasApproved = (work.getStatus() == BuildingContestWork.WorkStatus.APPROVED);
+
+        // 始终先删除关联的投票记录，避免外键约束冲突
+        voteRepository.deleteByWorkId(work.getId());
+
+        // 再删除作品
+        workRepository.delete(work);
+        log.info("用户 {} 删除了作品 {}", userId, work.getTitle());
+
+        return wasApproved;
+    }
+
+    /**
      * 根据票数排名计算网络投票得分
      * 第1名30分，第2名28分，第3名26分，第4名24分，第5名22分，
      * 第6~10名20分，第11~20名18分，第21~30名16分，其余有效作品15分

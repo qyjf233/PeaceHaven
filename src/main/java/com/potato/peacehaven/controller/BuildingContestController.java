@@ -148,6 +148,33 @@ public class BuildingContestController {
     }
 
     /**
+     * 删除自己的投稿作品
+     */
+    @PostMapping("/delete-work")
+    public ResponseEntity<Map<String, Object>> deleteWork(HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录");
+            return ResponseEntity.ok(result);
+        }
+
+        try {
+            Activity activity = activityService.getActivityBySlug("building-master-1");
+            boolean wasApproved = contestService.deleteOwnWork(activity.getId(), user.getId());
+            result.put("success", true);
+            result.put("message", wasApproved ? "作品已删除，关联投票记录已一并清除" : "作品已删除");
+        } catch (RuntimeException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * 获取已通过审核的作品列表
      */
     @GetMapping("/works")

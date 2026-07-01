@@ -17,4 +17,7 @@ public interface BuildingContestVoteRepository extends JpaRepository<BuildingCon
 
     /** 查询用户对某作品的投票记录（用于撤回） */
     Optional<BuildingContestVote> findByWorkIdAndUserId(Long workId, Long userId);
+
+    /** 删除某作品的所有投票记录 */
+    void deleteByWorkId(Long workId);
 }

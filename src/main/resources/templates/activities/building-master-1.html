@@ -255,6 +255,21 @@
             font-size: 0.88rem;
             color: var(--text-muted);
         }
+        .btn-delete-work {
+            margin-left: 10px;
+            padding: 4px 14px;
+            border-radius: 16px;
+            border: 1px solid var(--danger, #e74c3c);
+            background: transparent;
+            color: var(--danger, #e74c3c);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-delete-work:hover {
+            background: var(--danger, #e74c3c);
+            color: #fff;
+        }
 
         /* Works Gallery */
         .works-grid {
@@ -624,7 +639,7 @@
         <div class="info-grid">
             <div class="info-card">
                 <h3>💡 展示创意</h3>
-                <p>展示营地成员的建筑创意，让每一位建造者的才华被看见</p>
+                <p>展示建筑创意，让每一位建造者的才华被看见</p>
             </div>
             <div class="info-card">
                 <h3>🤝 交流技巧</h3>
@@ -632,11 +647,11 @@
             </div>
             <div class="info-card">
                 <h3>🏆 评选佳作</h3>
-                <p>评选出本期最具创意、最具观赏性的庄园作品</p>
+                <p>评选出本期最具创意的庄园作品</p>
             </div>
             <div class="info-card">
                 <h3>🎁 赢取奖励</h3>
-                <p>前三名可获得现金红包奖励，第一名38.88元</p>
+                <p>前三名可获得现金红包奖励，第一名66.66元</p>
             </div>
         </div>
     </section>
@@ -698,12 +713,12 @@
             <div class="prize-card">
                 <div class="prize-rank">🥇</div>
                 <div class="prize-place">第一名</div>
-                <div class="prize-amount">¥38.88</div>
+                <div class="prize-amount">¥66.66</div>
             </div>
             <div class="prize-card">
                 <div class="prize-rank">🥈</div>
                 <div class="prize-place">第二名</div>
-                <div class="prize-amount">¥28.88</div>
+                <div class="prize-amount">¥38.88</div>
             </div>
             <div class="prize-card">
                 <div class="prize-rank">🥉</div>
@@ -757,12 +772,12 @@
         <h2 class="section-title">活动须知</h2>
         <div class="notice-box">
             <ul>
-                <li>投稿作品须为本人庄园</li>
+                <li>投稿作品须为 会员服 投稿人本人庄园</li>
                 <li>不得盗用、冒用他人作品</li>
                 <li>不得恶意拉票、刷票或使用作弊行为</li>
                 <li>主办方有权取消违规作品参赛资格</li>
                 <li>投稿即视为同意活动期间展示作品</li>
-                <li>本活动最终解释权归营地主办方所有</li>
+                <li>本活动最终解释权归主办方所有</li>
             </ul>
         </div>
     </section>
@@ -937,12 +952,11 @@
 
     // === 更新投稿区域状态 ===
     function updateSubmitArea() {
-        // 依赖 auth.js 暴露的 currentUser — 通过 /api/auth/me 判断
         fetch('/api/auth/me')
             .then(function(r) { return r.json(); })
             .then(function(user) {
                 if (!user.loggedIn) {
-                    submitStatus.textContent = '登录后可投稿，每人仅限一次';
+                    submitStatus.textContent = '登录后可投稿，每人仅限1份作品';
                     submitBtn.onclick = function() {
                         var loginBtn = document.getElementById('loginBtn');
                         if (loginBtn) loginBtn.click();
@@ -950,22 +964,56 @@
                 } else if (myWorkStatus === 'APPROVED') {
                     submitBtn.disabled = true;
                     submitBtn.textContent = '已投稿';
-                    submitStatus.textContent = '你的作品已通过审核 ✅';
+                    submitStatus.innerHTML = '你的作品已通过审核 ✅ <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>';
+                    bindDeleteWork('APPROVED');
                 } else if (myWorkStatus === 'PENDING') {
                     submitBtn.disabled = true;
                     submitBtn.textContent = '已投稿';
-                    submitStatus.textContent = '你的作品正在审核中，请耐心等待 ⏳';
+                    submitStatus.innerHTML = '你的作品正在审核中，请耐心等待 ⏳ <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>';
+                    bindDeleteWork('PENDING');
                 } else if (myWorkStatus === 'REJECTED') {
                     submitBtn.disabled = true;
                     submitBtn.textContent = '已投稿';
-                    submitStatus.textContent = '你的作品未通过审核，请联系管理员 ❌';
+                    submitStatus.innerHTML = '你的作品未通过审核，请联系管理员 ❌ <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>';
+                    bindDeleteWork('REJECTED');
                 } else {
                     submitBtn.disabled = false;
                     submitBtn.textContent = '投稿我的作品';
-                    submitStatus.textContent = '登录后可投稿，每人仅限一次';
+                    submitStatus.textContent = '登录后可投稿，每人仅限1份作品';
                     submitBtn.onclick = openSubmitModal;
                 }
             });
+    }
+    
+    // === 删除作品绑定 ===
+    function bindDeleteWork(status) {
+        document.getElementById('deleteWorkBtn').addEventListener('click', function() {
+            var msg = status === 'APPROVED'
+                ? '确定要删除这个作品吗？\n\n⚠️ 该作品已审核通过，删除后所有投票记录也会一并清除，且不可恢复！'
+                : '确定要删除这个作品吗？此操作不可恢复。';
+            if (!confirm(msg)) return;
+    
+            var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            fetch('/api/contest/delete-work', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrfToken }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    myWorkStatus = null;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '投稿我的作品';
+                    submitStatus.textContent = data.message;
+                    submitBtn.onclick = openSubmitModal;
+                    // 刷新作品列表
+                    loadWorks();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(function() { alert('网络错误，请重试'); });
+        });
     }
 
     // === 投稿弹窗 ===
