@@ -48,6 +48,7 @@ public class ActivityController {
             m.put("summary", a.getSummary());
             m.put("thumbnail", a.getThumbnail());
             m.put("status", activityService.getStatus(a));
+            m.put("viewCount", a.getViewCount() != null ? a.getViewCount() : 0L);
             m.put("startDate", a.getStartDate() != null ? a.getStartDate().toString() : null);
             m.put("endDate", a.getEndDate() != null ? a.getEndDate().toString() : null);
             return m;
@@ -68,6 +69,8 @@ public class ActivityController {
     @GetMapping("/activities/{slug}")
     public String detail(@PathVariable String slug, Model model) {
         Activity activity = activityService.getActivityBySlug(slug);
+        // 增加浏览量
+        activityService.incrementViewCount(activity.getId());
         model.addAttribute("activity", activity);
         model.addAttribute("status", activityService.getStatus(activity));
         return "activities/" + slug;

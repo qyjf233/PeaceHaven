@@ -260,6 +260,11 @@
                          th:text="${(act.startDate != null ? #temporals.format(act.startDate, 'yyyy.MM.dd') : '') + (act.endDate != null ? ' - ' + #temporals.format(act.endDate, 'yyyy.MM.dd') : '')}"></div>
                     <h3 class="activity-title" th:text="${act.title}"></h3>
                     <p class="activity-desc" th:text="${act.summary}"></p>
+                    <div class="activity-view-count">
+                        <span class="eye-icon">👁️</span>
+                        <span th:text="${act.viewCount != null ? act.viewCount : 0}">0</span>
+                        <span>次浏览</span>
+                    </div>
                 </div>
             </a>
         </div>

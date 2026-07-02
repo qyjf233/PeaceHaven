@@ -200,6 +200,20 @@
             overflow: hidden;
         }
 
+        .activity-view-count {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .activity-view-count .eye-icon {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
         /* Pagination */
         .pagination {
             display: flex;
@@ -421,6 +435,10 @@
                     '<div class="activity-list-period">' + period + '</div>' +
                     '<h3 class="activity-list-title">' + a.title + '</h3>' +
                     '<p class="activity-list-desc">' + (a.summary || '') + '</p>' +
+                    '<div class="activity-view-count">' +
+                        '<span class="eye-icon">👁️</span>' +
+                        '<span>' + (a.viewCount || 0) + ' 次浏览</span>' +
+                    '</div>' +
                 '</div>' +
             '</a>';
         }).join('');

@@ -54,6 +54,12 @@ public class Activity {
     @Comment("活动结束时间")
     private LocalDateTime endDate;
 
+    /** 浏览次数，默认0 */
+    @Column(name = "view_count", nullable = false)
+    @Comment("浏览次数")
+    @Builder.Default
+    private Long viewCount = 0L;
+
     /** 记录创建时间，自动生成 */
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

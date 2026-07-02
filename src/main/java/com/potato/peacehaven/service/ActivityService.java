@@ -54,6 +54,17 @@ public class ActivityService {
                 .orElseThrow(() -> new RuntimeException("活动不存在: " + slug));
     }
 
+    /**
+     * 增加活动浏览量
+     */
+    @Transactional
+    public void incrementViewCount(Long id) {
+        activityRepository.findById(id).ifPresent(activity -> {
+            activity.setViewCount(activity.getViewCount() + 1);
+            activityRepository.save(activity);
+        });
+    }
+
     public List<Activity> getRecentActivities() {
         return activityRepository.findTop4ByEndDateAfterOrderByStartDateAsc(LocalDateTime.now());
     }

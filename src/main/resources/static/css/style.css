@@ -784,6 +784,20 @@ a {
     overflow: hidden;
 }
 
+.activity-view-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.activity-view-count .eye-icon {
+    font-size: 0.95rem;
+    opacity: 0.7;
+}
+
 .activities-more {
     text-align: center;
     margin-top: 40px;

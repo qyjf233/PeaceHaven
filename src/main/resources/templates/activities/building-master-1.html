@@ -64,6 +64,18 @@
             margin: 0 auto;
             text-shadow: 0 1px 6px rgba(0,0,0,0.5);
         }
+        .contest-view-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(6px);
+            color: rgba(255,255,255,0.9);
+            font-size: 0.85rem;
+        }
 
         /* Sections */
         .contest-section {
@@ -859,6 +871,11 @@
             <div class="contest-badge">🏗️ 建筑大赛</div>
             <h1>长安建筑大赛</h1>
             <p>展示建筑创意，交流建造技巧，评选最具创意与观赏性的庄园作品</p>
+            <div class="contest-view-count">
+                <span>👁️</span>
+                <span th:text="${activity.viewCount != null ? activity.viewCount : 0}">0</span>
+                <span>次浏览</span>
+            </div>
         </div>
     </section>
 
