@@ -150,6 +150,58 @@ public class BuildingContestController {
     }
 
     /**
+     * 投抽象票（每人每活动限一票，已投其他作品则自动改投）
+     */
+    @PostMapping("/abstract-vote/{workId}")
+    public ResponseEntity<Map<String, Object>> abstractVote(@PathVariable Long workId, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录后再投票");
+            return ResponseEntity.ok(result);
+        }
+
+        try {
+            contestService.abstractVoteForWork(workId, user);
+            result.put("success", true);
+            result.put("message", "抽象票已投出！");
+        } catch (RuntimeException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 撤回抽象票
+     */
+    @PostMapping("/abstract-unvote/{workId}")
+    public ResponseEntity<Map<String, Object>> abstractUnvote(@PathVariable Long workId, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录");
+            return ResponseEntity.ok(result);
+        }
+
+        try {
+            contestService.retractAbstractVote(workId, user);
+            result.put("success", true);
+            result.put("message", "已撤回抽象票");
+        } catch (RuntimeException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * 删除自己的投稿作品
      */
     @PostMapping("/delete-work")
@@ -215,6 +267,11 @@ public class BuildingContestController {
         boolean canSubmit = (phase == ContestPhase.SUBMISSION) && !userIsJudge;
         boolean canDelete = (phase == ContestPhase.SUBMISSION || phase == ContestPhase.REVIEW) && !userIsJudge;
 
+        // 查询当前用户的抽象票投给了哪个作品
+        Long abstractVotedWorkId = (user != null)
+                ? contestService.getAbstractVotedWorkId(activityId, user.getId())
+                : null;
+
         List<Map<String, Object>> workList = sortedByTime.stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", w.getId());
@@ -232,9 +289,12 @@ public class BuildingContestController {
             // 标记当前用户是否已投票
             if (user != null) {
                 m.put("hasVoted", contestService.hasVoted(w.getId(), user.getId()));
+                m.put("hasAbstractVoted", abstractVotedWorkId != null && abstractVotedWorkId.equals(w.getId()));
             } else {
                 m.put("hasVoted", false);
+                m.put("hasAbstractVoted", false);
             }
+            m.put("abstractVoteCount", showVoteCount ? w.getAbstractVoteCount() : -1);
             return m;
         }).collect(Collectors.toList());
 

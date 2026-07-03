@@ -64,6 +64,12 @@ public class BuildingContestWork {
     @Builder.Default
     private Integer voteCount = 0;
 
+    /** 抽象票票数（每人限投一票） */
+    @Column(name = "abstract_vote_count", nullable = false)
+    @Comment("抽象票票数")
+    @Builder.Default
+    private Integer abstractVoteCount = 0;
+
     /** 裁判平均分（满分10分，暂未评分为null） */
     @Column(name = "judge_score")
     @Comment("裁判平均分（满分10）")

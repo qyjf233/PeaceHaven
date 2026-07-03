@@ -1,5 +1,6 @@
 package com.potato.peacehaven.service;
 
+import com.potato.peacehaven.entity.BuildingContestAbstractVote;
 import com.potato.peacehaven.entity.BuildingContestConfig;
 import com.potato.peacehaven.entity.BuildingContestConfig.ContestPhase;
 import com.potato.peacehaven.entity.BuildingContestJudge;
@@ -7,6 +8,7 @@ import com.potato.peacehaven.entity.BuildingContestJudgeScore;
 import com.potato.peacehaven.entity.BuildingContestVote;
 import com.potato.peacehaven.entity.BuildingContestWork;
 import com.potato.peacehaven.entity.User;
+import com.potato.peacehaven.repository.BuildingContestAbstractVoteRepository;
 import com.potato.peacehaven.repository.BuildingContestConfigRepository;
 import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.repository.BuildingContestJudgeScoreRepository;
@@ -28,6 +30,7 @@ public class BuildingContestService {
 
     private final BuildingContestWorkRepository workRepository;
     private final BuildingContestVoteRepository voteRepository;
+    private final BuildingContestAbstractVoteRepository abstractVoteRepository;
     private final BuildingContestConfigRepository configRepository;
     private final BuildingContestJudgeRepository judgeRepository;
     private final BuildingContestJudgeScoreRepository judgeScoreRepository;
@@ -163,6 +166,100 @@ public class BuildingContestService {
      */
     public boolean hasVoted(Long workId, Long userId) {
         return voteRepository.existsByWorkIdAndUserId(workId, userId);
+    }
+
+    // ==============================
+    // 抽象票（每人每活动限一票）
+    // ==============================
+
+    /**
+     * 投抽象票：如果已投给其他作品则自动改投
+     */
+    @Transactional
+    public void abstractVoteForWork(Long workId, User user) {
+        BuildingContestWork work = workRepository.findById(workId)
+                .orElseThrow(() -> new RuntimeException("作品不存在"));
+
+        Long activityId = work.getActivityId();
+
+        // 裁判不可投票
+        if (isJudge(activityId, user.getId())) {
+            throw new RuntimeException("裁判不可投票");
+        }
+
+        // 阶段检查
+        ContestPhase phase = getCurrentPhase(activityId);
+        if (phase != ContestPhase.VOTING) {
+            throw new RuntimeException(getPhaseRestrictionMessage(phase, "投票"));
+        }
+
+        if (work.getStatus() != BuildingContestWork.WorkStatus.APPROVED) {
+            throw new RuntimeException("该作品尚未通过审核");
+        }
+
+        // 检查是否已投给同一作品（取消操作应走撤回接口）
+        var existingVote = abstractVoteRepository.findByActivityIdAndUserId(activityId, user.getId());
+        if (existingVote.isPresent()) {
+            if (existingVote.get().getWork().getId().equals(workId)) {
+                throw new RuntimeException("你已经给这个作品投了抽象票");
+            }
+            // 已投给其他作品 → 改投：先撤回旧票
+            BuildingContestAbstractVote oldVote = existingVote.get();
+            BuildingContestWork oldWork = oldVote.getWork();
+            oldWork.setAbstractVoteCount(Math.max(0, oldWork.getAbstractVoteCount() - 1));
+            workRepository.save(oldWork);
+            abstractVoteRepository.delete(oldVote);
+            log.info("用户 {} 撤回对作品 {} 的抽象票，改投作品 {}", user.getNickname(), oldWork.getTitle(), work.getTitle());
+        }
+
+        // 投新票
+        BuildingContestAbstractVote newVote = BuildingContestAbstractVote.builder()
+                .activityId(activityId)
+                .work(work)
+                .user(user)
+                .build();
+        abstractVoteRepository.save(newVote);
+
+        // 更新作品抽象票数
+        work.setAbstractVoteCount(work.getAbstractVoteCount() + 1);
+        workRepository.save(work);
+
+        log.info("用户 {} 给作品 {} 投了抽象票", user.getNickname(), work.getTitle());
+    }
+
+    /**
+     * 撤回抽象票
+     */
+    @Transactional
+    public void retractAbstractVote(Long workId, User user) {
+        BuildingContestWork work = workRepository.findById(workId)
+                .orElseThrow(() -> new RuntimeException("作品不存在"));
+
+        Long activityId = work.getActivityId();
+        var vote = abstractVoteRepository.findByActivityIdAndUserId(activityId, user.getId())
+                .orElseThrow(() -> new RuntimeException("你还没有投过抽象票"));
+
+        if (!vote.getWork().getId().equals(workId)) {
+            throw new RuntimeException("你的抽象票投给了其他作品");
+        }
+
+        // 删除投票记录
+        abstractVoteRepository.delete(vote);
+
+        // 更新票数
+        work.setAbstractVoteCount(Math.max(0, work.getAbstractVoteCount() - 1));
+        workRepository.save(work);
+
+        log.info("用户 {} 撤回了对作品 {} 的抽象票", user.getNickname(), work.getTitle());
+    }
+
+    /**
+     * 查询用户在指定活动的抽象票投给了哪个作品
+     */
+    public Long getAbstractVotedWorkId(Long activityId, Long userId) {
+        return abstractVoteRepository.findByActivityIdAndUserId(activityId, userId)
+                .map(v -> v.getWork().getId())
+                .orElse(null);
     }
 
     /**

@@ -566,8 +566,18 @@
         }
         .work-card-footer {
             display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .work-card-footer .work-card-actions {
+            display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 8px;
+        }
+        .work-card-footer .work-card-actions .btn-vote,
+        .work-card-footer .work-card-actions .btn-abstract {
+            flex: 1;
+            text-align: center;
         }
         .work-scores {
             display: flex;
@@ -605,6 +615,30 @@
             background: var(--danger, #e74c3c);
             border-color: var(--danger, #e74c3c);
             color: #fff;
+        }
+        .btn-abstract {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid #ff6b6b;
+            background: transparent;
+            color: #ff6b6b;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-abstract:hover {
+            background: #ff6b6b;
+            color: #fff;
+        }
+        .btn-abstract.voted {
+            background: #ff6b6b;
+            border-color: #ff6b6b;
+            color: #fff;
+        }
+        .btn-abstract.voted:hover {
+            background: var(--danger, #e74c3c);
+            border-color: var(--danger, #e74c3c);
         }
 
         /* Vote Info Bar */
@@ -1019,7 +1053,7 @@
                 <div class="prize-amount">¥8.88</div>
             </div>
             <div class="prize-card">
-                <div class="prize-rank">🎭</div>
+                <div class="prize-rank">🤡</div>
                 <div class="prize-place">抽象达人奖</div>
                 <div class="prize-desc">评委评定</div>
                 <div class="prize-amount">¥8.88</div>
@@ -1157,16 +1191,29 @@
             var voteBtnHtml = '';
             if (canVote) {
                 var voteBtnClass = w.hasVoted ? 'btn-vote voted' : 'btn-vote';
-                var voteBtnText = w.hasVoted ? '已投票' : '投票';
+                var voteBtnText = w.hasVoted ? '🗳 已投票' : '🗳 投票';
                 voteBtnHtml = '<button class="' + voteBtnClass + '" data-work-id="' + w.id + '">' + voteBtnText + '</button>';
             } else if (w.hasVoted) {
-                voteBtnHtml = '<span class="btn-vote voted" style="cursor:default">已投票</span>';
+                voteBtnHtml = '<span class="btn-vote voted" style="cursor:default; flex:1; text-align:center">🗳 已投票</span>';
+            }
+
+            // 抽象票按钮
+            var abstractBtnHtml = '';
+            if (canVote) {
+                var abstractBtnClass = w.hasAbstractVoted ? 'btn-abstract voted' : 'btn-abstract';
+                var abstractBtnText = w.hasAbstractVoted ? '已抽象 ✓' : '🤡 抽象';
+                abstractBtnHtml = '<button class="' + abstractBtnClass + '" data-abstract-work-id="' + w.id + '">' + abstractBtnText + '</button>';
+            } else if (w.hasAbstractVoted) {
+                abstractBtnHtml = '<span class="btn-abstract voted" style="cursor:default">已抽象 ✓</span>';
             }
 
             // 根据阶段控制票数显示
             var voteCountText = showVoteCount
                 ? '🗳 ' + w.voteCount + ' 票'
                 : '🗳 票数未公开';
+            var abstractCountText = showVoteCount
+                ? (w.abstractVoteCount >= 0 ? ' · 🤡 ' + w.abstractVoteCount + ' 抽象' : '')
+                : '';
 
             // 评委分数仅在 RESULTS 阶段显示
             var scoreHtml = '';
@@ -1186,12 +1233,12 @@
                 '</div>' +
                 '<div class="work-card-body">' +
                     '<div class="work-card-title">' + w.title + '</div>' +
-                    '<div class="work-card-author">by ' + w.authorName + '</div>' +
+                    '<div class="work-card-author">作者: ' + w.authorName + '</div>' +
                     (w.description ? '<div class="work-card-desc">' + w.description + '</div>' : '') +
                     scoreHtml +
                     '<div class="work-card-footer">' +
-                        '<span class="work-vote-count">' + voteCountText + '</span>' +
-                        voteBtnHtml +
+                        '<span class="work-vote-count">' + voteCountText + abstractCountText + '</span>' +
+                        '<div class="work-card-actions">' + voteBtnHtml + abstractBtnHtml + '</div>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -1206,6 +1253,18 @@
                         handleUnvote(workId, this);
                     } else {
                         handleVote(workId, this);
+                    }
+                });
+            });
+
+            // 绑定抽象票事件
+            worksGrid.querySelectorAll('.btn-abstract').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var workId = parseInt(this.dataset.abstractWorkId);
+                    if (this.classList.contains('voted')) {
+                        handleAbstractUnvote(workId, this);
+                    } else {
+                        handleAbstractVote(workId, this);
                     }
                 });
             });
@@ -1275,7 +1334,7 @@
             .then(function(data) {
                 if (data.success) {
                     btn.classList.add('voted');
-                    btn.textContent = '已投票';
+                    btn.textContent = '🗳 已投票';
                     // 更新票数
                     var countEl = btn.parentElement.querySelector('.work-vote-count');
                     if (countEl) {
@@ -1290,13 +1349,13 @@
                 } else {
                     alert(data.message);
                     btn.disabled = false;
-                    btn.textContent = '投票';
+                    btn.textContent = '🗳 投票';
                 }
             })
             .catch(function() {
                 alert('网络错误，请重试');
                 btn.disabled = false;
-                btn.textContent = '投票';
+                btn.textContent = '🗳 投票';
             });
     }
 
@@ -1314,7 +1373,7 @@
             .then(function(data) {
                 if (data.success) {
                     btn.classList.remove('voted');
-                    btn.textContent = '投票';
+                    btn.textContent = '🗳 投票';
                     // 更新票数
                     var countEl = btn.parentElement.querySelector('.work-vote-count');
                     if (countEl) {
@@ -1334,7 +1393,70 @@
             .catch(function() {
                 alert('网络错误，请重试');
                 btn.disabled = false;
-                btn.textContent = '已投票';
+                btn.textContent = '🗳 已投票';
+            });
+    }
+
+    // === 投抽象票 ===
+    function handleAbstractVote(workId, btn) {
+        btn.disabled = true;
+        btn.textContent = '投集中...';
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/abstract-vote/' + workId, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    // 先把所有抽象票按钮重置为未投状态
+                    worksGrid.querySelectorAll('.btn-abstract').forEach(function(b) {
+                        b.classList.remove('voted');
+                        b.textContent = '🤡 抽象';
+                    });
+                    // 标记当前按钮为已投
+                    btn.classList.add('voted');
+                    btn.textContent = '已抽象 ✓';
+                    // 刷新作品列表以更新抽象票数
+                    loadWorks();
+                } else {
+                    alert(data.message);
+                }
+                btn.disabled = false;
+            })
+            .catch(function() {
+                alert('网络错误，请重试');
+                btn.disabled = false;
+                btn.textContent = '🤡 抽象';
+            });
+    }
+
+    // === 撤回抽象票 ===
+    function handleAbstractUnvote(workId, btn) {
+        if (!confirm('确定要撤回对这个作品的抽象票吗？')) return;
+        btn.disabled = true;
+        btn.textContent = '撤回中...';
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/abstract-unvote/' + workId, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    btn.classList.remove('voted');
+                    btn.textContent = '🤡 抽象';
+                    // 刷新作品列表以更新抽象票数
+                    loadWorks();
+                } else {
+                    alert(data.message);
+                }
+                btn.disabled = false;
+            })
+            .catch(function() {
+                alert('网络错误，请重试');
+                btn.disabled = false;
+                btn.textContent = '已抽象 ✓';
             });
     }
 
