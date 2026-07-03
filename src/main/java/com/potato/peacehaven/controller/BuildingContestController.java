@@ -215,7 +215,7 @@ public class BuildingContestController {
         boolean canSubmit = (phase == ContestPhase.SUBMISSION) && !userIsJudge;
         boolean canDelete = (phase == ContestPhase.SUBMISSION || phase == ContestPhase.REVIEW) && !userIsJudge;
 
-        List<Map<String, Object>> workList = works.stream().map(w -> {
+        List<Map<String, Object>> workList = sortedByTime.stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", w.getId());
             m.put("title", w.getTitle());
