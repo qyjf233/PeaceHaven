@@ -47,25 +47,27 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         String queryString = request.getQueryString();
         String fullUri = queryString != null ? uri + "?" + queryString : uri;
         String contentType = request.getContentType();
+        boolean isJson = isJsonContentType(contentType);
+        boolean isMultipartReq = isMultipart(contentType);
 
         // 提取请求参数（表单参数）
         String reqParams = extractRequestParams(request);
 
-        // 提取请求体（仅对 JSON 请求记录 body）
-        String reqBody = "";
-        if (isJsonContentType(contentType)) {
-            reqBody = extractRequestBody(wrappedRequest);
-        } else if (isMultipart(contentType)) {
-            // 文件上传只记录文件名和大小，不记录二进制内容
-            reqBody = extractMultipartInfo(request);
-        }
-
         try {
+            // 先放行请求，让 Controller 正常处理
             filterChain.doFilter(wrappedRequest, wrappedResponse);
         } finally {
             try {
                 long duration = System.currentTimeMillis() - startTime;
                 int status = wrappedResponse.getStatus();
+
+                // 从缓存中提取请求体（在 Controller 处理完之后读，不影响请求流）
+                String reqBody = "";
+                if (isJson) {
+                    reqBody = extractRequestBodyFromCache(wrappedRequest);
+                } else if (isMultipartReq) {
+                    reqBody = extractMultipartInfo(request);
+                }
 
                 // 提取响应体
                 String respBody = extractResponseBody(wrappedResponse);
@@ -160,12 +162,12 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 提取 JSON 请求体
+     * 从缓存中提取 JSON 请求体（在 Controller 处理完请求后调用）
+     * ContentCachingRequestWrapper 会在 Controller 读取 body 时自动缓存，
+     * 我们直接从缓存拿即可，不影响请求流
      */
-    private String extractRequestBody(ContentCachingRequestWrapper request) {
+    private String extractRequestBodyFromCache(ContentCachingRequestWrapper request) {
         try {
-            // 触发缓存填充
-            request.getInputStream().readAllBytes();
             byte[] buf = request.getContentAsByteArray();
             if (buf.length == 0) return "";
             String body = new String(buf, StandardCharsets.UTF_8);

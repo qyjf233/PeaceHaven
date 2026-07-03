@@ -14,15 +14,15 @@
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
-            <charset>UTF-8</charset>
+            <!-- Windows 控制台默认 GBK 编码，与 PowerShell 保持一致，中文不乱码 -->
+            <charset>GBK</charset>
         </encoder>
     </appender>
 
     <!-- =============================================== -->
     <!-- 2. 阿里云 SLS 日志（仅在配置了 endpoint 时启用） -->
     <!-- =============================================== -->
-    <if>
-        <condition>property("slsEndpoint").length() > 0</condition>
+    <if condition='property("slsEndpoint").length() > 0'>
         <then>
             <appender name="SLS" class="com.aliyun.openservices.log.logback.LoghubAppender">
                 <!-- SLS 连接配置 -->
