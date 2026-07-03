@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 从 Spring 环境变量中读取 SLS 配置 -->
+    <springProperty scope="context" name="slsEndpoint"        source="aliyun.sls.endpoint"    defaultValue=""/>
+    <springProperty scope="context" name="slsProject"         source="aliyun.sls.project"     defaultValue=""/>
+    <springProperty scope="context" name="slsLogStore"        source="aliyun.sls.log-store"   defaultValue=""/>
+    <springProperty scope="context" name="slsAccessKeyId"     source="aliyun.access-key-id"   defaultValue=""/>
+    <springProperty scope="context" name="slsAccessKeySecret" source="aliyun.access-key-secret" defaultValue=""/>
+    <springProperty scope="context" name="appName"            source="spring.application.name" defaultValue="peacehaven"/>
+
+    <!-- ======================== -->
+    <!-- 1. 控制台输出（始终启用）   -->
+    <!-- ======================== -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- =============================================== -->
+    <!-- 2. 阿里云 SLS 日志（仅在配置了 endpoint 时启用） -->
+    <!-- =============================================== -->
+    <if>
+        <condition>property("slsEndpoint").length() > 0</condition>
+        <then>
+            <appender name="SLS" class="com.aliyun.openservices.log.logback.LoghubAppender">
+                <!-- SLS 连接配置 -->
+                <endpoint>${slsEndpoint}</endpoint>
+                <accessKeyId>${slsAccessKeyId}</accessKeyId>
+                <accessKeySecret>${slsAccessKeySecret}</accessKeySecret>
+                <project>${slsProject}</project>
+                <logStore>${slsLogStore}</logStore>
+
+                <!-- 日志标识 -->
+                <topic>${appName}</topic>
+
+                <!-- 性能调优 -->
+                <totalSizeInBytes>104857600</totalSizeInBytes>
+                <maxBlockMs>0</maxBlockMs>
+                <ioThreadCount>4</ioThreadCount>
+                <batchSizeThresholdInBytes>524288</batchSizeThresholdInBytes>
+                <batchCountThreshold>4096</batchCountThreshold>
+                <lingerMs>2000</lingerMs>
+                <retries>10</retries>
+                <baseRetryBackoffMs>100</baseRetryBackoffMs>
+                <maxRetryBackoffMs>50000</maxRetryBackoffMs>
+
+                <!-- 日志格式 -->
+                <encoder>
+                    <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg</pattern>
+                </encoder>
+                <timeFormat>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timeFormat>
+                <timeZone>Asia/Shanghai</timeZone>
+                <includeLocation>true</includeLocation>
+                <includeMessage>true</includeMessage>
+                <maxThrowable>2000</maxThrowable>
+            </appender>
+
+            <!-- Root Logger: 控制台 + SLS -->
+            <root level="INFO">
+                <appender-ref ref="CONSOLE"/>
+                <appender-ref ref="SLS"/>
+            </root>
+        </then>
+        <else>
+            <!-- Root Logger: 仅控制台（SLS 未配置时） -->
+            <root level="INFO">
+                <appender-ref ref="CONSOLE"/>
+            </root>
+        </else>
+    </if>
+
+    <!-- ======================== -->
+    <!-- 3. Logger 级别配置        -->
+    <!-- ======================== -->
+    <!-- 应用代码日志级别 -->
+    <logger name="com.potato.peacehaven" level="DEBUG"/>
+
+    <!-- 框架日志级别（减少噪音） -->
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.apache" level="WARN"/>
+    <logger name="com.aliyun" level="INFO"/>
+
+    <!-- 防止进程退出时内存中的日志数据丢失 -->
+    <shutdownHook class="ch.qos.logback.core.hook.DefaultShutdownHook"/>
+
+    <!-- SLS Appender 异常时输出到控制台，方便排查 -->
+    <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener"/>
+</configuration>

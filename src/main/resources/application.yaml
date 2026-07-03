@@ -22,15 +22,20 @@ spring:
 
 # 阿里云配置
 aliyun:
-  access-key-id: ${ALIYUN_AK_ID}
-  access-key-secret: ${ALIYUN_AK_SECRET}
+  access-key-id: ${ALIYUN_AK_ID:}
+  access-key-secret: ${ALIYUN_AK_SECRET:}
   sms:
-    sign-name: ${ALIYUN_SMS_SIGN}
-    template-code: ${ALIYUN_SMS_TEMPLATE}
+    sign-name: ${ALIYUN_SMS_SIGN:}
+    template-code: ${ALIYUN_SMS_TEMPLATE:}
   oss:
     endpoint: oss-cn-hangzhou.aliyuncs.com
-    bucket-name: ${ALIYUN_OSS_BUCKET}
-    url-prefix: ${ALIYUN_OSS_URL_PREFIX}
+    bucket-name: ${ALIYUN_OSS_BUCKET:}
+    url-prefix: ${ALIYUN_OSS_URL_PREFIX:}
+  # SLS 日志服务配置（留空则仅输出到控制台，填入后自动启用 SLS 上报）
+  sls:
+    endpoint: cn-hangzhou.log.aliyuncs.com
+    project: ${ALIYUN_SLS_PROJECT:}
+    log-store: ${ALIYUN_SLS_LOGSTORE:}
 
 # 应用配置
 app:
