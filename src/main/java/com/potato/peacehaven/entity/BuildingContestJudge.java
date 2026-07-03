@@ -44,4 +44,9 @@ public class BuildingContestJudge {
     @Column(name = "created_at", updatable = false)
     @Comment("创建时间")
     private LocalDateTime createdAt;
+
+    /** 直播间链接（主播裁判专属，非空时显示「前往直播间」按钮） */
+    @Column(name = "live_room_url", length = 500)
+    @Comment("直播间链接，非空时显示前往直播间按钮")
+    private String liveRoomUrl;
 }

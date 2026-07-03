@@ -1,6 +1,7 @@
 package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.entity.Activity;
+import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.service.ActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 public class ActivityController {
 
     private final ActivityService activityService;
+    private final BuildingContestJudgeRepository judgeRepository;
 
     /**
      * 活动列表页（公开）- 只返回模板，数据由前端 AJAX 加载
@@ -73,6 +76,35 @@ public class ActivityController {
         activityService.incrementViewCount(activity.getId());
         model.addAttribute("activity", activity);
         model.addAttribute("status", activityService.getStatus(activity));
+
+        // 裁判组数据（建筑大赛专用，始终显示5个位置）
+        if ("building-master-1".equals(slug)) {
+            var realJudges = judgeRepository.findByActivityId(activity.getId());
+            List<Map<String, Object>> judgeList = new ArrayList<>();
+
+            // 真实裁判数据
+            for (var judge : realJudges) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("name", judge.getUser().getNickname());
+                m.put("title", judge.getUser().getCampName() != null ? judge.getUser().getCampName() : "");
+                m.put("avatar", judge.getUser().getAvatar());
+                m.put("liveRoomUrl", judge.getLiveRoomUrl());
+                judgeList.add(m);
+            }
+
+            // 不足 5 个的位置用占位填充
+            for (int i = judgeList.size() + 1; i <= 5; i++) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("name", "裁判 " + i);
+                m.put("title", "待公布");
+                m.put("avatar", null);
+                m.put("liveRoomUrl", null);
+                judgeList.add(m);
+            }
+
+            model.addAttribute("judges", judgeList);
+        }
+
         return "activities/" + slug;
     }
 }

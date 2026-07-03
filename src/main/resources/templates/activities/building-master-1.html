@@ -184,13 +184,19 @@
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background: var(--gradient-accent);
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 12px;
             font-size: 1.4rem;
             color: #fff;
+            overflow: hidden;
+            background: var(--gradient-accent);
+        }
+        .judge-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         .judge-name {
             font-weight: 600;
@@ -201,6 +207,22 @@
             font-size: 0.78rem;
             color: var(--text-muted);
             margin-top: 4px;
+        }
+        .judge-live-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 4px 14px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #fff;
+            background: var(--gradient-accent);
+            border-radius: 20px;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .judge-live-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         /* Prize */
@@ -952,30 +974,18 @@
     <section class="contest-section">
         <h2 class="section-title">裁判组</h2>
         <div class="judge-grid">
-            <div class="judge-card">
-                <div class="judge-avatar">👷</div>
-                <div class="judge-name">裁判 1</div>
-                <div class="judge-title">待公布</div>
-            </div>
-            <div class="judge-card">
-                <div class="judge-avatar">👷</div>
-                <div class="judge-name">裁判 2</div>
-                <div class="judge-title">待公布</div>
-            </div>
-            <div class="judge-card">
-                <div class="judge-avatar">👷</div>
-                <div class="judge-name">裁判 3</div>
-                <div class="judge-title">待公布</div>
-            </div>
-            <div class="judge-card">
-                <div class="judge-avatar">👷</div>
-                <div class="judge-name">裁判 4</div>
-                <div class="judge-title">待公布</div>
-            </div>
-            <div class="judge-card">
-                <div class="judge-avatar">👷</div>
-                <div class="judge-name">裁判 5</div>
-                <div class="judge-title">待公布</div>
+            <div class="judge-card" th:each="judge : ${judges}">
+                <div class="judge-avatar">
+                    <img th:src="${judge.avatar}" th:alt="${judge.name}"
+                         th:if="${judge.avatar != null and judge.avatar != ''}">
+                    <span th:if="${judge.avatar == null or judge.avatar == ''}">👷</span>
+                </div>
+                <div class="judge-name" th:text="${judge.name}">裁判昵称</div>
+                <div class="judge-title" th:text="${judge.title}">营地名</div>
+                <a class="judge-live-btn"
+                   th:if="${judge.liveRoomUrl != null and judge.liveRoomUrl != ''}"
+                   th:href="${judge.liveRoomUrl}"
+                   target="_blank" rel="noopener">🎙 前往直播间</a>
             </div>
         </div>
     </section>

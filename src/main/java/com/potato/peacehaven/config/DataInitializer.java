@@ -62,7 +62,7 @@ public class DataInitializer implements ApplicationRunner {
         }
 
         // 初始化裁判（按手机号指定）
-        initJudges(activity.getId());
+        // initJudges(activity.getId());
     }
 
     /**
@@ -71,7 +71,7 @@ public class DataInitializer implements ApplicationRunner {
      */
     private void initJudges(Long activityId) {
         // 配置裁判手机号列表（在此添加）
-        String[] judgePhones = {"13586619697"};
+        String[] judgePhones = {};
 
         log.info("开始初始化裁判，活动ID: {}，当前已有裁判数: {}", activityId,
                 judgeRepository.findByActivityId(activityId).size());
