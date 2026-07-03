@@ -331,6 +331,7 @@ public class BuildingContestController {
             }
             result.put("remainingVotes", contestService.getRemainingVotes(activityId, user.getId()));
             result.put("maxVotes", BuildingContestService.MAX_VOTES_PER_USER);
+            result.put("hasAbstractVoted", abstractVotedWorkId != null);
         }
 
         return ResponseEntity.ok(result);

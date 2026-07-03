@@ -209,6 +209,7 @@ public class BuildingContestService {
             oldWork.setAbstractVoteCount(Math.max(0, oldWork.getAbstractVoteCount() - 1));
             workRepository.save(oldWork);
             abstractVoteRepository.delete(oldVote);
+            abstractVoteRepository.flush(); // 立即执行DELETE，避免INSERT时唯一约束冲突
             log.info("用户 {} 撤回对作品 {} 的抽象票，改投作品 {}", user.getNickname(), oldWork.getTitle(), work.getTitle());
         }
 

@@ -1055,7 +1055,7 @@
             <div class="prize-card">
                 <div class="prize-rank">🤡</div>
                 <div class="prize-place">抽象达人奖</div>
-                <div class="prize-desc">评委评定</div>
+                <div class="prize-desc">票数最多</div>
                 <div class="prize-amount">¥8.88</div>
             </div>
         </div>
@@ -1074,6 +1074,7 @@
         <div class="vote-info-bar" id="voteInfoBar" style="display:none;">
             <span class="phase-label" id="phaseLabel"></span>
             <span class="vote-info-text" id="voteInfoText" style="display:none;">🗳 我的剩余票数：<strong id="remainingVotesCount">-</strong> / <span id="maxVotesCount">3</span></span>
+            <span class="vote-info-text" id="abstractVoteInfoText" style="display:none;">🤡 抽象票：<strong id="abstractVoteStatus">未使用</strong></span>
         </div>
         <div class="works-grid" id="worksGrid">
             <div class="empty-works">
@@ -1162,6 +1163,17 @@
         } else {
             voteInfoText.style.display = 'none';
         }
+
+        // 显示抽象票状态（投票/结果阶段）
+        var abstractInfoText = document.getElementById('abstractVoteInfoText');
+        var abstractStatus = document.getElementById('abstractVoteStatus');
+        if (data.hasAbstractVoted !== undefined && (canVote || currentPhase === 'RESULTS')) {
+            abstractStatus.textContent = data.hasAbstractVoted ? '已使用' : '未使用';
+            abstractStatus.style.color = data.hasAbstractVoted ? 'var(--text-muted, #999)' : 'var(--accent-primary)';
+            abstractInfoText.style.display = 'inline';
+        } else {
+            abstractInfoText.style.display = 'none';
+        }
     }
 
     // === 加载作品列表 ===
@@ -1210,7 +1222,7 @@
             // 根据阶段控制票数显示
             var voteCountText = showVoteCount
                 ? '🗳 ' + w.voteCount + ' 票'
-                : '🗳 票数未公开';
+                : '🗳 投票未开始';
             var abstractCountText = showVoteCount
                 ? (w.abstractVoteCount >= 0 ? ' · 🤡 ' + w.abstractVoteCount + ' 抽象' : '')
                 : '';
@@ -1322,6 +1334,16 @@
     }
 
     // === 投票 ===
+    // 统一处理登录态失效（未登录/CSRF过期）→ 弹出登录框
+    function handleAuthError(data) {
+        if (!data.success && (data.message && (data.message.includes('登录') || data.message.includes('CSRF')))) {
+            var loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) loginBtn.click();
+            return true;
+        }
+        return false;
+    }
+
     function handleVote(workId, btn) {
         btn.disabled = true;
         btn.textContent = '投票中...';
@@ -1335,19 +1357,15 @@
                 if (data.success) {
                     btn.classList.add('voted');
                     btn.textContent = '🗳 已投票';
-                    // 更新票数
-                    var countEl = btn.parentElement.querySelector('.work-vote-count');
-                    if (countEl) {
-                        var current = parseInt(countEl.textContent.match(/\d+/)[0]);
-                        countEl.textContent = '🗳 ' + (current + 1) + ' 票';
-                    }
                     // 更新剩余票数
                     if (data.remainingVotes !== undefined) {
                         remainingVotes = data.remainingVotes;
                         document.getElementById('remainingVotesCount').textContent = remainingVotes;
                     }
+                    // 刷新作品列表以更新票数
+                    loadWorks();
                 } else {
-                    alert(data.message);
+                    if (!handleAuthError(data)) alert(data.message);
                     btn.disabled = false;
                     btn.textContent = '🗳 投票';
                 }
@@ -1374,21 +1392,18 @@
                 if (data.success) {
                     btn.classList.remove('voted');
                     btn.textContent = '🗳 投票';
-                    // 更新票数
-                    var countEl = btn.parentElement.querySelector('.work-vote-count');
-                    if (countEl) {
-                        var current = parseInt(countEl.textContent.match(/\d+/)[0]);
-                        countEl.textContent = '🗳 ' + (current - 1) + ' 票';
-                    }
                     // 更新剩余票数
                     if (data.remainingVotes !== undefined) {
                         remainingVotes = data.remainingVotes;
                         document.getElementById('remainingVotesCount').textContent = remainingVotes;
                     }
+                    // 刷新作品列表以更新票数
+                    loadWorks();
                 } else {
-                    alert(data.message);
+                    if (!handleAuthError(data)) alert(data.message);
+                    btn.disabled = false;
+                    btn.textContent = '🗳 已投票';
                 }
-                btn.disabled = false;
             })
             .catch(function() {
                 alert('网络错误，请重试');
@@ -1400,7 +1415,7 @@
     // === 投抽象票 ===
     function handleAbstractVote(workId, btn) {
         btn.disabled = true;
-        btn.textContent = '投集中...';
+        btn.textContent = '抽象中...';
         var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
         fetch('/api/contest/abstract-vote/' + workId, {
             method: 'POST',
@@ -1420,9 +1435,10 @@
                     // 刷新作品列表以更新抽象票数
                     loadWorks();
                 } else {
-                    alert(data.message);
+                    if (!handleAuthError(data)) alert(data.message);
+                    btn.disabled = false;
+                    btn.textContent = '🤡 抽象';
                 }
-                btn.disabled = false;
             })
             .catch(function() {
                 alert('网络错误，请重试');
@@ -1449,9 +1465,10 @@
                     // 刷新作品列表以更新抽象票数
                     loadWorks();
                 } else {
-                    alert(data.message);
+                    if (!handleAuthError(data)) alert(data.message);
+                    btn.disabled = false;
+                    btn.textContent = '已抽象 ✓';
                 }
-                btn.disabled = false;
             })
             .catch(function() {
                 alert('网络错误，请重试');
@@ -1541,7 +1558,7 @@
                     // 刷新作品列表
                     loadWorks();
                 } else {
-                    alert(data.message);
+                    if (!handleAuthError(data)) alert(data.message);
                 }
             })
             .catch(function() { alert('网络错误，请重试'); });
