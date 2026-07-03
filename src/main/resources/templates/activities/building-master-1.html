@@ -500,11 +500,10 @@
             color: #fff;
         }
 
-        /* Works Gallery */
+        /* Works Gallery - 瀑布流布局 */
         .works-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
+            columns: 3;
+            column-gap: 24px;
         }
         .work-card {
             background: var(--bg-card);
@@ -513,6 +512,8 @@
             overflow: hidden;
             box-shadow: var(--shadow-sm);
             transition: all 0.3s;
+            break-inside: avoid;
+            margin-bottom: 24px;
         }
         .work-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
         .work-card-img {
@@ -562,10 +563,6 @@
             color: var(--text-secondary);
             line-height: 1.5;
             margin-bottom: 14px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
         }
         .work-card-footer {
             display: flex;
@@ -851,7 +848,7 @@
             .prize-place { font-size: 0.85rem; margin-bottom: 4px; }
             .prize-desc { font-size: 0.72rem; }
             .prize-amount { font-size: 1.1rem; }
-            .works-grid { grid-template-columns: 1fr; gap: 16px; }
+            .works-grid { columns: 1; column-gap: 16px; }
             .submit-area { padding: 28px 16px; }
             .score-table { gap: 6px; }
             .score-item { padding: 8px; gap: 6px; flex-direction: column; text-align: center; }
@@ -859,7 +856,7 @@
             .score-pts { font-size: 1rem; }
         }
         @media (max-width: 1024px) and (min-width: 769px) {
-            .works-grid { grid-template-columns: repeat(2, 1fr); }
+            .works-grid { columns: 2; }
             .judge-grid { grid-template-columns: repeat(3, 1fr); }
         }
     </style>
