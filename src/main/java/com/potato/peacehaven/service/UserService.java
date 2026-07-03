@@ -5,14 +5,12 @@ import com.potato.peacehaven.enums.UserRole;
 import com.potato.peacehaven.enums.UserStatus;
 import com.potato.peacehaven.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -20,9 +18,6 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
-
-    @Value("${app.admin-phones:}")
-    private String adminPhones;
 
     /** 登录结果，包含用户对象和是否为新用户标识 */
     public record LoginResult(User user, boolean isNewUser) {}
@@ -41,11 +36,6 @@ public class UserService {
                     .phone(phone)
                     .nickname(defaultNickname)
                     .build();
-
-            // 检查是否为配置的管理员手机号
-            if (isAdminPhone(phone)) {
-                newUser.setRole(UserRole.ADMIN);
-            }
 
             return userRepository.save(newUser);
         });
@@ -110,12 +100,4 @@ public class UserService {
                 .stream().limit(10).toList();
     }
 
-    /**
-     * 检查手机号是否在管理员列表中
-     */
-    private boolean isAdminPhone(String phone) {
-        if (adminPhones == null || adminPhones.isBlank()) return false;
-        List<String> admins = Arrays.asList(adminPhones.split(","));
-        return admins.stream().map(String::trim).anyMatch(phone::equals);
-    }
 }

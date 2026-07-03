@@ -36,7 +36,3 @@ aliyun:
     endpoint: cn-hangzhou.log.aliyuncs.com
     project: ${ALIYUN_SLS_PROJECT:}
     log-store: ${ALIYUN_SLS_LOGSTORE:}
-
-# 应用配置
-app:
-  admin-phones: "13586619697"  # 逗号分隔，注册时自动提升为ADMIN
