@@ -84,7 +84,7 @@
                 <p>营地拥有活跃的日常活动、和谐友善的社交氛围，无论你是热爱建造的休闲玩家，还是驰骋战场的热血玩家，长安都愿成为你旅途中最温暖、最值得停留的归宿。</p>
                 <div class="about-stats">
                     <div class="stat-item">
-                        <span class="stat-number" data-target="90">0</span>
+                        <span class="stat-number" th:attr="data-target=${siteStats.memberCount}">0</span>
                         <span class="stat-label">营地成员</span>
                     </div>
                     <div class="stat-item">
@@ -92,18 +92,18 @@
                         <span class="stat-label">相伴天数</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number" data-target="1">0</span>
+                        <span class="stat-number" th:attr="data-target=${siteStats.eventCount}">0</span>
                         <span class="stat-label">活动举办</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number" data-target="1">0</span>
+                        <span class="stat-number" th:attr="data-target=${siteStats.battleCount}">0</span>
                         <span class="stat-label">参与战役</span>
                     </div>
                 </div>
             </div>
             <div class="about-image">
                 <div class="about-img-wrapper">
-                    <img th:src="@{/images/banner_1.png}" alt="长安营地全景">
+                    <img th:src="${siteStats.aboutImage != null and siteStats.aboutImage != ''} ? ${siteStats.aboutImage} : @{/images/banner_1.png}" alt="长安营地全景">
                     <div class="about-img-frame"></div>
                 </div>
             </div>
