@@ -120,134 +120,19 @@
             <div class="section-divider"></div>
         </div>
         <div class="team-grid">
-            <!-- 市长 -->
-            <div class="team-card fade-in" data-tilt>
+            <div class="team-card fade-in" data-tilt th:each="member : ${teamMembers}">
                 <div class="card-glow"></div>
                 <div class="card-border"></div>
                 <div class="card-inner">
                     <div class="card-avatar">
-                        <img th:src="@{/images/avatar/avatar_shutiaojun.png}" alt="市长">
+                        <img th:src="${member.avatar}" th:alt="${member.nickname}">
                         <div class="avatar-ring"></div>
                     </div>
-                    <div class="card-role">市长</div>
-                    <h3 class="card-name">薯条君</h3>
-                    <p class="card-desc">「能力不详，遇强则慌」</p>
+                    <div class="card-role" th:text="${member.role}">头衔</div>
+                    <h3 class="card-name" th:text="${member.nickname}">昵称</h3>
+                    <p class="card-desc" th:text="'「' + ${member.motto} + '」'">「座右铭」</p>
                     <div class="card-tags">
-                        <span class="tag">创始人</span>
-                        <span class="tag">传奇耐串王</span>
-                        <span class="tag">会喵喵叫</span>
-                    </div>
-                </div>
-            </div>
-            <!-- 副市长 -->
-            <div class="team-card fade-in" data-tilt>
-                <div class="card-glow"></div>
-                <div class="card-border"></div>
-                <div class="card-inner">
-                    <div class="card-avatar">
-                        <img th:src="@{/images/avatar/avatar_senyu.png}" alt="副市长">
-                        <div class="avatar-ring"></div>
-                    </div>
-                    <div class="card-role">副市长</div>
-                    <h3 class="card-name">森屿</h3>
-                    <p class="card-desc">「快乐至上，其他随意」</p>
-                    <div class="card-tags">
-                        <span class="tag">首席黑子</span>
-                        <span class="tag">爱小雨</span>
-                    </div>
-                </div>
-            </div>
-            <!-- 后勤部长 -->
-            <div class="team-card fade-in" data-tilt>
-                <div class="card-glow"></div>
-                <div class="card-border"></div>
-                <div class="card-inner">
-                    <div class="card-avatar">
-                        <img th:src="@{/images/avatar/avatar_jiangyu.png}" alt="后勤部长">
-                        <div class="avatar-ring"></div>
-                    </div>
-                    <div class="card-role">后勤部长</div>
-                    <h3 class="card-name">降雨</h3>
-                    <p class="card-desc">「生活的嚼嚼者๑-ㅅ-๑」</p>
-                    <div class="card-tags">
-                        <span class="tag">小雨宝</span>
-                        <span class="tag">社恐大王</span>
-                        <span class="tag">乖乖雨</span>
-                    </div>
-                </div>
-            </div>
-            <!-- 战斗组长 -->
-            <div class="team-card fade-in" data-tilt>
-                <div class="card-glow"></div>
-                <div class="card-border"></div>
-                <div class="card-inner">
-                    <div class="card-avatar">
-                        <img th:src="@{/images/avatar/avatar_lanan.jpg}" alt="战斗组长">
-                        <div class="avatar-ring"></div>
-                    </div>
-                    <div class="card-role">战斗组长</div>
-                    <h3 class="card-name">可心绪难言</h3>
-                    <p class="card-desc">「莫愁莫愁，万事莫愁」</p>
-                    <div class="card-tags">
-                        <span class="tag">超长待机玩家</span>
-                        <span class="tag">薛定谔靠谱</span>
-                        <span class="tag">蓝少</span>
-                    </div>
-                </div>
-            </div>
-            <!-- 外交官 -->
-            <div class="team-card fade-in" data-tilt>
-                <div class="card-glow"></div>
-                <div class="card-border"></div>
-                <div class="card-inner">
-                    <div class="card-avatar">
-                        <img th:src="@{/images/avatar/avatar_kekejiang.jpg}" alt="外交官">
-                        <div class="avatar-ring"></div>
-                    </div>
-                    <div class="card-role">外交官</div>
-                    <h3 class="card-name">KEKE酱</h3>
-                    <p class="card-desc">「宇宙的尽头是西红柿」</p>
-                    <div class="card-tags">
-                        <span class="tag">傻</span>
-                        <span class="tag">白</span>
-                        <span class="tag">甜</span>
-                    </div>
-                </div>
-            </div>
-            <!-- 带本专家 -->
-            <div class="team-card fade-in" data-tilt>
-                <div class="card-glow"></div>
-                <div class="card-border"></div>
-                <div class="card-inner">
-                    <div class="card-avatar">
-                        <img th:src="@{/images/avatar/avatar_changye.jpg}" alt="带本专家">
-                        <div class="avatar-ring"></div>
-                    </div>
-                    <div class="card-role">带本专家</div>
-                    <h3 class="card-name">小狐小依</h3>
-                    <p class="card-desc">「像小草一样不屈的飘扬」</p>
-                    <div class="card-tags">
-                        <span class="tag">磊哥真棒</span>
-                        <span class="tag">真威武</span>
-                        <span class="tag">万人迷</span>
-                    </div>
-                </div>
-            </div>
-            <!-- 战神水鸟 -->
-            <div class="team-card fade-in" data-tilt>
-                <div class="card-glow"></div>
-                <div class="card-border"></div>
-                <div class="card-inner">
-                    <div class="card-avatar">
-                        <img th:src="@{/images/avatar/avatar_shuiniao.png}" alt="战神水鸟">
-                        <div class="avatar-ring"></div>
-                    </div>
-                    <div class="card-role">卡了电竞水鸟</div>
-                    <h3 class="card-name">水鸟乱舞</h3>
-                    <p class="card-desc">「我的同居第一好」</p>
-                    <div class="card-tags">
-                        <span class="tag">我是飞舞</span>
-                        <span class="tag">考古炸麦选手</span>
+                        <span class="tag" th:each="tag : ${#strings.listSplit(member.tags, ',')}" th:text="${#strings.trim(tag)}">标签</span>
                     </div>
                 </div>
             </div>
