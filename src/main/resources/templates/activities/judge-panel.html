@@ -109,10 +109,33 @@
             height: 200px;
             object-fit: cover;
             display: block;
+            transition: transform 0.35s ease;
         }
         .judge-card-img-wrap {
             position: relative;
             overflow: hidden;
+            cursor: pointer;
+        }
+        .judge-card-img-wrap:hover .judge-card-img {
+            transform: scale(1.06);
+        }
+        .judge-card-zoom-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            font-size: 0.72rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s;
+            z-index: 2;
+        }
+        .judge-card-img-wrap:hover .judge-card-zoom-hint {
+            opacity: 1;
         }
         .judge-card-number {
             position: absolute;
@@ -139,7 +162,14 @@
         .judge-card-author {
             font-size: 0.8rem;
             color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .judge-card-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
             margin-bottom: 14px;
+            word-break: break-word;
         }
 
         /* Scoring Section */
@@ -204,6 +234,27 @@
             font-size: 0.7rem;
             font-weight: 600;
             opacity: 0.7;
+        }
+
+        /* Image Lightbox */
+        .lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .lightbox-overlay.show { opacity: 1; }
+        .lightbox-overlay img {
+            max-width: 92%;
+            max-height: 92%;
+            border-radius: 8px;
+            box-shadow: 0 4px 40px rgba(0,0,0,0.6);
         }
 
         /* Empty state */
@@ -359,19 +410,24 @@
     function renderWorkCard(w, canScore) {
         var cardClass = w.hasScored ? 'judge-card scored' : 'judge-card';
         var html = '<div class="' + cardClass + '">';
-        html += '  <div class="judge-card-img-wrap"><span class="judge-card-number">NO.' + w.workNumber + '</span><img class="judge-card-img" src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy"></div>';
+        html += '  <div class="judge-card-img-wrap" onclick="openLightbox(\'' + w.imageUrl + '\')">';
+        html += '    <span class="judge-card-number">NO.' + w.workNumber + '</span>';
+        html += '    <span class="judge-card-zoom-hint">🔍 点击放大</span>';
+        html += '    <img class="judge-card-img" src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy">';
+        html += '  </div>';
         html += '  <div class="judge-card-body">';
         html += '    <div class="judge-card-title">' + w.title + '</div>';
         html += '    <div class="judge-card-author">作者：' + w.authorName + (w.authorCampName ? ' · ' + w.authorCampName : '') + '</div>';
+        if (w.description) {
+            html += '    <div class="judge-card-desc">' + w.description + '</div>';
+        }
 
         if (w.hasScored) {
-            // 已评分 - 显示分数
             html += '  <div class="score-display">';
             html += '    <span class="label">✅ 已评分</span>';
             html += '    <span class="value">' + w.myScore + '<small> 分</small></span>';
             html += '  </div>';
         } else if (canScore) {
-            // 未评分 + 可评分
             html += '  <div class="score-section">';
             html += '    <div class="score-input-row">';
             html += '      <input type="number" class="score-input" id="scoreInput_' + w.id + '" min="0" max="10" step="0.1" placeholder="0~10">';
@@ -379,13 +435,24 @@
             html += '    </div>';
             html += '  </div>';
         } else {
-            // 未评分 + 不可评分
             html += '  <div class="score-section"><p style="font-size:0.8rem;color:var(--text-muted);text-align:center;">当前不可评分</p></div>';
         }
 
         html += '  </div></div>';
         return html;
     }
+
+    // 图片灯箱
+    window.openLightbox = function(src) {
+        var overlay = document.createElement('div');
+        overlay.className = 'lightbox-overlay show';
+        overlay.innerHTML = '<img src="' + src + '" alt="作品大图">';
+        overlay.addEventListener('click', function() {
+            overlay.classList.remove('show');
+            setTimeout(function() { overlay.remove(); }, 300);
+        });
+        document.body.appendChild(overlay);
+    };
 
     function submitScore(workId, score, btn) {
         btn.disabled = true;
