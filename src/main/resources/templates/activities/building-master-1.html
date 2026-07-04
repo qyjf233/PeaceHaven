@@ -859,6 +859,116 @@
         }
         .empty-works .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
 
+        /* Podium */
+        .podium-top3 {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 12px;
+            margin-bottom: 36px;
+            padding: 0 10px;
+        }
+        .podium-spot {
+            flex: 1;
+            max-width: 220px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .podium-spot .podium-medal {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+        .podium-spot .podium-img {
+            width: 100%;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 10px;
+        }
+        .podium-spot .podium-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+            word-break: break-word;
+        }
+        .podium-spot .podium-author {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .podium-spot .podium-score {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+        .podium-spot .podium-bar {
+            width: 100%;
+            border-radius: 8px 8px 0 0;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: rgba(255,255,255,0.8);
+        }
+        /* Gold center tallest */
+        .podium-spot.gold .podium-bar { height: 100px; background: linear-gradient(180deg, #f5c842, #e8a317); }
+        .podium-spot.gold .podium-medal { font-size: 2.8rem; }
+        .podium-spot.gold .podium-img { max-width: 180px; }
+        /* Silver left */
+        .podium-spot.silver .podium-bar { height: 72px; background: linear-gradient(180deg, #c0c0c0, #8a8a8a); }
+        /* Bronze right */
+        .podium-spot.bronze .podium-bar { height: 52px; background: linear-gradient(180deg, #cd7f32, #8b4513); }
+
+        .podium-awards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .podium-award-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 12px;
+            padding: 20px 14px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+        }
+        .podium-award-card .award-icon { font-size: 2rem; margin-bottom: 6px; }
+        .podium-award-card .award-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .podium-award-card .award-stat {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .podium-award-card .award-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin: 0 auto 8px;
+            display: block;
+        }
+        .podium-award-card .award-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+        .podium-award-card .award-author {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .contest-hero { height: 280px; }
@@ -888,6 +998,12 @@
             .score-item { padding: 8px; gap: 6px; flex-direction: column; text-align: center; }
             .score-rank { min-width: auto; font-size: 0.7rem; }
             .score-pts { font-size: 1rem; }
+            .podium-top3 { flex-direction: column; align-items: center; gap: 20px; }
+            .podium-spot { max-width: 260px; }
+            .podium-spot.gold .podium-bar { height: 60px; }
+            .podium-spot.silver .podium-bar { height: 48px; }
+            .podium-spot.bronze .podium-bar { height: 40px; }
+            .podium-awards { grid-template-columns: 1fr; gap: 12px; }
         }
         @media (max-width: 1024px) and (min-width: 769px) {
             .works-grid { columns: 2; }
@@ -1068,6 +1184,13 @@
         <div class="submit-status" id="submitStatus">登录后可投稿，每人仅限一次</div>
     </section>
 
+    <!-- 颁奖台（仅 RESULTS 阶段显示） -->
+    <section class="contest-section podium-section" id="podiumSection" style="display:none;">
+        <h2 class="section-title">🏆 颁奖台</h2>
+        <div class="podium-top3" id="podiumTop3"></div>
+        <div class="podium-awards" id="podiumAwards"></div>
+    </section>
+
     <!-- 作品集锦 -->
     <section class="contest-section">
         <h2 class="section-title">作品集锦</h2>
@@ -1176,6 +1299,78 @@
         }
     }
 
+    // === 渲染颁奖台 ===
+    function renderPodium(podium) {
+        var section = document.getElementById('podiumSection');
+        var top3El = document.getElementById('podiumTop3');
+        var awardsEl = document.getElementById('podiumAwards');
+        if (!podium || !podium.top3 || !podium.top3.length) {
+            section.style.display = 'none';
+            return;
+        }
+        section.style.display = '';
+
+        // 颁奖台排序: silver(左) -> gold(中) -> bronze(右)
+        var medals = ['🥇', '🥈', '🥉'];
+        var classes = ['gold', 'silver', 'bronze'];
+        var barNums = ['1', '2', '3'];
+        // 渲染顺序: 亚军(左) -> 冠军(中) -> 季军(右)
+        var order = podium.top3.length >= 3 ? [1, 0, 2] : (podium.top3.length === 2 ? [1, 0] : [0]);
+
+        var top3Html = '';
+        order.forEach(function(idx) {
+            var w = podium.top3[idx];
+            if (!w) return;
+            var authorText = w.authorName + (w.authorCampName ? ' · ' + w.authorCampName : '');
+            top3Html += '<div class="podium-spot ' + classes[idx] + '">' +
+                '<div class="podium-medal">' + medals[idx] + '</div>' +
+                '<img class="podium-img" src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy">' +
+                '<div class="podium-title">' + w.title + '</div>' +
+                '<div class="podium-author">' + authorText + '</div>' +
+                '<div class="podium-score">🏆 ' + (w.finalScore != null ? w.finalScore.toFixed(1) : '?') + ' 分</div>' +
+                '<div class="podium-bar">' + barNums[idx] + '</div>' +
+                '</div>';
+        });
+        top3El.innerHTML = top3Html;
+
+        // 特别奖项
+        var awardsHtml = '';
+        if (podium.popularityAward) {
+            var p = podium.popularityAward;
+            awardsHtml += '<div class="podium-award-card">' +
+                '<div class="award-icon">🔥</div>' +
+                '<div class="award-label">最佳人气奖</div>' +
+                '<div class="award-stat">🗳 ' + p.voteCount + ' 票</div>' +
+                '<img class="award-img" src="' + p.imageUrl + '" alt="' + p.title + '" loading="lazy">' +
+                '<div class="award-title">' + p.title + '</div>' +
+                '<div class="award-author">' + p.authorName + (p.authorCampName ? ' · ' + p.authorCampName : '') + '</div>' +
+                '</div>';
+        }
+        if (podium.creativityAward) {
+            var c = podium.creativityAward;
+            awardsHtml += '<div class="podium-award-card">' +
+                '<div class="award-icon">💡</div>' +
+                '<div class="award-label">最佳创意奖</div>' +
+                '<div class="award-stat">🏅 评委分 ' + (c.judgeScore != null ? c.judgeScore.toFixed(1) : '?') + '</div>' +
+                '<img class="award-img" src="' + c.imageUrl + '" alt="' + c.title + '" loading="lazy">' +
+                '<div class="award-title">' + c.title + '</div>' +
+                '<div class="award-author">' + c.authorName + (c.authorCampName ? ' · ' + c.authorCampName : '') + '</div>' +
+                '</div>';
+        }
+        if (podium.abstractAward) {
+            var a = podium.abstractAward;
+            awardsHtml += '<div class="podium-award-card">' +
+                '<div class="award-icon">🤡</div>' +
+                '<div class="award-label">抽象达人奖</div>' +
+                '<div class="award-stat">🤡 ' + a.abstractVoteCount + ' 抽象票</div>' +
+                '<img class="award-img" src="' + a.imageUrl + '" alt="' + a.title + '" loading="lazy">' +
+                '<div class="award-title">' + a.title + '</div>' +
+                '<div class="award-author">' + a.authorName + (a.authorCampName ? ' · ' + a.authorCampName : '') + '</div>' +
+                '</div>';
+        }
+        awardsEl.innerHTML = awardsHtml;
+    }
+
     // === 加载作品列表 ===
     function loadWorks() {
         fetch('/api/contest/works')
@@ -1186,6 +1381,7 @@
                 updateSubmitArea();
                 renderWorks(data.works || []);
                 renderTimeline(data.milestones, data.phase);
+                renderPodium(data.podium);
             })
             .catch(function() {
                 worksGrid.innerHTML = '<div class="empty-works"><div class="empty-icon">⚠️</div><p>加载失败，请刷新</p></div>';
@@ -1232,7 +1428,15 @@
             if (showJudgeScore && w.judgeScore != null) {
                 scoreHtml = '<div class="work-scores">' +
                     '<span>🏅 评委分: ' + w.judgeScore.toFixed(1) + '</span>' +
-                    (w.finalScore != null ? '<span>🏆 总分: ' + w.finalScore.toFixed(1) + '</span>' : '') +
+                    (w.popularityScore != null ? '<span>🎫 人气分: ' + w.popularityScore + '</span>' : '') +
+                    (w.finalScore != null ? '<span>🏆 最终: ' + w.finalScore.toFixed(1) + ' 分</span>' : '') +
+                    '</div>';
+            } else if (showJudgeScore && w.finalScore != null) {
+                // judgeScore 为 null（无人评分），但有 finalScore
+                scoreHtml = '<div class="work-scores">' +
+                    '<span>🏅 评委分: ?.?</span>' +
+                    (w.popularityScore != null ? '<span>🎫 人气分: ' + w.popularityScore + '</span>' : '') +
+                    '<span>🏆 最终: ' + w.finalScore.toFixed(1) + ' 分</span>' +
                     '</div>';
             } else if (currentPhase === 'JUDGING' || currentPhase === 'PRE_VOTE') {
                 scoreHtml = '<div class="work-scores"><span>🏅 评委分: ?.?</span></div>';

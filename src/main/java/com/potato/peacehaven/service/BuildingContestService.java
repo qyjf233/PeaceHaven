@@ -21,7 +21,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -497,5 +500,60 @@ public class BuildingContestService {
             work.setJudgeScore(Math.round(avg * 10.0) / 10.0);
         }
         workRepository.save(work);
+    }
+
+    /**
+     * 根据投票排名计算人气分
+     * 1st=30, 2nd=28, 3rd=26, 4th=24, 5th=22, 6-10th=20, 11-20th=18, 21-30th=16, 其余=15
+     */
+    public static int getPopularityPoint(int rank) {
+        if (rank == 1) return 30;
+        if (rank == 2) return 28;
+        if (rank == 3) return 26;
+        if (rank == 4) return 24;
+        if (rank == 5) return 22;
+        if (rank <= 10) return 20;
+        if (rank <= 20) return 18;
+        if (rank <= 30) return 16;
+        return 15;
+    }
+
+    /**
+     * 获取活动所有作品的人气分映射
+     * @return Map<workId, popularityScore>
+     */
+    public Map<Long, Integer> getPopularityScoreMap(Long activityId) {
+        List<BuildingContestWork> works = getApprovedWorks(activityId);
+
+        // 按投票数降序排名
+        List<BuildingContestWork> sortedByVotes = works.stream()
+                .sorted(Comparator.comparingInt(BuildingContestWork::getVoteCount).reversed())
+                .toList();
+
+        Map<Long, Integer> map = new HashMap<>();
+        for (int i = 0; i < sortedByVotes.size(); i++) {
+            map.put(sortedByVotes.get(i).getId(), getPopularityPoint(i + 1));
+        }
+        return map;
+    }
+
+    /**
+     * 计算并持久化所有作品的最终得分
+     * finalScore = judgeScore * 7(评委平均分×7, 无则为0) + popularityScore(人气分)
+     */
+    @Transactional
+    public void calculateFinalScores(Long activityId) {
+        List<BuildingContestWork> works = getApprovedWorks(activityId);
+        Map<Long, Integer> popMap = getPopularityScoreMap(activityId);
+
+        for (BuildingContestWork work : works) {
+            double judgePart = work.getJudgeScore() != null ? work.getJudgeScore() * 7 : 0.0;
+            int popPart = popMap.getOrDefault(work.getId(), 15);
+            // 最终得分 = 评委分×7 + 人气分，保留1位小数
+            work.setFinalScore(Math.round((judgePart + popPart) * 10.0) / 10.0);
+            workRepository.save(work);
+        }
+
+        log.info("已计算活动 {} 的 {} 个作品最终得分", activityId, works.size());
     }
 }
