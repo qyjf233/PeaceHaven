@@ -1,11 +1,21 @@
 server:
   port: 2508
+  servlet:
+    session:
+      cookie:
+        max-age: 2592000  # 30天（秒），cookie持久化，关闭浏览器不丢失
+        http-only: true
 
 spring:
   application:
     name: peacehaven
+  session:
+    store-type: jdbc           # Session持久化到数据库
+    timeout: 30d               # Session有效期30天
+    jdbc:
+      initialize-schema: always  # 自动建表 SPRING_SESSION / SPRING_SESSION_ATTRIBUTES
   datasource:
-    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db_pre
+    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db
     username: peacehaven_server
     password: XHJdashuaige2508@
     driver-class-name: com.mysql.cj.jdbc.Driver
