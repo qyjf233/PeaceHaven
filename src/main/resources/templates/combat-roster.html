@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战斗组花名册 - PeaceHaven</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .roster-page {
+            min-height: 100vh;
+            background: var(--bg-primary);
+            padding-top: 80px;
+        }
+
+        /* Header */
+        .roster-header {
+            text-align: center;
+            padding: 40px 20px 30px;
+            background: linear-gradient(135deg, rgba(232,131,58,0.08) 0%, rgba(244,164,96,0.05) 100%);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 32px;
+        }
+        .roster-header h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 2rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .roster-header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        .roster-header .count {
+            display: inline-block;
+            background: var(--accent-primary);
+            color: #fff;
+            font-size: 0.8rem;
+            padding: 2px 10px;
+            border-radius: 12px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* Filters */
+        .roster-filters {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 0 20px;
+            margin-bottom: 28px;
+        }
+        .filter-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .filter-group-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            align-self: center;
+            margin-right: 4px;
+        }
+        .filter-btn {
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+        .filter-btn.active {
+            background: var(--accent-primary);
+            color: #fff;
+            border-color: var(--accent-primary);
+        }
+
+        /* Grid */
+        .roster-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px 60px;
+        }
+
+        /* Card */
+        .member-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+        .member-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+        .member-card.hidden { display: none; }
+
+        /* Panel Image */
+        .card-panel {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 */
+            background: var(--bg-secondary);
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .card-panel img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .card-panel:hover img { transform: scale(1.05); }
+        .card-panel .no-image {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .card-panel .zoom-hint {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .card-panel:hover .zoom-hint { opacity: 1; }
+
+        /* Card Body */
+        .card-body {
+            padding: 14px 16px 16px;
+        }
+        .card-nickname {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Badges Row */
+        .card-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .badge-job {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .badge-job.job-rifle { background: #4CAF50; }
+        .badge-job.job-sniper { background: #2196F3; }
+        .badge-job.job-warrior { background: #E8654A; }
+
+        .badge-group {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-group.group-small { background: rgba(232,131,58,0.15); color: var(--accent-primary); }
+        .badge-group.group-vanguard { background: rgba(218,165,32,0.15); color: #DAA520; }
+        .badge-group.group-main { background: rgba(33,150,243,0.15); color: #2196F3; }
+        .badge-group.group-reserve { background: rgba(158,158,158,0.15); color: #9E9E9E; }
+
+        /* Set bonuses */
+        .card-sets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .set-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 500;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .set-tag.set-4 { border-color: #DAA520; color: #DAA520; background: rgba(218,165,32,0.08); }
+        .set-tag.set-3 { border-color: #9C27B0; color: #9C27B0; background: rgba(156,39,176,0.08); }
+        .set-tag.set-2 { border-color: var(--text-muted); }
+
+        /* Lightbox */
+        .lightbox-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+        .lightbox-overlay.active { display: flex; }
+        .lightbox-overlay img {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .roster-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .roster-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 12px 40px; }
+            .roster-header h1 { font-size: 1.5rem; }
+            .card-body { padding: 10px 12px 14px; }
+            .card-nickname { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body data-theme="day">
+
+<!-- Navbar -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <a href="/" class="nav-logo">
+            <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
+            <span class="logo-text"><span class="logo-full">PeaceHaven · </span>长安</span>
+        </a>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="/#hero" class="nav-link">首页</a></li>
+            <li><a href="/#about" class="nav-link">营地简介</a></li>
+            <li><a href="/#team" class="nav-link">管理组</a></li>
+            <li><a href="/activities" class="nav-link">活动</a></li>
+            <li><a href="/combat-roster" class="nav-link active">战斗组</a></li>
+            <li><a href="/#benefits" class="nav-link">福利</a></li>
+        </ul>
+        <div class="nav-actions">
+            <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                <span class="theme-icon-day">☀️</span>
+                <span class="theme-icon-night">🌙</span>
+            </button>
+            <button class="nav-hamburger" id="hamburger" aria-label="菜单">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="roster-page">
+    <div class="roster-header">
+        <h1>⚔️ 战斗组花名册 <span class="count" th:text="${#lists.size(members)} + ' 人'"></span></h1>
+        <p>PeaceHaven · 长安营地战斗组成员名录</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="roster-filters">
+        <span class="filter-group-label">分组：</span>
+        <div class="filter-group" id="groupFilters">
+            <button class="filter-btn active" data-filter="all" data-type="group">全部</button>
+            <button class="filter-btn" data-filter="小团" data-type="group">小团</button>
+            <button class="filter-btn" data-filter="大团先锋" data-type="group">大团先锋</button>
+            <button class="filter-btn" data-filter="大团" data-type="group">大团</button>
+            <button class="filter-btn" data-filter="预备役" data-type="group">预备役</button>
+        </div>
+        <span style="width: 16px;"></span>
+        <span class="filter-group-label">职业：</span>
+        <div class="filter-group" id="jobFilters">
+            <button class="filter-btn active" data-filter="all" data-type="job">全部</button>
+            <button class="filter-btn" data-filter="步枪兵" data-type="job">步枪兵</button>
+            <button class="filter-btn" data-filter="狙击手" data-type="job">狙击手</button>
+            <button class="filter-btn" data-filter="武士" data-type="job">武士</button>
+        </div>
+    </div>
+
+    <!-- Member Cards -->
+    <div class="roster-grid">
+        <div class="member-card" th:each="m : ${members}"
+             th:attr="data-group=${m.groupTag},data-job=${m.jobClass}">
+            <!-- Panel Image -->
+            <div class="card-panel" th:if="${m.panelImage != null && !m.panelImage.isEmpty()}"
+                 th:attr="onclick='openLightbox(\'' + ${m.panelImage} + '\')'">
+                <img th:src="${m.panelImage}" alt="面板图">
+                <span class="zoom-hint">🔍 点击放大</span>
+            </div>
+            <div class="card-panel" th:if="${m.panelImage == null || m.panelImage.isEmpty()}">
+                <span class="no-image">暂无面板图</span>
+            </div>
+
+            <!-- Card Body -->
+            <div class="card-body">
+                <div class="card-nickname" th:text="${nicknameMap[m.userId] ?: '未知成员'}">昵称</div>
+
+                <div class="card-badges">
+                    <!-- Job badge -->
+                    <span class="badge-job"
+                          th:classappend="${m.jobClass == '步枪兵' ? 'job-rifle' : (m.jobClass == '狙击手' ? 'job-sniper' : 'job-warrior')}"
+                          th:text="${m.jobClass}">职业</span>
+                    <!-- Group badge -->
+                    <span class="badge-group"
+                          th:classappend="${m.groupTag == '小团' ? 'group-small' : (m.groupTag == '大团先锋' ? 'group-vanguard' : (m.groupTag == '大团' ? 'group-main' : 'group-reserve'))}"
+                          th:text="${m.groupTag}">分组</span>
+                </div>
+
+                <!-- Set bonuses -->
+                <div class="card-sets" th:if="${m.setBonuses != null && !m.setBonuses.isEmpty()}">
+                    <th:block th:each="bonus : ${#strings.listSplit(m.setBonuses, ',')}">
+                        <span class="set-tag"
+                              th:classappend="${#strings.startsWith(bonus, '4') ? 'set-4' : (#strings.startsWith(bonus, '3') ? 'set-3' : 'set-2')}"
+                              th:text="${bonus}">套装</span>
+                    </th:block>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox-overlay" id="lightbox" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt="大图">
+</div>
+
+<script>
+    // Theme toggle (reuse from main site)
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('ph-theme') || 'day';
+    document.body.setAttribute('data-theme', savedTheme);
+    themeToggle.addEventListener('click', () => {
+        const current = document.body.getAttribute('data-theme');
+        const next = current === 'day' ? 'night' : 'day';
+        document.body.setAttribute('data-theme', next);
+        localStorage.setItem('ph-theme', next);
+    });
+
+    // Hamburger menu
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('navLinks');
+    hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('active');
+        navLinks.classList.toggle('open');
+    });
+    navLinks.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            hamburger.classList.remove('active');
+            navLinks.classList.remove('open');
+        });
+    });
+
+    // Filters
+    let activeGroup = 'all';
+    let activeJob = 'all';
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const type = this.dataset.type;
+            const filter = this.dataset.filter;
+
+            // Update active state within same group
+            this.closest('.filter-group').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+
+            if (type === 'group') activeGroup = filter;
+            if (type === 'job') activeJob = filter;
+
+            applyFilters();
+        });
+    });
+
+    function applyFilters() {
+        document.querySelectorAll('.member-card').forEach(card => {
+            const groupMatch = activeGroup === 'all' || card.dataset.group === activeGroup;
+            const jobMatch = activeJob === 'all' || card.dataset.job === activeJob;
+            card.classList.toggle('hidden', !(groupMatch && jobMatch));
+        });
+    }
+
+    // Lightbox
+    function openLightbox(url) {
+        document.getElementById('lightboxImg').src = url;
+        document.getElementById('lightbox').classList.add('active');
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('active');
+    }
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeLightbox();
+    });
+</script>
+</body>
+</html>

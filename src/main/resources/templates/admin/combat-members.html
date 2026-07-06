@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战斗组管理 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <style>
+        .set-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+        .set-group label { font-size: 0.85rem; color: #555; min-width: 40px; }
+        .set-group select { padding: 4px 8px; border-radius: 4px; border: 1px solid var(--admin-border); font-size: 0.85rem; }
+        .form-row { margin-bottom: 12px; }
+        .form-row label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+        .form-row input, .form-row select { width: 100%; padding: 8px 12px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); font-size: 0.9rem; }
+        .form-actions { display: flex; gap: 8px; margin-top: 16px; }
+        .search-results { position: absolute; background: #fff; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); box-shadow: var(--admin-shadow); max-height: 200px; overflow-y: auto; z-index: 100; width: 100%; }
+        .search-results .item { padding: 8px 12px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid #f0f0f0; }
+        .search-results .item:hover { background: #f5f5f5; }
+        .search-results .item.in-combat { opacity: 0.5; }
+        .search-results .item .tag { font-size: 0.75rem; background: #e0e0e0; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+        .user-search-wrap { position: relative; }
+        .selected-user { background: #f0f7ff; padding: 8px 12px; border-radius: var(--admin-radius); border: 1px solid #bbdefb; margin-top: 6px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
+        .selected-user .remove { cursor: pointer; color: var(--admin-danger); font-weight: bold; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #fff; border-radius: 12px; padding: 28px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2 { margin-bottom: 20px; font-size: 1.2rem; }
+        .alert-error { padding: 14px 20px; border-radius: var(--admin-radius); margin-bottom: 20px; font-size: 0.95rem; background: #fdecea; color: #c62828; border: 1px solid #ef9a9a; }
+    </style>
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>⚔️ 战斗组管理</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin/activities" class="btn-back">活动管理</a>
+            <a href="/admin/users" class="btn-back">用户管理</a>
+            <a href="/" class="btn-back">← 返回前台</a>
+        </div>
+    </header>
+
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <div th:if="${error}" class="alert-error" th:text="${error}"></div>
+
+    <div style="margin-bottom: 16px;">
+        <button class="btn btn-primary" onclick="openAddModal()">+ 添加成员</button>
+        <span style="margin-left: 12px; color: #777; font-size: 0.9rem;" th:text="'共 ' + ${#lists.size(members)} + ' 人'"></span>
+    </div>
+
+    <table class="admin-table">
+        <thead>
+        <tr>
+            <th>排序</th>
+            <th>昵称</th>
+            <th>职业</th>
+            <th>套装</th>
+            <th>分组</th>
+            <th>面板图</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="m : ${members}">
+            <td th:text="${m.sortOrder}"></td>
+            <td th:text="${nicknameMap[m.userId] ?: '未知用户'}"></td>
+            <td th:text="${m.jobClass}"></td>
+            <td th:text="${m.setBonuses}" style="font-size: 0.85rem;"></td>
+            <td>
+                <span class="badge badge-basic" th:text="${m.groupTag}"></span>
+            </td>
+            <td>
+                <span th:if="${m.panelImage != null && !m.panelImage.isEmpty()}">有</span>
+                <span th:unless="${m.panelImage != null && !m.panelImage.isEmpty()}" style="color:#aaa;">无</span>
+            </td>
+            <td class="actions">
+                <button class="btn btn-sm btn-info"
+                        th:attr="data-id=${m.id},data-userid=${m.userId},data-jobclass=${m.jobClass},data-sets=${m.setBonuses},data-group=${m.groupTag},data-image=${m.panelImage},data-sort=${m.sortOrder},data-nickname=${nicknameMap[m.userId] ?: ''}"
+                        onclick="openEditModal(this)">编辑</button>
+                <form th:action="@{/admin/combat-members/{id}/delete(id=${m.id})}" method="post" style="display:inline"
+                      onsubmit="return confirm('确定移除该成员？')">
+                    <input type="hidden" name="_csrf" th:value="${_csrf}">
+                    <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(members)}">
+            <td colspan="7" class="empty-state">暂无战斗组成员</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="memberModal">
+    <div class="modal-content">
+        <h2 id="modalTitle">添加战斗组成员</h2>
+        <form id="memberForm" method="post">
+            <input type="hidden" name="_csrf" th:value="${_csrf}">
+            <input type="hidden" id="formId" name="id">
+            <input type="hidden" id="selectedUserId" name="userId">
+
+            <div class="form-row">
+                <label>搜索用户（昵称或手机号）</label>
+                <div class="user-search-wrap">
+                    <input type="text" id="userSearchInput" placeholder="输入昵称或手机号搜索..." autocomplete="off">
+                    <div class="search-results" id="searchResults" style="display:none;"></div>
+                </div>
+                <div class="selected-user" id="selectedUserDisplay" style="display:none;">
+                    <span id="selectedUserText"></span>
+                    <span class="remove" onclick="clearSelectedUser()">✕</span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label>职业</label>
+                <select id="formJobClass" name="jobClass" required>
+                    <option value="步枪兵">步枪兵</option>
+                    <option value="狙击手">狙击手</option>
+                    <option value="武士">武士</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>套装选择（数字越大越强）</label>
+                <div class="set-group">
+                    <label>精准</label>
+                    <select id="set_jingzhun"><option value="0">无</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+                    <label>御敌</label>
+                    <select id="set_yudi"><option value="0">无</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+                </div>
+                <div class="set-group">
+                    <label>追猎</label>
+                    <select id="set_zhuilie"><option value="0">无</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+                    <label>速射</label>
+                    <select id="set_sushe"><option value="0">无</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+                </div>
+                <div class="set-group">
+                    <label>暴徒</label>
+                    <select id="set_baotu"><option value="0">无</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+                    <label>决斗</label>
+                    <select id="set_juedou"><option value="0">无</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+                </div>
+                <input type="hidden" id="formSetBonuses" name="setBonuses">
+            </div>
+
+            <div class="form-row">
+                <label>分组标签</label>
+                <select id="formGroupTag" name="groupTag" required>
+                    <option value="小团">小团</option>
+                    <option value="大团先锋">大团先锋</option>
+                    <option value="大团">大团</option>
+                    <option value="预备役">预备役</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>面板图片URL（16:9）</label>
+                <input type="text" id="formPanelImage" name="panelImage" placeholder="https://...">
+            </div>
+
+            <div class="form-row">
+                <label>排序权重（数字越小越靠前）</label>
+                <input type="number" id="formSortOrder" name="sortOrder" value="0" min="0">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">保存</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const SET_NAMES = {
+        'jingzhun': '精准', 'yudi': '御敌', 'zhuilie': '追猎',
+        'sushe': '速射', 'baotu': '暴徒', 'juedou': '决斗'
+    };
+
+    function buildSetBonuses() {
+        let bonuses = [];
+        for (const [key, name] of Object.entries(SET_NAMES)) {
+            const val = parseInt(document.getElementById('set_' + key).value);
+            if (val > 0) bonuses.push({ num: val, name: name });
+        }
+        bonuses.sort((a, b) => b.num - a.num);
+        return bonuses.map(b => b.num + b.name).join(',');
+    }
+
+    function parseSetBonuses(str) {
+        // Reset all
+        for (const key of Object.keys(SET_NAMES)) {
+            document.getElementById('set_' + key).value = '0';
+        }
+        if (!str) return;
+        const nameToKey = {};
+        for (const [k, v] of Object.entries(SET_NAMES)) nameToKey[v] = k;
+
+        str.split(',').forEach(part => {
+            part = part.trim();
+            if (!part) return;
+            const num = parseInt(part.charAt(0));
+            const name = part.substring(1);
+            if (nameToKey[name]) {
+                document.getElementById('set_' + nameToKey[name]).value = String(num);
+            }
+        });
+    }
+
+    // User search
+    let searchTimer = null;
+    const searchInput = document.getElementById('userSearchInput');
+    const searchResults = document.getElementById('searchResults');
+
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        const kw = this.value.trim();
+        if (kw.length < 1) { searchResults.style.display = 'none'; return; }
+        searchTimer = setTimeout(() => {
+            fetch('/admin/combat-members/search-users?keyword=' + encodeURIComponent(kw))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.length === 0) { searchResults.style.display = 'none'; return; }
+                    searchResults.innerHTML = data.map(u =>
+                        '<div class="item' + (u.inCombat ? ' in-combat' : '') + '" data-id="' + u.id + '" data-name="' + (u.nickname || '') + '">' +
+                        (u.nickname || '未设置昵称') + ' (' + u.phone + ')' +
+                        (u.inCombat ? '<span class="tag">已在战斗组</span>' : '') +
+                        '</div>'
+                    ).join('');
+                    searchResults.style.display = 'block';
+                });
+        }, 300);
+    });
+
+    searchResults.addEventListener('click', function (e) {
+        const item = e.target.closest('.item');
+        if (!item || item.classList.contains('in-combat')) return;
+        selectUser(item.dataset.id, item.dataset.name);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.user-search-wrap')) searchResults.style.display = 'none';
+    });
+
+    function selectUser(id, name) {
+        document.getElementById('selectedUserId').value = id;
+        document.getElementById('selectedUserDisplay').style.display = 'flex';
+        document.getElementById('selectedUserText').textContent = name + ' (ID: ' + id + ')';
+        searchInput.value = '';
+        searchResults.style.display = 'none';
+    }
+
+    function clearSelectedUser() {
+        document.getElementById('selectedUserId').value = '';
+        document.getElementById('selectedUserDisplay').style.display = 'none';
+    }
+
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = '添加战斗组成员';
+        document.getElementById('memberForm').action = '/admin/combat-members';
+        document.getElementById('formId').value = '';
+        clearSelectedUser();
+        document.getElementById('formJobClass').value = '步枪兵';
+        for (const key of Object.keys(SET_NAMES)) document.getElementById('set_' + key).value = '0';
+        document.getElementById('formGroupTag').value = '小团';
+        document.getElementById('formPanelImage').value = '';
+        document.getElementById('formSortOrder').value = '0';
+        document.getElementById('memberModal').classList.add('active');
+    }
+
+    function openEditModal(btn) {
+        document.getElementById('modalTitle').textContent = '编辑战斗组成员';
+        const id = btn.dataset.id;
+        document.getElementById('memberForm').action = '/admin/combat-members/' + id;
+        document.getElementById('formId').value = id;
+        selectUser(btn.dataset.userid, btn.dataset.nickname);
+        document.getElementById('formJobClass').value = btn.dataset.jobclass;
+        parseSetBonuses(btn.dataset.sets);
+        document.getElementById('formGroupTag').value = btn.dataset.group;
+        document.getElementById('formPanelImage').value = btn.dataset.image || '';
+        document.getElementById('formSortOrder').value = btn.dataset.sort || '0';
+        document.getElementById('memberModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('memberModal').classList.remove('active');
+    }
+
+    // Before submit, build set bonuses string
+    document.getElementById('memberForm').addEventListener('submit', function (e) {
+        document.getElementById('formSetBonuses').value = buildSetBonuses();
+        if (!document.getElementById('selectedUserId').value) {
+            e.preventDefault();
+            alert('请先搜索并选择一个用户');
+        }
+    });
+</script>
+</body>
+</html>

@@ -29,6 +29,7 @@
             <li><a href="#about" class="nav-link">营地简介</a></li>
             <li><a href="#team" class="nav-link">管理组</a></li>
             <li><a href="#activities" class="nav-link">活动</a></li>
+            <li th:if="${isManager}"><a href="/combat-roster" class="nav-link">战斗组</a></li>
             <li><a href="#benefits" class="nav-link">福利</a></li>
         </ul>
         <div class="nav-actions">
@@ -132,11 +133,11 @@
                 <div class="card-border"></div>
                 <div class="card-inner">
                     <div class="card-avatar">
-                        <img th:src="${member.avatar}" th:alt="${member.nickname}">
+                        <img th:src="${member.avatar}" th:alt="${nicknameMap[member.id] ?: '管理组'}">
                         <div class="avatar-ring"></div>
                     </div>
                     <div class="card-role" th:text="${member.role}">头衔</div>
-                    <h3 class="card-name" th:text="${member.nickname}">昵称</h3>
+                    <h3 class="card-name" th:text="${nicknameMap[member.id] ?: '未关联用户'}">昵称</h3>
                     <p class="card-desc" th:text="'「' + ${member.motto} + '」'">「座右铭」</p>
                     <div class="card-tags">
                         <span class="tag" th:each="tag : ${#strings.listSplit(member.tags, ',')}" th:text="${#strings.trim(tag)}">标签</span>

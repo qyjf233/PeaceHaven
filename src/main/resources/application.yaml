@@ -15,7 +15,7 @@ spring:
     jdbc:
       initialize-schema: always  # 自动建表 SPRING_SESSION / SPRING_SESSION_ATTRIBUTES
   datasource:
-    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db
+    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db_pre
     username: peacehaven_server
     password: XHJdashuaige2508@
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -46,3 +46,8 @@ aliyun:
     endpoint: cn-hangzhou.log.aliyuncs.com
     project: ${ALIYUN_SLS_PROJECT:}
     log-store: ${ALIYUN_SLS_LOGSTORE:}
+
+# 功能开关（true=启用，false=隐藏）
+features:
+  combat-roster:
+    enabled: false

@@ -32,15 +32,16 @@ public class TeamMember {
     @Comment("头像URL")
     private String avatar;
 
+    /** 关联用户ID（对应 user 表 id） */
+    @Column(name = "user_id", nullable = false)
+    @Comment("关联用户ID")
+    @Builder.Default
+    private Long userId = 0L;
+
     /** 头衔/职位，如：市长、副市长、后勤部长 */
     @Column(name = "role", nullable = false, length = 50)
     @Comment("头衔/职位")
     private String role;
-
-    /** 昵称 */
-    @Column(name = "nickname", nullable = false, length = 50)
-    @Comment("昵称")
-    private String nickname;
 
     /** 座右铭（不含「」括号，模板渲染时自动包裹） */
     @Column(name = "motto", length = 100)
