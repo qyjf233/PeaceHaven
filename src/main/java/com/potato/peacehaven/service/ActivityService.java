@@ -41,6 +41,12 @@ public class ActivityService {
         if ("ONGOING".equalsIgnoreCase(status)) {
             return activityRepository.findByStartDateBeforeAndEndDateAfter(now, now, pageRequest);
         }
+        if ("UPCOMING".equalsIgnoreCase(status)) {
+            return activityRepository.findByStartDateAfterOrderByStartDateAsc(now, pageRequest);
+        }
+        if ("ENDED".equalsIgnoreCase(status)) {
+            return activityRepository.findByEndDateBeforeOrderByStartDateDesc(now, pageRequest);
+        }
         return activityRepository.findAllByOrderByStartDateDesc(pageRequest);
     }
 

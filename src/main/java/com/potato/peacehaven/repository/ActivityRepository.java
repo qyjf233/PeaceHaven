@@ -24,4 +24,10 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     /** 分页查询所有活动，按开始时间倒序 */
     Page<Activity> findAllByOrderByStartDateDesc(Pageable pageable);
+
+    /** 查询即将开始的活动（开始时间在当前时间之后） */
+    Page<Activity> findByStartDateAfterOrderByStartDateAsc(LocalDateTime now, Pageable pageable);
+
+    /** 查询已结束的活动（结束时间在当前时间之前） */
+    Page<Activity> findByEndDateBeforeOrderByStartDateDesc(LocalDateTime now, Pageable pageable);
 }
