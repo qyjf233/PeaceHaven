@@ -1,13 +1,14 @@
 package com.potato.peacehaven.config;
 
 import com.potato.peacehaven.entity.Activity;
-import com.potato.peacehaven.entity.BuildingContestConfig;
+import com.potato.peacehaven.entity.ActivityConfig;
 import com.potato.peacehaven.entity.BuildingContestJudge;
 import com.potato.peacehaven.entity.User;
+import com.potato.peacehaven.repository.ActivityConfigRepository;
 import com.potato.peacehaven.repository.ActivityRepository;
-import com.potato.peacehaven.repository.BuildingContestConfigRepository;
 import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.repository.UserRepository;
+import com.potato.peacehaven.service.BuildingContestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -15,6 +16,8 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -22,13 +25,14 @@ import java.time.LocalDateTime;
 public class DataInitializer implements ApplicationRunner {
 
     private final ActivityRepository activityRepository;
-    private final BuildingContestConfigRepository configRepository;
+    private final ActivityConfigRepository configRepository;
     private final BuildingContestJudgeRepository judgeRepository;
     private final UserRepository userRepository;
 
     @Override
     public void run(ApplicationArguments args) {
         initBuildingContest();
+        initBattleShowdown();
     }
 
     private void initBuildingContest() {
@@ -48,14 +52,17 @@ public class DataInitializer implements ApplicationRunner {
 
         // 初始化时间配置（如果不存在）
         if (configRepository.findByActivityId(activity.getId()).isEmpty()) {
-            BuildingContestConfig config = BuildingContestConfig.builder()
+            Map<String, String> configData = new LinkedHashMap<>();
+            configData.put("submitStart", "2026-07-05T00:00");
+            configData.put("submitEnd", "2026-07-14T23:30");
+            configData.put("judgeStart", "2026-07-15T00:00");
+            configData.put("judgeEnd", "2026-07-15T23:59");
+            configData.put("voteStart", "2026-07-16T00:00");
+            configData.put("voteEnd", "2026-07-20T23:30");
+
+            ActivityConfig config = ActivityConfig.builder()
                     .activityId(activity.getId())
-                    .submitStart(LocalDateTime.of(2026, 7, 5, 0, 0))
-                    .submitEnd(LocalDateTime.of(2026, 7, 14, 23, 30))
-                    .judgeStart(LocalDateTime.of(2026, 7, 15, 0, 0))
-                    .judgeEnd(LocalDateTime.of(2026, 7, 15, 23, 59))
-                    .voteStart(LocalDateTime.of(2026, 7, 16, 0, 0))
-                    .voteEnd(LocalDateTime.of(2026, 7, 20, 23, 30))
+                    .configJson(BuildingContestService.mapToJson(configData))
                     .build();
             configRepository.save(config);
             log.info("已创建建筑大赛时间配置");
@@ -63,6 +70,42 @@ public class DataInitializer implements ApplicationRunner {
 
         // 初始化裁判（按手机号指定）
         // initJudges(activity.getId());
+    }
+
+    private void initBattleShowdown() {
+        String slug = "battle-showdown-1";
+        Activity activity = activityRepository.findBySlug(slug).orElse(null);
+        if (activity == null) {
+            activity = Activity.builder()
+                    .slug(slug)
+                    .title("1v1 擂台赛")
+                    .summary("瑞士轮积分赛 + 淘汰赛，谁是长安最强战力？")
+                    .startDate(LocalDateTime.of(2026, 7, 1, 0, 0))
+                    .endDate(LocalDateTime.of(2026, 7, 20, 23, 59))
+                    .build();
+            activity = activityRepository.save(activity);
+            log.info("已自动创建擂台赛活动记录: slug={}", slug);
+        }
+
+        // 初始化时间配置（如果不存在）
+        if (configRepository.findByActivityId(activity.getId()).isEmpty()) {
+            String timelineJson = "["
+                + "{\"label\":\"报名期\",\"icon\":\"📋\",\"phase\":\"register\",\"start\":\"2026-07-01T00:00\",\"end\":\"2026-07-05T23:59\"},"
+                + "{\"label\":\"瑞士轮\",\"icon\":\"🔄\",\"phase\":\"swiss\",\"start\":\"2026-07-06T00:00\",\"end\":\"2026-07-12T23:59\"},"
+                + "{\"label\":\"淘汰赛\",\"icon\":\"⚔️\",\"phase\":\"elimination\",\"start\":\"2026-07-13T00:00\",\"end\":\"2026-07-15T23:59\"},"
+                + "{\"label\":\"决赛&颁奖\",\"icon\":\"🏆\",\"phase\":\"finals\",\"start\":\"2026-07-16T20:00\",\"end\":\"2026-07-16T23:59\"}"
+                + "]";
+
+            Map<String, String> configData = new LinkedHashMap<>();
+            configData.put("timeline", timelineJson);
+
+            ActivityConfig config = ActivityConfig.builder()
+                    .activityId(activity.getId())
+                    .configJson(BuildingContestService.mapToJson(configData))
+                    .build();
+            configRepository.save(config);
+            log.info("已创建擂台赛时间配置");
+        }
     }
 
     /**

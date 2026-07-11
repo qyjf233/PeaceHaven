@@ -1,11 +1,10 @@
 package com.potato.peacehaven.controller;
 
-import com.potato.peacehaven.entity.BuildingContestConfig;
-import com.potato.peacehaven.entity.BuildingContestConfig.ContestPhase;
 import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.entity.BuildingContestWork;
 import com.potato.peacehaven.entity.User;
+import com.potato.peacehaven.enums.ContestPhase;
 import com.potato.peacehaven.service.ActivityService;
 import com.potato.peacehaven.service.BuildingContestService;
 import com.potato.peacehaven.service.OssService;
@@ -341,15 +340,15 @@ public class BuildingContestController {
         result.put("showJudgeScore", showJudgeScore);
 
         // 时间节点（供进程条显示）
-        BuildingContestConfig config = contestService.getConfig(activityId);
-        if (config != null) {
+        Map<String, String> configMap = contestService.getConfigMap(activityId);
+        if (!configMap.isEmpty()) {
             List<Map<String, String>> milestones = new ArrayList<>();
-            milestones.add(milestone("投稿开始", config.getSubmitStart()));
-            milestones.add(milestone("投稿截止", config.getSubmitEnd()));
-            milestones.add(milestone("评委打分", config.getJudgeStart()));
-            milestones.add(milestone("打分截止", config.getJudgeEnd()));
-            milestones.add(milestone("投票开启", config.getVoteStart()));
-            milestones.add(milestone("投票截止", config.getVoteEnd()));
+            milestones.add(milestone("投稿开始", configMap.get("submitStart")));
+            milestones.add(milestone("投稿截止", configMap.get("submitEnd")));
+            milestones.add(milestone("评委打分", configMap.get("judgeStart")));
+            milestones.add(milestone("打分截止", configMap.get("judgeEnd")));
+            milestones.add(milestone("投票开启", configMap.get("voteStart")));
+            milestones.add(milestone("投票截止", configMap.get("voteEnd")));
             result.put("milestones", milestones);
         }
 
@@ -454,10 +453,20 @@ public class BuildingContestController {
         };
     }
 
-    private Map<String, String> milestone(String label, java.time.LocalDateTime time) {
+    private Map<String, String> milestone(String label, String dateTimeStr) {
         Map<String, String> m = new HashMap<>();
         m.put("label", label);
-        m.put("time", time != null ? time.format(java.time.format.DateTimeFormatter.ofPattern("M/d HH:mm")) : null);
+        if (dateTimeStr != null && !dateTimeStr.isEmpty()) {
+            try {
+                java.time.LocalDateTime dt = java.time.LocalDateTime.parse(dateTimeStr,
+                        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
+                m.put("time", dt.format(java.time.format.DateTimeFormatter.ofPattern("M/d HH:mm")));
+            } catch (Exception e) {
+                m.put("time", dateTimeStr);
+            }
+        } else {
+            m.put("time", null);
+        }
         return m;
     }
 

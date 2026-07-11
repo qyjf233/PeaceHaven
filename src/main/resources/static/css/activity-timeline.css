@@ -1,0 +1,99 @@
+/* ============================================
+   PeaceHaven 活动进程时间轴 - 公共样式
+   使用方式：在活动页 <head> 中引入
+   <link rel="stylesheet" th:href="@{/css/activity-timeline.css}">
+   ============================================ */
+
+/* === 时间轴容器 === */
+.ph-timeline {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    position: relative;
+    padding: 20px 0;
+}
+
+/* === 步骤 === */
+.ph-tl-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    max-width: 160px;
+}
+
+/* 连接轨道 */
+.ph-tl-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 18px;
+    left: calc(50% + 20px);
+    right: calc(-50% + 20px);
+    height: 3px;
+    background: var(--border-color);
+    z-index: 0;
+}
+.ph-tl-step.done:not(:last-child)::after {
+    background: var(--accent-primary);
+}
+
+/* === 圆点 === */
+.ph-tl-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 3px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    z-index: 1;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+}
+.ph-tl-step.done .ph-tl-dot {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+}
+.ph-tl-step.active .ph-tl-dot {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 4px rgba(232,131,58,0.2);
+    animation: ph-tl-pulse 2s ease-in-out infinite;
+}
+@keyframes ph-tl-pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(232,131,58,0.2); }
+    50% { box-shadow: 0 0 0 8px rgba(232,131,58,0.1); }
+}
+
+/* === 标签 === */
+.ph-tl-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+}
+.ph-tl-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    text-align: center;
+}
+
+/* === 响应式 === */
+@media (max-width: 768px) {
+    .ph-timeline {
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+    }
+    .ph-tl-step {
+        max-width: 120px;
+        flex: 0 0 auto;
+    }
+    .ph-tl-step:not(:last-child)::after {
+        display: none;
+    }
+}

@@ -1,6 +1,7 @@
 package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.entity.Activity;
+import com.potato.peacehaven.repository.ActivityConfigRepository;
 import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.service.ActivityService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class ActivityController {
 
     private final ActivityService activityService;
     private final BuildingContestJudgeRepository judgeRepository;
+    private final ActivityConfigRepository configRepository;
 
     /**
      * 活动列表页（公开）- 只返回模板，数据由前端 AJAX 加载
@@ -76,6 +78,11 @@ public class ActivityController {
         activityService.incrementViewCount(activity.getId());
         model.addAttribute("activity", activity);
         model.addAttribute("status", activityService.getStatus(activity));
+
+        // 读取活动配置（通用）
+        configRepository.findByActivityId(activity.getId()).ifPresent(cfg -> {
+            model.addAttribute("configJson", cfg.getConfigJson());
+        });
 
         // 裁判组数据（建筑大赛专用，始终显示3个位置）
         if ("building-master-1".equals(slug)) {

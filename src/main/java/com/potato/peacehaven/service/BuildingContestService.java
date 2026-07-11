@@ -1,15 +1,15 @@
 package com.potato.peacehaven.service;
 
+import com.potato.peacehaven.entity.ActivityConfig;
 import com.potato.peacehaven.entity.BuildingContestAbstractVote;
-import com.potato.peacehaven.entity.BuildingContestConfig;
-import com.potato.peacehaven.entity.BuildingContestConfig.ContestPhase;
 import com.potato.peacehaven.entity.BuildingContestJudge;
 import com.potato.peacehaven.entity.BuildingContestJudgeScore;
 import com.potato.peacehaven.entity.BuildingContestVote;
 import com.potato.peacehaven.entity.BuildingContestWork;
 import com.potato.peacehaven.entity.User;
+import com.potato.peacehaven.enums.ContestPhase;
+import com.potato.peacehaven.repository.ActivityConfigRepository;
 import com.potato.peacehaven.repository.BuildingContestAbstractVoteRepository;
-import com.potato.peacehaven.repository.BuildingContestConfigRepository;
 import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.repository.BuildingContestJudgeScoreRepository;
 import com.potato.peacehaven.repository.BuildingContestVoteRepository;
@@ -21,10 +21,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -34,7 +33,7 @@ public class BuildingContestService {
     private final BuildingContestWorkRepository workRepository;
     private final BuildingContestVoteRepository voteRepository;
     private final BuildingContestAbstractVoteRepository abstractVoteRepository;
-    private final BuildingContestConfigRepository configRepository;
+    private final ActivityConfigRepository configRepository;
     private final BuildingContestJudgeRepository judgeRepository;
     private final BuildingContestJudgeScoreRepository judgeScoreRepository;
 
@@ -326,22 +325,195 @@ public class BuildingContestService {
         }
     }
 
-    // ==================== 阶段控制 ====================
+    private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     /**
-     * 获取当前大赛阶段
+     * 解析活动配置 JSON 为 Map
+     * 支持嵌套 JSON 值（数组/对象），嵌套值以原始字符串形式存储
      */
-    public ContestPhase getCurrentPhase(Long activityId) {
+    public Map<String, String> getConfigMap(Long activityId) {
         return configRepository.findByActivityId(activityId)
-                .map(BuildingContestConfig::getCurrentPhase)
-                .orElse(ContestPhase.BEFORE_START);
+                .map(cfg -> parseJson(cfg.getConfigJson()))
+                .orElse(Collections.emptyMap());
     }
 
     /**
-     * 获取大赛时间配置
+     * 解析 JSON 字符串为 Map，支持嵌套数组/对象值
+     * 例如：{"key":"value","timeline":[{...},{...}]}
+     * 结果：key → "value", timeline → "[{...},{...}]"（原始 JSON 字符串）
      */
-    public BuildingContestConfig getConfig(Long activityId) {
-        return configRepository.findByActivityId(activityId).orElse(null);
+    private Map<String, String> parseJson(String json) {
+        Map<String, String> map = new LinkedHashMap<>();
+        if (json == null || json.isBlank()) return map;
+        String s = json.trim();
+        if (s.startsWith("{")) s = s.substring(1);
+        if (s.endsWith("}")) s = s.substring(0, s.length() - 1);
+        s = s.trim();
+
+        int i = 0;
+        while (i < s.length()) {
+            // 找 key
+            int k1 = s.indexOf('"', i);
+            if (k1 < 0) break;
+            int k2 = s.indexOf('"', k1 + 1);
+            if (k2 < 0) break;
+            String key = s.substring(k1 + 1, k2);
+
+            // 找冒号
+            int colon = s.indexOf(':', k2 + 1);
+            if (colon < 0) break;
+            int vi = colon + 1;
+            while (vi < s.length() && s.charAt(vi) == ' ') vi++;
+            if (vi >= s.length()) break;
+
+            char ch = s.charAt(vi);
+            String value;
+            int next;
+
+            if (ch == '"') {
+                // 字符串值：找下一个未转义的引号
+                int end = vi + 1;
+                while (end < s.length()) {
+                    if (s.charAt(end) == '"' && s.charAt(end - 1) != '\\') break;
+                    end++;
+                }
+                value = s.substring(vi + 1, end);
+                next = end + 1;
+            } else if (ch == '[' || ch == '{') {
+                // 嵌套结构：找匹配的关闭括号
+                char open = ch, close = ch == '[' ? ']' : '}';
+                int depth = 1;
+                int end = vi + 1;
+                boolean inStr = false;
+                while (end < s.length() && depth > 0) {
+                    char c = s.charAt(end);
+                    if (c == '"' && (end == 0 || s.charAt(end - 1) != '\\')) inStr = !inStr;
+                    if (!inStr) {
+                        if (c == open) depth++;
+                        else if (c == close) depth--;
+                    }
+                    if (depth > 0) end++;
+                }
+                value = s.substring(vi, end + 1); // 原始 JSON
+                next = end + 1;
+            } else {
+                // 数字/布尔/null
+                int end = vi;
+                while (end < s.length() && s.charAt(end) != ',' && s.charAt(end) != '}') end++;
+                value = s.substring(vi, end).trim();
+                next = end;
+            }
+
+            map.put(key, value);
+
+            // 跳过逗号
+            while (next < s.length() && (s.charAt(next) == ',' || s.charAt(next) == ' ')) next++;
+            i = next;
+        }
+        return map;
+    }
+
+    /**
+     * 将 Map 序列化为 JSON 字符串
+     * 如果值以 [ 或 { 开头，视为原始 JSON 不加引号；否则作为字符串值加引号
+     */
+    public static String mapToJson(Map<String, String> map) {
+        StringBuilder sb = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            if (!first) sb.append(",");
+            sb.append("\"").append(entry.getKey()).append("\":");
+            String v = entry.getValue();
+            if (v != null && (v.startsWith("[") || v.startsWith("{"))) {
+                sb.append(v); // 原始 JSON 值
+            } else {
+                sb.append("\"").append(v != null ? v : "").append("\"");
+            }
+            first = false;
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
+    /**
+     * 从配置 JSON 中提取指定 key 的字符串值
+     * 用于从原始 configJson 字符串中直接提取嵌套值（如 timeline 数组）
+     */
+    public static String extractJsonValue(String json, String targetKey) {
+        if (json == null) return null;
+        String search = "\"" + targetKey + "\"";
+        int keyIdx = json.indexOf(search);
+        if (keyIdx < 0) return null;
+        int colonIdx = json.indexOf(':', keyIdx + search.length());
+        if (colonIdx < 0) return null;
+        int start = colonIdx + 1;
+        while (start < json.length() && json.charAt(start) == ' ') start++;
+        if (start >= json.length()) return null;
+
+        char ch = json.charAt(start);
+        if (ch == '"') {
+            int end = start + 1;
+            while (end < json.length() && json.charAt(end) != '"') end++;
+            return json.substring(start + 1, end);
+        } else if (ch == '[' || ch == '{') {
+            char open = ch, close = ch == '[' ? ']' : '}';
+            int depth = 1, end = start + 1;
+            boolean inStr = false;
+            while (end < json.length() && depth > 0) {
+                char c = json.charAt(end);
+                if (c == '"' && (end == 0 || json.charAt(end - 1) != '\\')) inStr = !inStr;
+                if (!inStr) {
+                    if (c == open) depth++;
+                    else if (c == close) depth--;
+                }
+                if (depth > 0) end++;
+            }
+            return json.substring(start, end + 1);
+        } else {
+            int end = start;
+            while (end < json.length() && json.charAt(end) != ',' && json.charAt(end) != '}') end++;
+            return json.substring(start, end).trim();
+        }
+    }
+
+    /**
+     * 从配置 Map 中解析指定 key 为 LocalDateTime
+     */
+    private LocalDateTime parseDateTime(Map<String, String> configMap, String key) {
+        String val = configMap.get(key);
+        if (val == null || val.isEmpty()) return null;
+        try {
+            return LocalDateTime.parse(val, DT_FORMAT);
+        } catch (Exception e) {
+            log.warn("日期解析失败: key={}, value={}", key, val);
+            return null;
+        }
+    }
+
+    // ==================== 阶段控制 ====================
+
+    /**
+     * 获取当前大赛阶段（根据 config JSON 中的时间节点推导）
+     */
+    public ContestPhase getCurrentPhase(Long activityId) {
+        Map<String, String> cfg = getConfigMap(activityId);
+        if (cfg.isEmpty()) return ContestPhase.BEFORE_START;
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime submitStart = parseDateTime(cfg, "submitStart");
+        LocalDateTime submitEnd = parseDateTime(cfg, "submitEnd");
+        LocalDateTime judgeStart = parseDateTime(cfg, "judgeStart");
+        LocalDateTime judgeEnd = parseDateTime(cfg, "judgeEnd");
+        LocalDateTime voteStart = parseDateTime(cfg, "voteStart");
+        LocalDateTime voteEnd = parseDateTime(cfg, "voteEnd");
+
+        if (submitStart == null || now.isBefore(submitStart)) return ContestPhase.BEFORE_START;
+        if (submitEnd != null && now.isBefore(submitEnd)) return ContestPhase.SUBMISSION;
+        if (judgeStart != null && now.isBefore(judgeStart)) return ContestPhase.REVIEW;
+        if (judgeEnd != null && now.isBefore(judgeEnd)) return ContestPhase.JUDGING;
+        if (voteStart != null && now.isBefore(voteStart)) return ContestPhase.PRE_VOTE;
+        if (voteEnd != null && now.isBefore(voteEnd)) return ContestPhase.VOTING;
+        return ContestPhase.RESULTS;
     }
 
     /**
