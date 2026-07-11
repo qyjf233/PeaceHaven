@@ -82,18 +82,52 @@
     text-align: center;
 }
 
-/* === 响应式 === */
-@media (max-width: 768px) {
+/* === 响应式 - 中等屏幕：缩小圆点和间距 === */
+@media (max-width: 768px) and (min-width: 481px) {
+    .ph-tl-step { max-width: 120px; }
+    .ph-tl-dot { width: 30px; height: 30px; font-size: 0.75rem; }
+    .ph-tl-step:not(:last-child)::after {
+        top: 15px;
+        left: calc(50% + 16px);
+        right: calc(-50% + 16px);
+        height: 2px;
+    }
+    .ph-tl-label { font-size: 0.78rem; }
+    .ph-tl-date { font-size: 0.68rem; }
+}
+
+/* === 响应式 - 小屏幕：切换为纵向布局 === */
+@media (max-width: 480px) {
     .ph-timeline {
-        flex-wrap: wrap;
-        gap: 12px;
-        justify-content: center;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 0 10px 20px;
     }
     .ph-tl-step {
-        max-width: 120px;
-        flex: 0 0 auto;
+        flex-direction: row;
+        align-items: flex-start;
+        max-width: none;
+        width: 100%;
+        gap: 14px;
+        padding-bottom: 24px;
     }
+    .ph-tl-step:last-child { padding-bottom: 0; }
+
+    /* 纵向连接线 */
     .ph-tl-step:not(:last-child)::after {
-        display: none;
+        top: 36px;
+        left: 17px;
+        right: auto;
+        width: 2px;
+        height: calc(100% - 36px);
     }
+
+    .ph-tl-dot {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        margin-bottom: 0;
+    }
+    .ph-tl-label { font-size: 0.88rem; text-align: left; }
+    .ph-tl-date { font-size: 0.75rem; text-align: left; }
 }
