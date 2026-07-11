@@ -77,7 +77,7 @@ public class ActivityController {
         model.addAttribute("activity", activity);
         model.addAttribute("status", activityService.getStatus(activity));
 
-        // 裁判组数据（建筑大赛专用，始终显示5个位置）
+        // 裁判组数据（建筑大赛专用，始终显示3个位置）
         if ("building-master-1".equals(slug)) {
             var realJudges = judgeRepository.findByActivityId(activity.getId());
             List<Map<String, Object>> judgeList = new ArrayList<>();
@@ -92,8 +92,8 @@ public class ActivityController {
                 judgeList.add(m);
             }
 
-            // 不足 5 个的位置用占位填充
-            for (int i = judgeList.size() + 1; i <= 5; i++) {
+            // 不足 3 个的位置用占位填充
+            for (int i = judgeList.size() + 1; i <= 3; i++) {
                 Map<String, Object> m = new HashMap<>();
                 m.put("name", "裁判 " + i);
                 m.put("title", "待公布");

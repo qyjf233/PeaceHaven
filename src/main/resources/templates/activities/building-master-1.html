@@ -169,9 +169,11 @@
         /* Judge Panel */
         .judge-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 16px;
             text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
         }
         .judge-card {
             background: var(--bg-card);
@@ -1092,7 +1094,7 @@
         <div class="info-card" style="margin-bottom: 20px;">
             <h3>📊 最终成绩计算</h3>
             <p><strong>最终得分 = 裁判评分（70%）+ 网络投票（30%）</strong></p>
-            <p style="margin-top: 8px;">裁判评分：由5位裁判独立评分，每位裁判满分10分，取平均分后乘以7，即裁判得分最高70分。</p>
+            <p style="margin-top: 8px;">裁判评分：由3位裁判独立评分，每位裁判满分10分，取平均分后乘以7，即裁判得分最高70分。</p>
             <div style="margin-top: 16px;">
                 <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 10px;">🗳️ <strong>网络投票</strong>：按票数排名计分</p>
                 <div class="score-table">
