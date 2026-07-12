@@ -2,6 +2,7 @@ server:
   port: 2508
   servlet:
     session:
+      timeout: 2592000  # Session有效期30天（秒）
       cookie:
         max-age: 2592000  # 30天（秒），cookie持久化，关闭浏览器不丢失
         http-only: true
@@ -11,7 +12,6 @@ spring:
     name: peacehaven
   session:
     store-type: jdbc           # Session持久化到数据库
-    timeout: 30d               # Session有效期30天
     jdbc:
       initialize-schema: always  # 自动建表 SPRING_SESSION / SPRING_SESSION_ATTRIBUTES
   datasource:
