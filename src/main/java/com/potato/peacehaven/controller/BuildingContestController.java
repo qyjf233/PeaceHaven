@@ -1,6 +1,5 @@
 package com.potato.peacehaven.controller;
 
-import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.entity.BuildingContestWork;
 import com.potato.peacehaven.entity.User;
@@ -8,6 +7,7 @@ import com.potato.peacehaven.enums.ContestPhase;
 import com.potato.peacehaven.service.ActivityService;
 import com.potato.peacehaven.service.BuildingContestService;
 import com.potato.peacehaven.service.OssService;
+import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +31,7 @@ public class BuildingContestController {
     private final BuildingContestService contestService;
     private final ActivityService activityService;
     private final OssService ossService;
+    private final UserService userService;
 
     /**
      * 投稿作品（上传图片 + 提交信息）
@@ -43,7 +44,7 @@ public class BuildingContestController {
             HttpSession session) {
 
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -100,7 +101,7 @@ public class BuildingContestController {
     @PostMapping("/vote/{workId}")
     public ResponseEntity<Map<String, Object>> vote(@PathVariable Long workId, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -128,7 +129,7 @@ public class BuildingContestController {
     @PostMapping("/unvote/{workId}")
     public ResponseEntity<Map<String, Object>> unvote(@PathVariable Long workId, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -156,7 +157,7 @@ public class BuildingContestController {
     @PostMapping("/abstract-vote/{workId}")
     public ResponseEntity<Map<String, Object>> abstractVote(@PathVariable Long workId, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -182,7 +183,7 @@ public class BuildingContestController {
     @PostMapping("/abstract-unvote/{workId}")
     public ResponseEntity<Map<String, Object>> abstractUnvote(@PathVariable Long workId, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -208,7 +209,7 @@ public class BuildingContestController {
     @PostMapping("/delete-work")
     public ResponseEntity<Map<String, Object>> deleteWork(HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -254,7 +255,7 @@ public class BuildingContestController {
             workNumberMap.put(sortedByTime.get(i).getId(), i + 1);
         }
 
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         // 获取当前阶段
         ContestPhase phase = contestService.getCurrentPhase(activityId);
@@ -478,7 +479,7 @@ public class BuildingContestController {
     @GetMapping("/judge/works")
     public ResponseEntity<Map<String, Object>> getJudgeWorks(HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -551,7 +552,7 @@ public class BuildingContestController {
             @RequestBody Map<String, Object> body,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);

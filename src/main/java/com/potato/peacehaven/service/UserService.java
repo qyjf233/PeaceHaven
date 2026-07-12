@@ -1,9 +1,11 @@
 package com.potato.peacehaven.service;
 
+import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.enums.UserRole;
 import com.potato.peacehaven.enums.UserStatus;
 import com.potato.peacehaven.repository.UserRepository;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -94,6 +96,17 @@ public class UserService {
         User user = getUserById(id);
         user.setAvatar(avatarUrl);
         userRepository.save(user);
+    }
+
+    /**
+     * 从 Session 获取当前登录用户（通过 userId 查数据库，保证数据实时）
+     * @return 用户对象，未登录返回 null
+     */
+    public User getCurrentUser(HttpSession session) {
+        if (session == null) return null;
+        Long userId = (Long) session.getAttribute(AdminInterceptor.SESSION_USER_ID_KEY);
+        if (userId == null) return null;
+        return userRepository.findById(userId).orElse(null);
     }
 
     /**

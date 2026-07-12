@@ -1,11 +1,11 @@
 package com.potato.peacehaven.controller;
 
-import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.entity.PvpRegistration;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.repository.PvpRegistrationRepository;
 import com.potato.peacehaven.service.ActivityService;
+import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +28,7 @@ public class PvpRegistrationController {
 
     private final PvpRegistrationRepository registrationRepository;
     private final ActivityService activityService;
+    private final UserService userService;
 
     /**
      * 获取报名状态（是否已报名 + 当前报名人数）
@@ -37,7 +38,7 @@ public class PvpRegistrationController {
         Activity activity = activityService.getActivityBySlug(slug);
         long totalRegistered = registrationRepository.countByActivityId(activity.getId());
 
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
         boolean isRegistered = false;
         String campName = null;
         if (user != null) {
@@ -57,7 +58,7 @@ public class PvpRegistrationController {
      */
     @PostMapping("/{slug}/register")
     public ResponseEntity<Map<String, Object>> register(@PathVariable String slug, HttpSession session) {
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
         }
@@ -93,7 +94,7 @@ public class PvpRegistrationController {
      */
     @PostMapping("/{slug}/cancel")
     public ResponseEntity<Map<String, Object>> cancel(@PathVariable String slug, HttpSession session) {
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
         }

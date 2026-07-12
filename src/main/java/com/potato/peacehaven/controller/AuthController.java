@@ -2,7 +2,7 @@ package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.User;
-import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
+import com.potato.peacehaven.repository.ActivityJudgeRepository;
 import com.potato.peacehaven.service.ActivityService;
 import com.potato.peacehaven.service.OssService;
 import com.potato.peacehaven.service.SmsService;
@@ -29,7 +29,7 @@ public class AuthController {
     private final SmsService smsService;
     private final UserService userService;
     private final OssService ossService;
-    private final BuildingContestJudgeRepository judgeRepository;
+    private final ActivityJudgeRepository judgeRepository;
     private final ActivityService activityService;
 
     private static final Pattern PHONE_PATTERN = Pattern.compile("^1[3-9]\\d{9}$");
@@ -114,8 +114,8 @@ public class AuthController {
         try {
             UserService.LoginResult loginResult = userService.login(phone);
             User user = loginResult.user();
-            // 存入 session
-            session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
+            // 存入 session（只存 userId，避免序列化问题）
+            session.setAttribute(AdminInterceptor.SESSION_USER_ID_KEY, user.getId());
 
             result.put("success", true);
             result.put("message", "登录成功");
@@ -135,7 +135,7 @@ public class AuthController {
     @PostMapping("/nickname")
     public ResponseEntity<Map<String, Object>> updateNickname(@RequestBody Map<String, String> body, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -158,7 +158,6 @@ public class AuthController {
 
         try {
             userService.updateNickname(user.getId(), nickname.trim());
-            user.setNickname(nickname.trim());
 
             // 同时保存营地名（如果提供了）
             String campName = body.get("campName");
@@ -169,11 +168,8 @@ public class AuthController {
                     return ResponseEntity.ok(result);
                 }
                 userService.updateCampName(user.getId(), campName.trim());
-                user.setCampName(campName.trim());
                 result.put("campName", campName.trim());
             }
-
-            session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
 
             result.put("success", true);
             result.put("message", "设置成功");
@@ -191,7 +187,7 @@ public class AuthController {
     @PostMapping("/camp-name")
     public ResponseEntity<Map<String, Object>> updateCampName(@RequestBody Map<String, String> body, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -214,8 +210,6 @@ public class AuthController {
 
         try {
             userService.updateCampName(user.getId(), campName.trim());
-            user.setCampName(campName.trim());
-            session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
 
             result.put("success", true);
             result.put("message", "营地名修改成功");
@@ -256,7 +250,7 @@ public class AuthController {
     @PostMapping("/avatar")
     public ResponseEntity<Map<String, Object>> updateAvatar(@RequestParam("file") MultipartFile file, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user == null) {
             result.put("success", false);
@@ -267,8 +261,6 @@ public class AuthController {
         try {
             String avatarUrl = ossService.uploadImage(file, "avatar");
             userService.updateAvatar(user.getId(), avatarUrl);
-            user.setAvatar(avatarUrl);
-            session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
 
             result.put("success", true);
             result.put("message", "头像上传成功");
@@ -290,7 +282,7 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<Map<String, Object>> me(HttpSession session) {
         Map<String, Object> result = new HashMap<>();
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         if (user != null) {
             result.put("loggedIn", true);

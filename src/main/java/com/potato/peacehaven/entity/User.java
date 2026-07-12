@@ -49,6 +49,11 @@ public class User implements Serializable {
     @Comment("头像URL")
     private String avatar;
 
+    /** 直播间链接 */
+    @Column(name = "live_room_url", length = 500)
+    @Comment("直播间链接")
+    private String liveRoomUrl;
+
     /** 角色：USER-普通用户 / ADMIN-管理员 */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

@@ -1,6 +1,5 @@
 package com.potato.peacehaven.controller;
 
-import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.SiteStats;
 import com.potato.peacehaven.entity.TeamMember;
 import com.potato.peacehaven.entity.User;
@@ -8,6 +7,7 @@ import com.potato.peacehaven.repository.SiteStatsRepository;
 import com.potato.peacehaven.repository.TeamMemberRepository;
 import com.potato.peacehaven.repository.UserRepository;
 import com.potato.peacehaven.service.ActivityService;
+import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +27,7 @@ public class HomeController {
     private final SiteStatsRepository siteStatsRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     @Value("${features.combat-roster.enabled:false}")
     private boolean combatRosterEnabled;
@@ -54,7 +55,7 @@ public class HomeController {
         model.addAttribute("nicknameMap", nicknameMap);
 
         // 判断当前用户是否为管理组成员（用于导航栏条件渲染），且战斗组功能已启用
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
         boolean isManager = combatRosterEnabled && user != null && teamMemberRepository.existsByUserId(user.getId());
         model.addAttribute("isManager", isManager);
 

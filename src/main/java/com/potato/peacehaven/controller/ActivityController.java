@@ -3,7 +3,6 @@ package com.potato.peacehaven.controller;
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.repository.ActivityConfigRepository;
 import com.potato.peacehaven.repository.ActivityJudgeRepository;
-import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.service.ActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,7 +22,6 @@ import java.util.stream.Collectors;
 public class ActivityController {
 
     private final ActivityService activityService;
-    private final BuildingContestJudgeRepository judgeRepository;
     private final ActivityConfigRepository configRepository;
     private final ActivityJudgeRepository activityJudgeRepository;
 
@@ -95,31 +93,24 @@ public class ActivityController {
                 m.put("name", judge.getUser().getNickname());
                 m.put("roleTitle", judge.getRoleTitle() != null ? judge.getRoleTitle() : "");
                 m.put("avatar", judge.getUser().getAvatar());
+                m.put("liveRoomUrl", judge.getUser().getLiveRoomUrl());
                 judgeList.add(m);
             }
+            model.addAttribute("judges", judgeList);
             model.addAttribute("activityJudges", judgeList);
         }
 
-        // 裁判组数据（建筑大赛专用，始终显示3个位置）
+        // 建筑大赛专用：始终显示3个裁判位置（不足用占位填充）
         if ("building-master-1".equals(slug)) {
-            var realJudges = judgeRepository.findByActivityId(activity.getId());
-            List<Map<String, Object>> judgeList = new ArrayList<>();
-
-            // 真实裁判数据
-            for (var judge : realJudges) {
-                Map<String, Object> m = new HashMap<>();
-                m.put("name", judge.getUser().getNickname());
-                m.put("title", judge.getUser().getCampName() != null ? judge.getUser().getCampName() : "");
-                m.put("avatar", judge.getUser().getAvatar());
-                m.put("liveRoomUrl", judge.getLiveRoomUrl());
-                judgeList.add(m);
-            }
+            List<Map<String, Object>> judgeList = model.containsAttribute("judges")
+                    ? new ArrayList<>((List<Map<String, Object>>) model.asMap().get("judges"))
+                    : new ArrayList<>();
 
             // 不足 3 个的位置用占位填充
             for (int i = judgeList.size() + 1; i <= 3; i++) {
                 Map<String, Object> m = new HashMap<>();
                 m.put("name", "裁判 " + i);
-                m.put("title", "待公布");
+                m.put("roleTitle", "待公布");
                 m.put("avatar", null);
                 m.put("liveRoomUrl", null);
                 judgeList.add(m);

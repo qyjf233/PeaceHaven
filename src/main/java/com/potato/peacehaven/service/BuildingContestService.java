@@ -2,15 +2,14 @@ package com.potato.peacehaven.service;
 
 import com.potato.peacehaven.entity.ActivityConfig;
 import com.potato.peacehaven.entity.BuildingContestAbstractVote;
-import com.potato.peacehaven.entity.BuildingContestJudge;
 import com.potato.peacehaven.entity.BuildingContestJudgeScore;
 import com.potato.peacehaven.entity.BuildingContestVote;
 import com.potato.peacehaven.entity.BuildingContestWork;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.enums.ContestPhase;
 import com.potato.peacehaven.repository.ActivityConfigRepository;
+import com.potato.peacehaven.repository.ActivityJudgeRepository;
 import com.potato.peacehaven.repository.BuildingContestAbstractVoteRepository;
-import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.repository.BuildingContestJudgeScoreRepository;
 import com.potato.peacehaven.repository.BuildingContestVoteRepository;
 import com.potato.peacehaven.repository.BuildingContestWorkRepository;
@@ -34,7 +33,7 @@ public class BuildingContestService {
     private final BuildingContestVoteRepository voteRepository;
     private final BuildingContestAbstractVoteRepository abstractVoteRepository;
     private final ActivityConfigRepository configRepository;
-    private final BuildingContestJudgeRepository judgeRepository;
+    private final ActivityJudgeRepository judgeRepository;
     private final BuildingContestJudgeScoreRepository judgeScoreRepository;
 
     /** 每人最多投票数 */

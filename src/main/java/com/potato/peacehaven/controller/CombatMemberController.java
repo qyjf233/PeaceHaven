@@ -1,11 +1,11 @@
 package com.potato.peacehaven.controller;
 
-import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.CombatMember;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.repository.CombatMemberRepository;
 import com.potato.peacehaven.repository.TeamMemberRepository;
 import com.potato.peacehaven.repository.UserRepository;
+import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +28,7 @@ public class CombatMemberController {
     private final CombatMemberRepository combatMemberRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     @Value("${features.combat-roster.enabled:false}")
     private boolean combatRosterEnabled;
@@ -39,7 +40,7 @@ public class CombatMemberController {
             return "redirect:/";
         }
 
-        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+        User user = userService.getCurrentUser(session);
 
         // 必须登录
         if (user == null) {

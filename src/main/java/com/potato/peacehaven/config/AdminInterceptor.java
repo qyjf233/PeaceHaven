@@ -2,6 +2,7 @@ package com.potato.peacehaven.config;
 
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.enums.UserRole;
+import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -15,14 +16,21 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Component
 public class AdminInterceptor implements HandlerInterceptor {
 
-    public static final String SESSION_USER_KEY = "session_user";
+    /** Session 中存储用户ID的 key（不再存储完整 User 对象，避免序列化问题） */
+    public static final String SESSION_USER_ID_KEY = "session_user_id";
+
+    private final UserService userService;
+
+    public AdminInterceptor(UserService userService) {
+        this.userService = userService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         HttpSession session = request.getSession(false);
 
         if (session != null) {
-            User user = (User) session.getAttribute(SESSION_USER_KEY);
+            User user = userService.getCurrentUser(session);
             if (user != null && user.getRole() == UserRole.ADMIN) {
                 return true; // 放行
             }

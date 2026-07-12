@@ -1103,7 +1103,7 @@
                     <span th:if="${judge.avatar == null or judge.avatar == ''}">👷</span>
                 </div>
                 <div class="judge-name" th:text="${judge.name}">裁判昵称</div>
-                <div class="judge-title" th:text="${judge.title}">营地名</div>
+                <div class="judge-title" th:text="${judge.roleTitle ?: ''}">头衔</div>
                 <a class="judge-live-btn"
                    th:if="${judge.liveRoomUrl != null and judge.liveRoomUrl != ''}"
                    th:href="${judge.liveRoomUrl}"

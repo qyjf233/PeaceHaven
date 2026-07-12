@@ -2,11 +2,11 @@ package com.potato.peacehaven.config;
 
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.entity.ActivityConfig;
-import com.potato.peacehaven.entity.BuildingContestJudge;
+import com.potato.peacehaven.entity.ActivityJudge;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.repository.ActivityConfigRepository;
+import com.potato.peacehaven.repository.ActivityJudgeRepository;
 import com.potato.peacehaven.repository.ActivityRepository;
-import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.repository.UserRepository;
 import com.potato.peacehaven.service.BuildingContestService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private final ActivityRepository activityRepository;
     private final ActivityConfigRepository configRepository;
-    private final BuildingContestJudgeRepository judgeRepository;
+    private final ActivityJudgeRepository judgeRepository;
     private final UserRepository userRepository;
 
     @Override
@@ -117,8 +117,9 @@ public class DataInitializer implements ApplicationRunner {
         String[] judgePhones = {};
 
         log.info("开始初始化裁判，活动ID: {}，当前已有裁判数: {}", activityId,
-                judgeRepository.findByActivityId(activityId).size());
+                judgeRepository.findByActivityIdOrderBySortOrderAsc(activityId).size());
 
+        int sortOrder = 0;
         for (String phone : judgePhones) {
             User user = userRepository.findByPhone(phone).orElse(null);
             if (user == null) {
@@ -126,9 +127,10 @@ public class DataInitializer implements ApplicationRunner {
                 continue;
             }
             if (!judgeRepository.existsByActivityIdAndUserId(activityId, user.getId())) {
-                BuildingContestJudge judge = BuildingContestJudge.builder()
+                ActivityJudge judge = ActivityJudge.builder()
                         .activityId(activityId)
                         .user(user)
+                        .sortOrder(sortOrder++)
                         .build();
                 judgeRepository.save(judge);
                 log.info("已添加裁判: {} (ID:{}, 手机:{})", user.getNickname(), user.getId(), phone);
