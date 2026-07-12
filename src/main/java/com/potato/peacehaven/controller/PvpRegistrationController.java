@@ -39,13 +39,16 @@ public class PvpRegistrationController {
 
         User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
         boolean isRegistered = false;
+        String campName = null;
         if (user != null) {
             isRegistered = registrationRepository.existsByActivityIdAndUserId(activity.getId(), user.getId());
+            campName = user.getCampName();
         }
 
         Map<String, Object> result = new HashMap<>();
         result.put("totalRegistered", totalRegistered);
         result.put("isRegistered", isRegistered);
+        result.put("campName", campName);
         return ResponseEntity.ok(result);
     }
 
@@ -60,6 +63,11 @@ public class PvpRegistrationController {
         }
 
         Activity activity = activityService.getActivityBySlug(slug);
+
+        // 校验营地名：仅限长安成员参赛
+        if (!"长安".equals(user.getCampName())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "本活动仅限长安成员参赛"));
+        }
 
         if (registrationRepository.existsByActivityIdAndUserId(activity.getId(), user.getId())) {
             return ResponseEntity.badRequest().body(Map.of("error", "你已经报名了"));

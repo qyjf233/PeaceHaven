@@ -673,6 +673,8 @@
         var countEl = document.getElementById('regCount');
         var slug = 'battle-showdown-1';
         var isRegistered = false;
+        var isChangAn = true; // 默认允许，API返回后更新
+        var isLoggedIn = false;
 
         // 实时读取当前阶段（由 activity-timeline.js 设置）
         function canRegister() {
@@ -680,19 +682,32 @@
         }
 
         // 加载报名状态
-        fetch('/api/pvp/' + slug + '/status')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                countEl.textContent = data.totalRegistered;
-                isRegistered = data.isRegistered;
-                updateButton();
-            })
-            .catch(function() {
-                btn.textContent = '加载失败';
-            });
+        function loadStatus() {
+            fetch('/api/pvp/' + slug + '/status')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    countEl.textContent = data.totalRegistered;
+                    isRegistered = data.isRegistered;
+                    isLoggedIn = (data.campName != null);
+                    isChangAn = (data.campName == null || data.campName === '长安');
+                    updateButton();
+                })
+                .catch(function() {
+                    btn.textContent = '加载失败';
+                });
+        }
+        loadStatus();
+
+        // 登录/登出后重新拉取报名状态
+        window.addEventListener('auth:login', loadStatus);
+        window.addEventListener('auth:logout', loadStatus);
 
         function updateButton() {
-            if (!canRegister() && !isRegistered) {
+            if (!isChangAn) {
+                btn.textContent = '限长安成员参赛';
+                btn.disabled = true;
+                btn.classList.remove('registered');
+            } else if (!canRegister() && !isRegistered) {
                 btn.textContent = '不在报名期';
                 btn.disabled = true;
                 btn.classList.remove('registered');
@@ -708,6 +723,11 @@
         }
 
         btn.addEventListener('click', function() {
+            if (!isLoggedIn) {
+                var loginBtn = document.getElementById('loginBtn');
+                if (loginBtn) loginBtn.click();
+                return;
+            }
             if (isRegistered) {
                 PHDialog.confirm({
                     icon: '🤔',
