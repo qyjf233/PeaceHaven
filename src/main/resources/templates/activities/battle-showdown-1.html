@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1v1 擂台赛 - PeaceHaven · 长安</title>
+    <title>第一届 · 巅峰对决 - PeaceHaven · 长安</title>
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="PeaceHaven · 长安">
-    <meta property="og:title" content="1v1 擂台赛 - PeaceHaven">
+    <meta property="og:title" content="第一届 · 巅峰对决 - PeaceHaven">
     <meta property="og:description" content="瑞士轮积分赛 + 淘汰赛，谁是长安最强战力？">
     <meta property="og:image" th:content="@{/images/banner_battle-showdown-1.png}">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/activity-timeline.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
     <style>
         /* === Battle Showdown Page Styles === */
         .contest-page { min-height: 100vh; padding-top: 64px; }
@@ -155,34 +156,46 @@
             background: var(--bg-card);
             border: var(--border-card);
             border-radius: 14px;
-            padding: 40px 28px;
+            padding: 44px 28px 36px;
             text-align: center;
             box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
         }
-        .register-area .reg-icon {
-            font-size: 3rem;
+        .register-area::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: var(--gradient-accent);
+        }
+        .reg-icon-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 72px; height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(232,131,58,0.12), rgba(232,131,58,0.04));
             margin-bottom: 16px;
+            animation: reg-float 3s ease-in-out infinite;
         }
-        .register-area .reg-title {
-            font-family: 'Noto Serif SC', serif;
-            font-size: 1.3rem;
-            color: var(--text-primary);
-            margin-bottom: 8px;
+        @keyframes reg-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
         }
-        .register-area .reg-desc {
-            font-size: 0.92rem;
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-            line-height: 1.6;
-        }
-        .register-area .reg-slots {
-            font-size: 0.85rem;
+        .reg-icon-wrap .reg-icon { font-size: 2.2rem; }
+        .reg-count {
+            font-size: 0.88rem;
             color: var(--text-muted);
             margin-bottom: 20px;
         }
+        .reg-count strong {
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+        }
         .btn-register {
             display: inline-block;
-            padding: 12px 40px;
+            padding: 13px 44px;
             border-radius: 50px;
             background: var(--gradient-accent);
             color: #fff;
@@ -193,21 +206,27 @@
             transition: all 0.3s;
             box-shadow: 0 4px 16px rgba(232,131,58,0.3);
         }
-        .btn-register:hover {
+        .btn-register:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 6px 24px rgba(232,131,58,0.4);
         }
+        .btn-register:active:not(:disabled) { transform: scale(0.97); }
         .btn-register:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
+            background: var(--text-muted);
         }
         .btn-register.registered {
-            background: var(--bg-secondary);
+            background: transparent;
             color: var(--accent-primary);
             border: 2px solid var(--accent-primary);
             box-shadow: none;
+        }
+        .btn-register.registered:hover:not(:disabled) {
+            background: rgba(232,131,58,0.08);
+            box-shadow: 0 2px 8px rgba(232,131,58,0.15);
         }
 
         /* Judge Panel */
@@ -457,8 +476,8 @@
     <section class="contest-hero" th:style="'background-image: url(' + @{/images/banner_battle-showdown-1.png} + ')'">
         <div class="contest-hero-content">
             <div class="contest-badge">⚔️ 1v1 擂台赛</div>
-            <h1>长安擂台赛</h1>
-            <p>瑞士轮积分赛 + 淘汰赛，谁是长安最强战力？</p>
+            <h1>第一届 · 巅峰对决 · 长安</h1>
+            <p>实力决定高度，积分记录荣耀。谁是长安最强战力？</p>
         </div>
     </section>
 
@@ -472,16 +491,11 @@
     <section class="contest-section">
         <h2 class="section-title">我要报名</h2>
         <div class="register-area" id="registerArea">
-            <div class="reg-icon">⚔️</div>
-            <div class="reg-title">1v1 擂台赛 · 第一季</div>
-            <div class="reg-desc">
-                采用瑞士轮积分赛制，每轮随机配对对手<br>
-                前8名晋级淘汰赛，争夺最终冠军宝座
+            <div class="reg-icon-wrap">
+                <span class="reg-icon">⚔️</span>
             </div>
-            <div class="reg-slots" id="regSlots">已报名：<strong>0</strong> / 32 人</div>
-            <button class="btn-register" id="btnRegister" onclick="handleRegister()">
-                立即报名
-            </button>
+            <div class="reg-count">已报名 <strong id="regCount">0</strong> 人</div>
+            <button class="btn-register" id="btnRegister" disabled>加载中...</button>
         </div>
     </section>
 
@@ -685,11 +699,117 @@
         });
     });
 
-    // Register button (placeholder)
-    function handleRegister() {
-        alert('报名功能即将开放，敬请期待！');
-    }
+    function handleRegister() {}
+
+    // === 报名模块 ===
+    (function() {
+        var btn = document.getElementById('btnRegister');
+        var countEl = document.getElementById('regCount');
+        var slug = 'battle-showdown-1';
+        var isRegistered = false;
+
+        // 实时读取当前阶段（由 activity-timeline.js 设置）
+        function canRegister() {
+            return window.__activePhase === 'register';
+        }
+
+        // 加载报名状态
+        fetch('/api/pvp/' + slug + '/status')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                countEl.textContent = data.totalRegistered;
+                isRegistered = data.isRegistered;
+                updateButton();
+            })
+            .catch(function() {
+                btn.textContent = '加载失败';
+            });
+
+        function updateButton() {
+            if (!canRegister() && !isRegistered) {
+                btn.textContent = '不在报名期';
+                btn.disabled = true;
+                btn.classList.remove('registered');
+            } else if (isRegistered) {
+                btn.textContent = '已报名 · 点击取消';
+                btn.disabled = !canRegister();
+                btn.classList.add('registered');
+            } else {
+                btn.textContent = '立即报名';
+                btn.disabled = false;
+                btn.classList.remove('registered');
+            }
+        }
+
+        btn.addEventListener('click', function() {
+            if (isRegistered) {
+                PHDialog.confirm({
+                    icon: '🤔',
+                    title: '取消报名',
+                    message: '确定要取消报名吗？取消后需要重新报名。',
+                    confirmText: '确认取消',
+                    cancelText: '再想想',
+                    confirmStyle: 'danger',
+                    onConfirm: doCancel
+                });
+            } else {
+                PHDialog.confirm({
+                    icon: '⚔️',
+                    title: '确认报名',
+                    message: '报名成功后请按时参赛，缺席将视为弃权。',
+                    confirmText: '立即报名',
+                    cancelText: '取消',
+                    onConfirm: doRegister
+                });
+            }
+        });
+
+        function doRegister() {
+            btn.disabled = true;
+            btn.textContent = '报名中...';
+            fetch('/api/pvp/' + slug + '/register', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) {
+                        PHDialog.show({ icon: '⚠️', title: '报名失败', message: data.error, confirmText: '知道了' });
+                        updateButton();
+                        return;
+                    }
+                    isRegistered = true;
+                    countEl.textContent = data.totalRegistered;
+                    PHDialog.show({ icon: '✅', title: '报名成功', message: '你已成功报名，请按时参赛！', confirmText: '好的' });
+                    updateButton();
+                })
+                .catch(function() {
+                    PHDialog.show({ icon: '⚠️', title: '网络错误', message: '报名失败，请稍后重试', confirmText: '知道了' });
+                    updateButton();
+                });
+        }
+
+        function doCancel() {
+            btn.disabled = true;
+            btn.textContent = '处理中...';
+            fetch('/api/pvp/' + slug + '/cancel', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) {
+                        PHDialog.show({ icon: '⚠️', title: '操作失败', message: data.error, confirmText: '知道了' });
+                        updateButton();
+                        return;
+                    }
+                    isRegistered = false;
+                    countEl.textContent = data.totalRegistered;
+                    PHDialog.show({ icon: '👋', title: '已取消报名', message: '报名已取消，您仍可重新报名参赛！', confirmText: '好的' });
+                    updateButton();
+                })
+                .catch(function() {
+                    PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
+                    updateButton();
+                });
+        }
+    })();
 </script>
+<script th:src="@{/js/ph-dialog.js}"></script>
 <script th:src="@{/js/activity-timeline.js}"></script>
 </body>
 </html>

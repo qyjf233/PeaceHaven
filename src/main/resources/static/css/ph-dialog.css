@@ -1,0 +1,126 @@
+/* ============================================
+   PeaceHaven 通用 Dialog 组件
+   类似 Android AlertDialog 风格
+   
+   使用方式：
+   <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+   <script th:src="@{/js/ph-dialog.js}"></script>
+   ============================================ */
+
+/* === 遮罩层 === */
+.ph-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.ph-dialog-overlay.ph-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* === 对话框 === */
+.ph-dialog {
+    background: var(--bg-card, #fff);
+    border-radius: 16px;
+    padding: 28px 28px 20px;
+    max-width: 360px;
+    width: calc(100% - 48px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: center;
+}
+.ph-dialog-overlay.ph-visible .ph-dialog {
+    transform: scale(1) translateY(0);
+}
+
+/* === 图标（可选） === */
+.ph-dialog-icon {
+    font-size: 2.4rem;
+    margin-bottom: 12px;
+    line-height: 1;
+}
+
+/* === 标题 === */
+.ph-dialog-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary, #333);
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+/* === 内容 === */
+.ph-dialog-message {
+    font-size: 0.88rem;
+    color: var(--text-secondary, #666);
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+/* === 按钮组 === */
+.ph-dialog-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.ph-dialog-btn {
+    flex: 1;
+    padding: 11px 0;
+    border-radius: 10px;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+}
+.ph-dialog-btn:active {
+    transform: scale(0.96);
+}
+
+/* 主按钮 */
+.ph-dialog-btn-primary {
+    background: var(--accent-primary, #E8833A);
+    color: #fff;
+}
+.ph-dialog-btn-primary:hover {
+    filter: brightness(1.1);
+}
+
+/* 次要按钮（取消） */
+.ph-dialog-btn-secondary {
+    background: var(--bg-secondary, #f0ece6);
+    color: var(--text-secondary, #666);
+}
+.ph-dialog-btn-secondary:hover {
+    background: var(--border-color, #ddd);
+}
+
+/* 危险按钮（取消报名等） */
+.ph-dialog-btn-danger {
+    background: #e74c3c;
+    color: #fff;
+}
+.ph-dialog-btn-danger:hover {
+    filter: brightness(1.1);
+}
+
+/* === 响应式 === */
+@media (max-width: 400px) {
+    .ph-dialog {
+        padding: 22px 20px 16px;
+        max-width: 320px;
+    }
+    .ph-dialog-title { font-size: 0.98rem; }
+    .ph-dialog-message { font-size: 0.82rem; }
+    .ph-dialog-btn { padding: 10px 0; font-size: 0.85rem; }
+}
