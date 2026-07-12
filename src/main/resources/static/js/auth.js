@@ -35,18 +35,22 @@
         userArea.id = 'userArea';
 
         if (currentUser) {
+            var avatarUrl = currentUser.avatar || '/images/avatar/default.png';
             userArea.className = 'user-logged';
             userArea.innerHTML =
                 '<div class="user-nickname-btn" id="userNicknameBtn">' +
+                    '<img class="user-avatar-small" src="' + avatarUrl + '" alt="头像">' +
                     '<span class="user-nickname-text">' + (currentUser.nickname || '用户') + '</span>' +
                     '<span class="user-dropdown-arrow" id="dropdownArrow">&#9662;</span>' +
                 '</div>' +
                 '<div class="user-dropdown" id="userDropdown">' +
                     '<div class="dropdown-header">' +
+                        '<img class="dropdown-avatar-img" src="' + avatarUrl + '" alt="头像">' +
                         '<div class="dropdown-nickname">' + currentUser.nickname + '</div>' +
                         (currentUser.campName ? '<div class="dropdown-campname">🏕 ' + currentUser.campName + '</div>' : '') +
                         '<div class="dropdown-role">' + (currentUser.role === 'ADMIN' ? '管理员' : '用户') + '</div>' +
                     '</div>' +
+                    '<button class="dropdown-item" id="editAvatarBtn">更换头像</button>' +
                     '<button class="dropdown-item" id="editNicknameBtn">修改昵称</button>' +
                     '<button class="dropdown-item" id="editCampNameBtn">修改营地名</button>' +
                     (currentUser.role === 'ADMIN' ? '<a href="/admin/activities" class="dropdown-item">后台管理</a>' : '') +
@@ -71,6 +75,13 @@
             document.addEventListener('click', function() {
                 dropdown.classList.remove('show');
                 arrow.classList.remove('open');
+            });
+
+            // 更换头像
+            document.getElementById('editAvatarBtn').addEventListener('click', function() {
+                dropdown.classList.remove('show');
+                arrow.classList.remove('open');
+                handleAvatarUpload();
             });
 
             // 修改昵称
@@ -104,6 +115,58 @@
 
             document.getElementById('loginBtn').addEventListener('click', openLoginModal);
         }
+    }
+
+    // === 头像上传 ===
+    function handleAvatarUpload() {
+        // 创建隐藏的文件选择器
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
+        fileInput.style.display = 'none';
+
+        fileInput.addEventListener('change', function() {
+            var file = fileInput.files[0];
+            if (!file) return;
+
+            // 校验文件大小 (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('图片大小不能超过5MB');
+                return;
+            }
+
+            // 显示上传中状态
+            var avatarImgs = document.querySelectorAll('.user-avatar-small, .dropdown-avatar-img');
+            avatarImgs.forEach(function(img) { img.style.opacity = '0.5'; });
+
+            var formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/api/auth/avatar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    currentUser.avatar = data.avatar;
+                    updateNavbar();
+                } else {
+                    alert(data.message || '头像上传失败');
+                    avatarImgs.forEach(function(img) { img.style.opacity = '1'; });
+                }
+            })
+            .catch(function() {
+                alert('网络错误，请重试');
+                avatarImgs.forEach(function(img) { img.style.opacity = '1'; });
+            });
+
+            // 清理
+            document.body.removeChild(fileInput);
+        });
+
+        document.body.appendChild(fileInput);
+        fileInput.click();
     }
 
     // === 登录弹窗 ===

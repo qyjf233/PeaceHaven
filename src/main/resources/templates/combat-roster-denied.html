@@ -40,14 +40,7 @@
     </style>
 </head>
 <body data-theme="day">
-<nav class="navbar" id="navbar">
-    <div class="nav-container">
-        <a href="/" class="nav-logo">
-            <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
-            <span class="logo-text"><span class="logo-full">PeaceHaven · </span>长安</span>
-        </a>
-    </div>
-</nav>
+<div th:replace="~{fragments/navbar :: navbar(page='', mode='bare', prefix='/#')}"></div>
 <div class="denied-page">
     <div class="denied-box">
         <div class="icon">🔒</div>

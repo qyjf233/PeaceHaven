@@ -4,6 +4,7 @@ import com.potato.peacehaven.config.AdminInterceptor;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.service.ActivityService;
+import com.potato.peacehaven.service.OssService;
 import com.potato.peacehaven.service.SmsService;
 import com.potato.peacehaven.service.UserService;
 import com.aliyun.sdk.service.dypnsapi20170525.models.SendSmsVerifyCodeResponse;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +28,7 @@ public class AuthController {
 
     private final SmsService smsService;
     private final UserService userService;
+    private final OssService ossService;
     private final BuildingContestJudgeRepository judgeRepository;
     private final ActivityService activityService;
 
@@ -244,6 +247,40 @@ public class AuthController {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("message", "已退出登录");
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 上传/修改头像
+     */
+    @PostMapping("/avatar")
+    public ResponseEntity<Map<String, Object>> updateAvatar(@RequestParam("file") MultipartFile file, HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        User user = (User) session.getAttribute(AdminInterceptor.SESSION_USER_KEY);
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "请先登录");
+            return ResponseEntity.ok(result);
+        }
+
+        try {
+            String avatarUrl = ossService.uploadImage(file, "avatar");
+            userService.updateAvatar(user.getId(), avatarUrl);
+            user.setAvatar(avatarUrl);
+            session.setAttribute(AdminInterceptor.SESSION_USER_KEY, user);
+
+            result.put("success", true);
+            result.put("message", "头像上传成功");
+            result.put("avatar", avatarUrl);
+        } catch (IllegalArgumentException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        } catch (Exception e) {
+            log.error("头像上传失败: {}", e.getMessage(), e);
+            result.put("success", false);
+            result.put("message", "头像上传失败，请稍后重试");
+        }
         return ResponseEntity.ok(result);
     }
 

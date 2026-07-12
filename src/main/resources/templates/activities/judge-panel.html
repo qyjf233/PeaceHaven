@@ -292,20 +292,7 @@
 <body data-theme="day">
 
 <!-- 导航栏 -->
-<nav class="navbar" id="navbar">
-    <div class="nav-container">
-        <a href="/" class="nav-logo">
-            <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
-            <span class="logo-text"><span class="logo-full">PeaceHaven · </span>长安</span>
-        </a>
-        <div class="nav-actions">
-            <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
-                <span class="theme-icon-day">☀️</span>
-                <span class="theme-icon-night">🌙</span>
-            </button>
-        </div>
-    </div>
-</nav>
+<div th:replace="~{fragments/navbar :: navbar(page='', mode='simple', prefix='/#')}"></div>
 
 <div class="judge-page">
     <div class="judge-header">
@@ -323,7 +310,7 @@
 </div>
 
 <script th:src="@{/js/main.js}"></script>
-<script th:src="@{/js/auth.js(v=2)}"></script>
+<script th:src="@{/js/auth.js(v=3)}"></script>
 <script>
 (function() {
     var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');

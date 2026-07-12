@@ -89,6 +89,13 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public void updateAvatar(Long id, String avatarUrl) {
+        User user = getUserById(id);
+        user.setAvatar(avatarUrl);
+        userRepository.save(user);
+    }
+
     /**
      * 获取营地名建议列表（前缀匹配，最多返回10条）
      */
