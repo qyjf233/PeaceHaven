@@ -142,4 +142,31 @@ public class PvpRegistrationController {
         result.put("rankings", list);
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * 通用排行榜 - 返回所有字段，前端自行排序和选择显示列
+     */
+    @GetMapping("/{slug}/rankings")
+    public ResponseEntity<Map<String, Object>> rankings(@PathVariable String slug) {
+        Activity activity = activityService.getActivityBySlug(slug);
+        var regs = registrationRepository.findByActivityIdOrderByCreatedAtAsc(activity.getId());
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (PvpRegistration r : regs) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("nickname", r.getUser().getNickname());
+            m.put("campName", r.getUser().getCampName());
+            m.put("avatar", r.getUser().getAvatar());
+            m.put("wins", r.getWins());
+            m.put("losses", r.getLosses());
+            m.put("points", r.getPoints());
+            m.put("rankNum", r.getRankNum());
+            m.put("completion", r.getCompletion());
+            list.add(m);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("rankings", list);
+        return ResponseEntity.ok(result);
+    }
 }

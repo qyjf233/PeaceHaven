@@ -35,7 +35,7 @@
         userArea.id = 'userArea';
 
         if (currentUser) {
-            var avatarUrl = currentUser.avatar || '/images/avatar/default.png';
+            var avatarUrl = currentUser.avatar || '/images/avatar/avatar_default.png';
             userArea.className = 'user-logged';
             userArea.innerHTML =
                 '<div class="user-nickname-btn" id="userNicknameBtn">' +

@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>第一届 · 巅峰对决 - PeaceHaven · 长安</title>
+    <th:block th:replace="~{fragments/head :: common(title='第一届 · 巅峰对决 - PeaceHaven · 长安')}"></th:block>
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="PeaceHaven · 长安">
     <meta property="og:title" content="第一届 · 巅峰对决 - PeaceHaven">
     <meta property="og:description" content="瑞士轮积分赛 + 淘汰赛，谁是长安最强战力？">
     <meta property="og:image" th:content="@{/images/banner_battle-showdown-1.png}">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/activity-timeline.css}">
     <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-leaderboard.css}">
+    <script th:src="@{/js/ph-leaderboard.js}"></script>
     <style>
         /* === Battle Showdown Page Styles === */
         .contest-page { min-height: 100vh; padding-top: 64px; }
@@ -309,67 +307,7 @@
             color: var(--accent-primary);
         }
 
-        /* Leaderboard */
-        .leaderboard-wrap {
-            background: var(--bg-card);
-            border: var(--border-card);
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-        }
-        .leaderboard-header {
-            display: grid;
-            grid-template-columns: 50px 1fr 80px 80px 80px;
-            padding: 14px 20px;
-            background: var(--bg-secondary);
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-align: center;
-        }
-        .leaderboard-header span:first-child { text-align: center; }
-        .leaderboard-header span:nth-child(2) { text-align: left; }
-        .lb-row {
-            display: grid;
-            grid-template-columns: 50px 1fr 80px 80px 80px;
-            padding: 14px 20px;
-            align-items: center;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            text-align: center;
-            border-bottom: 1px solid var(--border-color);
-            transition: background 0.2s;
-        }
-        .lb-row:last-child { border-bottom: none; }
-        .lb-row:hover { background: var(--bg-card-hover); }
-        .lb-rank {
-            font-weight: 700;
-            font-size: 1rem;
-            color: var(--text-primary);
-        }
-        .lb-rank.rank-1 { color: #DAA520; }
-        .lb-rank.rank-2 { color: #A0A0A0; }
-        .lb-rank.rank-3 { color: #CD7F32; }
-        .lb-name {
-            text-align: left;
-            font-weight: 600;
-            color: var(--text-primary);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .lb-wins { color: #4CAF50; font-weight: 600; }
-        .lb-losses { color: #E8654A; font-weight: 600; }
-        .lb-points { font-weight: 700; color: var(--accent-primary); font-size: 1rem; }
-
-        /* 排行榜手机端数据标签（默认隐藏） */
-        .lb-label { display: none; }
-        .leaderboard-empty {
-            padding: 40px 20px;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.92rem;
-        }
+        /* Leaderboard - 已移至 ph-leaderboard.css */
 
         /* Swiss Round Bracket Preview */
         .format-cards {
@@ -437,19 +375,6 @@
             .prize-card { padding: 16px 8px; }
             .prize-rank { font-size: 1.4rem; }
             .prize-amount { font-size: 1.1rem; }
-            .leaderboard-header {
-                grid-template-columns: 36px 1fr 44px 44px 52px;
-                padding: 10px 12px;
-                font-size: 0.72rem;
-            }
-            .lb-row {
-                grid-template-columns: 36px 1fr 44px 44px 52px;
-                padding: 11px 12px;
-                font-size: 0.8rem;
-            }
-            .lb-rank { font-size: 0.95rem; }
-            .lb-name { font-size: 0.82rem; }
-            .lb-points { font-size: 0.88rem; }
         }
     </style>
 </head>
@@ -570,10 +495,10 @@
                 <div class="prize-amount">¥28.88</div>
             </div>
             <div class="prize-card">
-                <div class="prize-rank">🔥</div>
-                <div class="prize-place">最佳战斗奖</div>
-                <div class="prize-desc">瑞士轮积分最高</div>
-                <div class="prize-amount">¥18.88</div>
+                <div class="prize-rank">🌟</div>
+                <div class="prize-place">幸运参与奖×5</div>
+                <div class="prize-desc">未获得名次的幸运奖</div>
+                <div class="prize-amount">¥8.88</div>
             </div>
         </div>
     </section>
@@ -581,40 +506,15 @@
     <!-- 积分排行榜 -->
     <section class="contest-section">
         <h2 class="section-title">积分排行榜</h2>
-        <div class="leaderboard-wrap">
-            <div class="leaderboard-header">
-                <span>排名</span>
-                <span>选手</span>
-                <span>胜</span>
-                <span>负</span>
-                <span>积分</span>
-            </div>
-            <div id="leaderboardBody">
-                <div class="leaderboard-empty"><p>📡 加载中...</p></div>
-            </div>
-        </div>
+        <div id="leaderboard"></div>
     </section>
 </div>
 
 <!-- 页尾 -->
-<footer class="footer" id="footer">
-    <div class="footer-wave">
-        <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
-            <path d="M0,60 C360,120 720,0 1080,60 C1260,90 1380,80 1440,60 L1440,120 L0,120 Z" fill="currentColor"/>
-        </svg>
-    </div>
-    <div class="container">
-        <div class="footer-bottom">
-            <p class="footer-slogan">「 长安不在远方，在此一隅灯火未熄 」</p>
-            <p class="footer-copyright">© 2026 PeaceHaven · 长安营地 | 明日之后</p>
-            <p class="footer-icp"><a href="https://beian.miit.gov.cn/">浙ICP备2025218889号-3</a> | <a href="/agreement">用户服务协议</a></p>
-        </div>
-    </div>
-</footer>
+<div th:replace="~{fragments/footer :: footer(mode='compact')}"></div>
 
-<button class="back-to-top" id="backToTop" aria-label="回到顶部">↑</button>
-<script th:src="@{/js/main.js}"></script>
-<script th:src="@{/js/auth.js(v=3)}"></script>
+<div th:replace="~{fragments/footer :: backToTop}"></div>
+<th:block th:replace="~{fragments/footer :: scripts(auth=true)}"></th:block>
 
 <script>
     // Theme toggle
@@ -773,37 +673,22 @@
     })();
 
     // === 积分排行榜 ===
-    (function() {
-        var body = document.getElementById('leaderboardBody');
-        if (!body) return;
-
-        fetch('/api/pvp/battle-showdown-1/leaderboard')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                var list = data.rankings || [];
-                if (!list.length) {
-                    body.innerHTML = '<div class="leaderboard-empty"><p>比赛尚未开始，排行榜将在第一轮比赛结束后更新</p></div>';
-                    return;
-                }
-
-                var html = '';
-                list.forEach(function(item) {
-                    var rankClass = item.rank <= 3 ? ' rank-' + item.rank : '';
-                    var medal = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : item.rank;
-                    html += '<div class="lb-row">'
-                        + '<span class="lb-rank' + rankClass + '">' + medal + '</span>'
-                        + '<span class="lb-name">' + (item.nickname || '') + '</span>'
-                        + '<span class="lb-wins">' + item.wins + '</span>'
-                        + '<span class="lb-losses">' + item.losses + '</span>'
-                        + '<span class="lb-points">' + item.points + '</span>'
-                        + '</div>';
-                });
-                body.innerHTML = html;
-            })
-            .catch(function() {
-                body.innerHTML = '<div class="leaderboard-empty"><p>⚠️ 排行榜加载失败</p></div>';
-            });
-    })();
+    PHLeaderboard.create({
+        container: '#leaderboard',
+        slug: 'battle-showdown-1',
+        columns: [
+            { field: 'rank',     label: '排名', type: 'rank' },
+            { field: 'nickname', label: '选手' },
+            { field: 'wins',     label: '胜',   type: 'number' },
+            { field: 'losses',   label: '负',   type: 'number' },
+            { field: 'points',   label: '积分', type: 'number' }
+        ],
+        sort: [
+            { field: 'points', order: 'desc' },
+            { field: 'wins',   order: 'desc' }
+        ],
+        emptyText: '比赛尚未开始，排行榜将在第一轮比赛结束后更新'
+    });
 </script>
 <script th:src="@{/js/ph-dialog.js}"></script>
 <script th:src="@{/js/activity-timeline.js}"></script>

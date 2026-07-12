@@ -1,0 +1,115 @@
+/**
+ * PeaceHaven 通用排行榜组件样式
+ *
+ * 使用方式：
+ * <link rel="stylesheet" th:href="@{/css/ph-leaderboard.css}">
+ *
+ * grid-template-columns 通过 CSS 变量 --ph-lb-cols 由 JS 动态设置
+ */
+
+/* === 外层容器 === */
+.ph-lb-wrap {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, rgba(0,0,0,0.1));
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.08));
+    --ph-lb-cols: 1fr; /* 默认回退 */
+}
+
+/* === 表头 === */
+.ph-lb-header {
+    display: grid;
+    grid-template-columns: var(--ph-lb-cols, 1fr);
+    padding: 14px 20px;
+    background: var(--bg-secondary, #f5f5f5);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted, #999);
+    text-align: center;
+}
+
+.ph-lb-header .ph-lb-col:first-child { text-align: center; }
+.ph-lb-header .ph-lb-col:nth-child(2) { text-align: left; }
+
+/* === 数据行 === */
+.ph-lb-row {
+    display: grid;
+    grid-template-columns: var(--ph-lb-cols, 1fr);
+    padding: 14px 20px;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary, #666);
+    text-align: center;
+    border-bottom: 1px solid var(--border-color, rgba(0,0,0,0.08));
+    transition: background 0.2s;
+}
+
+.ph-lb-row:last-child { border-bottom: none; }
+.ph-lb-row:hover { background: var(--bg-card-hover, rgba(0,0,0,0.02)); }
+
+/* === 排名列 === */
+.ph-lb-rank {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary, #333);
+}
+.ph-lb-rank.rank-1 { color: #DAA520; }
+.ph-lb-rank.rank-2 { color: #A0A0A0; }
+.ph-lb-rank.rank-3 { color: #CD7F32; }
+
+/* === 名称列 === */
+.ph-lb-name {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary, #333);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* === 数字列 === */
+.ph-lb-number { font-weight: 600; }
+
+/* === 字段专属颜色（可被 col.color 覆盖） === */
+.ph-lb-wins  { color: #4CAF50; }
+.ph-lb-losses { color: #E8654A; }
+.ph-lb-points { color: var(--accent-primary, #E8833A); }
+
+/* === 空状态 === */
+.ph-lb-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted, #999);
+    font-size: 0.9rem;
+}
+
+/* === 响应式 === */
+
+/* 手机端：紧凑列宽，!important 覆盖 inline style */
+@media (max-width: 768px) {
+    .ph-lb-wrap {
+        --ph-lb-cols: 36px 1fr 44px 44px 52px !important;
+    }
+    .ph-lb-wrap[data-col-count="3"] {
+        --ph-lb-cols: 36px 1fr 52px !important;
+    }
+    .ph-lb-wrap[data-col-count="4"] {
+        --ph-lb-cols: 36px 1fr 44px 52px !important;
+    }
+    .ph-lb-wrap[data-col-count="6"] {
+        --ph-lb-cols: 32px 1fr 40px 40px 40px 48px !important;
+    }
+
+    .ph-lb-header {
+        padding: 10px 12px;
+        font-size: 0.72rem;
+    }
+    .ph-lb-row {
+        padding: 11px 12px;
+        font-size: 0.8rem;
+    }
+    .ph-lb-rank { font-size: 0.95rem; }
+    .ph-lb-name { font-size: 0.82rem; }
+    .ph-lb-points { font-size: 0.88rem; }
+}

@@ -1,0 +1,61 @@
+<!-- ============================================
+     PeaceHaven 通用页尾组件
+     用法: <div th:replace="~{fragments/footer :: footer(mode='compact')}"></div>
+     参数:
+       mode - 页尾模式: full(完整，含品牌/导航/联系) / compact(精简) / bare(仅back-to-top)
+     ============================================ -->
+
+<!-- 页尾片段 -->
+<footer th:fragment="footer(mode)" class="footer" id="footer">
+    <div class="footer-wave">
+        <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+            <path d="M0,60 C360,120 720,0 1080,60 C1260,90 1380,80 1440,60 L1440,120 L0,120 Z" fill="currentColor"/>
+        </svg>
+    </div>
+    <div class="container">
+        <!-- 完整模式：品牌 + 导航 + 联系 -->
+        <div th:if="${mode == 'full'}" class="footer-content">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <img th:src="@{/images/peacehaven_logo_1.png}" alt="PeaceHaven Logo" class="logo-icon">
+                    <span class="logo-text"><span class="logo-full">PeaceHaven · </span>长安</span>
+                </div>
+                <p class="footer-motto">长安不问来路，唯迎同路之人</p>
+            </div>
+            <div class="footer-links">
+                <h4>快速导航</h4>
+                <ul>
+                    <li><a href="#about">营地简介</a></li>
+                    <li><a href="#team">管理组</a></li>
+                    <li><a href="#activities">活动</a></li>
+                    <li><a href="#benefits">福利</a></li>
+                </ul>
+            </div>
+            <div class="footer-contact">
+                <h4>加入我们</h4>
+                <p>游戏内搜索营地ID：<strong>长安</strong></p>
+                <p>或联系管理组任意成员</p>
+            <br/>
+                <h4><a href="https://kook.vip/1vrsYD" target="_blank" rel="noopener">点击加入KOOK频道</a></h4>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p class="footer-slogan">「 长安不在远方，在此一隅灯火未熄 」</p>
+            <p class="footer-copyright">© 2026 PeaceHaven · 长安营地 | 明日之后</p>
+            <p class="footer-icp"><a href="https://beian.miit.gov.cn/">浙ICP备2025218889号-3</a> | <a href="/agreement">用户服务协议</a></p>
+        </div>
+    </div>
+</footer>
+
+<!-- 回到顶部按钮（非 bare 模式时显示） -->
+<button th:fragment="backToTop" class="back-to-top" id="backToTop" aria-label="回到顶部">↑</button>
+
+<!-- ============================================
+     通用底部脚本
+     用法: <th:block th:replace="~{fragments/footer :: scripts(auth=true)}"></th:block>
+     参数: auth - 是否加载 auth.js
+     ============================================ -->
+<th:block th:fragment="scripts(auth)">
+    <script th:src="@{/js/main.js}"></script>
+    <script th:if="${auth}" th:src="@{/js/auth.js(v=3)}"></script>
+</th:block>

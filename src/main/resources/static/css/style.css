@@ -903,7 +903,8 @@ a {
     background: var(--gradient-footer);
     color: var(--text-inverse);
     position: relative;
-    padding-top: 60px;
+    padding-top: 40px;
+    margin-top: 60px;
 }
 
 [data-theme="night"] .footer {
@@ -1320,6 +1321,11 @@ a {
     .section { padding: 70px 0; }
     .section-title { font-size: 1.8rem; }
     .section-header { margin-bottom: 40px; }
+
+    .footer {
+        padding-top: 0;
+        margin-top: 30px;
+    }
 
     .about-content {
         grid-template-columns: 1fr;
