@@ -12,7 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -104,6 +106,32 @@ public class PvpRegistrationController {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("totalRegistered", totalRegistered);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 排行榜（按积分降序，积分相同按胜场降序）
+     */
+    @GetMapping("/{slug}/leaderboard")
+    public ResponseEntity<Map<String, Object>> leaderboard(@PathVariable String slug) {
+        Activity activity = activityService.getActivityBySlug(slug);
+        var regs = registrationRepository.findByActivityIdOrderByPointsDescWinsDesc(activity.getId());
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        int rank = 0;
+        for (PvpRegistration r : regs) {
+            rank++;
+            Map<String, Object> m = new HashMap<>();
+            m.put("rank", rank);
+            m.put("nickname", r.getUser().getNickname());
+            m.put("wins", r.getWins());
+            m.put("losses", r.getLosses());
+            m.put("points", r.getPoints());
+            list.add(m);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("rankings", list);
         return ResponseEntity.ok(result);
     }
 }

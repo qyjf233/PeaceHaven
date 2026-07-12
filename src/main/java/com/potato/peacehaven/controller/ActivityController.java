@@ -2,6 +2,7 @@ package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.repository.ActivityConfigRepository;
+import com.potato.peacehaven.repository.ActivityJudgeRepository;
 import com.potato.peacehaven.repository.BuildingContestJudgeRepository;
 import com.potato.peacehaven.service.ActivityService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class ActivityController {
     private final ActivityService activityService;
     private final BuildingContestJudgeRepository judgeRepository;
     private final ActivityConfigRepository configRepository;
+    private final ActivityJudgeRepository activityJudgeRepository;
 
     /**
      * 活动列表页（公开）- 只返回模板，数据由前端 AJAX 加载
@@ -83,6 +85,20 @@ public class ActivityController {
         configRepository.findByActivityId(activity.getId()).ifPresent(cfg -> {
             model.addAttribute("configJson", cfg.getConfigJson());
         });
+
+        // 通用裁判组数据
+        var activityJudges = activityJudgeRepository.findByActivityIdOrderBySortOrderAsc(activity.getId());
+        if (!activityJudges.isEmpty()) {
+            List<Map<String, Object>> judgeList = new ArrayList<>();
+            for (var judge : activityJudges) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("name", judge.getUser().getNickname());
+                m.put("roleTitle", judge.getRoleTitle() != null ? judge.getRoleTitle() : "");
+                m.put("avatar", judge.getUser().getAvatar());
+                judgeList.add(m);
+            }
+            model.addAttribute("activityJudges", judgeList);
+        }
 
         // 裁判组数据（建筑大赛专用，始终显示3个位置）
         if ("building-master-1".equals(slug)) {

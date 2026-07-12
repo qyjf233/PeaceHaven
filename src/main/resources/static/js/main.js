@@ -74,6 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSlide = 0;
     let carouselInterval;
 
+    if (slides.length > 0 && prevBtn && nextBtn) {
+
     function goToSlide(index) {
         slides[currentSlide].classList.remove('active');
         currentSlide = (index + slides.length) % slides.length;
@@ -96,6 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
     nextBtn.addEventListener('click', () => { nextSlide(); resetCarousel(); });
 
     startCarousel();
+
+    } // end carousel
 
     // === Fade-in on Scroll ===
     const fadeEls = document.querySelectorAll('.fade-in');
