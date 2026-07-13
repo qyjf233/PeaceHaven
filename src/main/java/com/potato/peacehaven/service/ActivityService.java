@@ -75,6 +75,10 @@ public class ActivityService {
         return activityRepository.findTop4ByEndDateAfterOrderByStartDateAsc(LocalDateTime.now());
     }
 
+    public List<Activity> getActivitiesWithWorkSubmission() {
+        return activityRepository.findByHasWorkSubmissionTrue();
+    }
+
     @Transactional
     public Activity createActivity(Activity activity) {
         return activityRepository.save(activity);
@@ -89,6 +93,7 @@ public class ActivityService {
         activity.setThumbnail(updated.getThumbnail());
         activity.setStartDate(updated.getStartDate());
         activity.setEndDate(updated.getEndDate());
+        activity.setHasWorkSubmission(updated.getHasWorkSubmission() != null && updated.getHasWorkSubmission());
         return activityRepository.save(activity);
     }
 

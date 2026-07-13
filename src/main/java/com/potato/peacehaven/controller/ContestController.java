@@ -1,11 +1,11 @@
 package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.entity.Activity;
-import com.potato.peacehaven.entity.BuildingContestWork;
+import com.potato.peacehaven.entity.ContestWork;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.enums.ContestPhase;
 import com.potato.peacehaven.service.ActivityService;
-import com.potato.peacehaven.service.BuildingContestService;
+import com.potato.peacehaven.service.ContestService;
 import com.potato.peacehaven.service.OssService;
 import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/contest")
 @RequiredArgsConstructor
-public class BuildingContestController {
+public class ContestController {
 
-    private final BuildingContestService contestService;
+    private final ContestService contestService;
     private final ActivityService activityService;
     private final OssService ossService;
     private final UserService userService;
@@ -41,6 +41,7 @@ public class BuildingContestController {
             @RequestParam("image") MultipartFile image,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam("slug") String slug,
             HttpSession session) {
 
         Map<String, Object> result = new HashMap<>();
@@ -65,14 +66,10 @@ public class BuildingContestController {
         }
 
         try {
-            // 上传图片到OSS
-            String imageUrl = ossService.uploadImage(image, "building-contest");
+            String imageUrl = ossService.uploadImage(image, "contest-works");
+            Activity activity = activityService.getActivityBySlug(slug);
 
-            // 获取建筑大赛活动ID
-            Activity activity = activityService.getActivityBySlug("building-master-1");
-
-            // 保存投稿
-            BuildingContestWork work = contestService.submitWork(
+            ContestWork work = contestService.submitWork(
                     activity.getId(), user, title.trim(),
                     description != null ? description.trim() : null,
                     imageUrl);
@@ -111,10 +108,8 @@ public class BuildingContestController {
 
         try {
             contestService.voteForWork(workId, user);
-            Activity activity = activityService.getActivityBySlug("building-master-1");
             result.put("success", true);
             result.put("message", "投票成功！");
-            result.put("remainingVotes", contestService.getRemainingVotes(activity.getId(), user.getId()));
         } catch (RuntimeException e) {
             result.put("success", false);
             result.put("message", e.getMessage());
@@ -139,10 +134,8 @@ public class BuildingContestController {
 
         try {
             contestService.retractVote(workId, user);
-            Activity activity = activityService.getActivityBySlug("building-master-1");
             result.put("success", true);
             result.put("message", "已撤回投票");
-            result.put("remainingVotes", contestService.getRemainingVotes(activity.getId(), user.getId()));
         } catch (RuntimeException e) {
             result.put("success", false);
             result.put("message", e.getMessage());
@@ -207,7 +200,9 @@ public class BuildingContestController {
      * 删除自己的投稿作品
      */
     @PostMapping("/delete-work")
-    public ResponseEntity<Map<String, Object>> deleteWork(HttpSession session) {
+    public ResponseEntity<Map<String, Object>> deleteWork(
+            @RequestParam("slug") String slug,
+            HttpSession session) {
         Map<String, Object> result = new HashMap<>();
         User user = userService.getCurrentUser(session);
 
@@ -218,7 +213,7 @@ public class BuildingContestController {
         }
 
         try {
-            Activity activity = activityService.getActivityBySlug("building-master-1");
+            Activity activity = activityService.getActivityBySlug(slug);
             boolean wasApproved = contestService.deleteOwnWork(activity.getId(), user.getId());
             result.put("success", true);
             result.put("message", wasApproved ? "作品已删除，关联投票记录已一并清除" : "作品已删除");
@@ -234,15 +229,17 @@ public class BuildingContestController {
      * 获取已通过审核的作品列表
      */
     @GetMapping("/works")
-    public ResponseEntity<Map<String, Object>> getWorks(HttpSession session) {
+    public ResponseEntity<Map<String, Object>> getWorks(
+            @RequestParam("slug") String slug,
+            HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
-        Activity activity = activityService.getActivityBySlug("building-master-1");
+        Activity activity = activityService.getActivityBySlug(slug);
         Long activityId = activity.getId();
-        List<BuildingContestWork> works = contestService.getApprovedWorks(activityId);
+        List<ContestWork> works = contestService.getApprovedWorks(activityId);
 
         // 按投稿时间排序，生成作品编号
-        List<BuildingContestWork> sortedByTime = works.stream()
+        List<ContestWork> sortedByTime = works.stream()
                 .sorted((a, b) -> {
                     if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
                     if (a.getCreatedAt() == null) return 1;
@@ -257,40 +254,40 @@ public class BuildingContestController {
 
         User user = userService.getCurrentUser(session);
 
-        // 获取当前阶段
         ContestPhase phase = contestService.getCurrentPhase(activityId);
         boolean showVoteCount = contestService.shouldShowVoteCount(activityId);
         boolean showJudgeScore = contestService.shouldShowJudgeScore(activityId);
         boolean isResults = (phase == ContestPhase.RESULTS);
 
-        // RESULTS 阶段：计算并持久化最终得分，获取人气分映射
         Map<Long, Integer> popScoreMap = new HashMap<>();
+        Map<Long, Double> finalScoreMap = new HashMap<>();
         if (isResults) {
-            contestService.calculateFinalScores(activityId);
+            finalScoreMap = contestService.computeFinalScores(activityId);
             popScoreMap = contestService.getPopularityScoreMap(activityId);
-            // 重新加载作品以获取最新 finalScore
-            works = contestService.getApprovedWorks(activityId);
         }
 
-        // 裁判身份检查
         boolean userIsJudge = (user != null && contestService.isJudge(activityId, user.getId()));
 
         boolean canVote = (phase == ContestPhase.VOTING) && !userIsJudge;
         boolean canSubmit = (phase == ContestPhase.SUBMISSION) && !userIsJudge;
         boolean canDelete = (phase == ContestPhase.SUBMISSION || phase == ContestPhase.REVIEW) && !userIsJudge;
 
-        // 查询当前用户的抽象票投给了哪个作品
         Long abstractVotedWorkId = (user != null)
                 ? contestService.getAbstractVotedWorkId(activityId, user.getId())
                 : null;
 
-        // RESULTS 阶段按最终得分降序，其他阶段按投稿时间升序
-        List<BuildingContestWork> displayList;
+        Map<Long, Integer> voteCountMap = contestService.getVoteCountMap(works);
+        Map<Long, Integer> abstractVoteCountMap = contestService.getAbstractVoteCountMap(works);
+        Map<Long, Double> judgeScoreMap = showJudgeScore
+                ? contestService.getJudgeScoreMap(works) : new HashMap<>();
+
+        List<ContestWork> displayList;
         if (isResults) {
+            Map<Long, Double> fsMap = finalScoreMap;
             displayList = works.stream()
                     .sorted((a, b) -> {
-                        double sa = a.getFinalScore() != null ? a.getFinalScore() : 0;
-                        double sb = b.getFinalScore() != null ? b.getFinalScore() : 0;
+                        double sa = fsMap.getOrDefault(a.getId(), 0.0);
+                        double sb = fsMap.getOrDefault(b.getId(), 0.0);
                         return Double.compare(sb, sa);
                     })
                     .collect(Collectors.toList());
@@ -299,6 +296,7 @@ public class BuildingContestController {
         }
 
         Map<Long, Integer> finalPopScoreMap = popScoreMap;
+        Map<Long, Double> finalFsMap = finalScoreMap;
         List<Map<String, Object>> workList = displayList.stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", w.getId());
@@ -307,16 +305,12 @@ public class BuildingContestController {
             m.put("imageUrl", w.getImageUrl());
             m.put("authorName", w.getUser().getNickname());
             m.put("authorCampName", w.getUser().getCampName());
-            // 根据阶段控制票数显示
-            m.put("voteCount", showVoteCount ? w.getVoteCount() : -1);
-            // 评委分数仅在 RESULTS 阶段显示
-            m.put("judgeScore", showJudgeScore ? w.getJudgeScore() : null);
-            m.put("finalScore", showJudgeScore ? w.getFinalScore() : null);
-            // 人气分仅在 RESULTS 阶段显示
+            m.put("voteCount", showVoteCount ? voteCountMap.getOrDefault(w.getId(), 0) : -1);
+            m.put("judgeScore", showJudgeScore ? judgeScoreMap.get(w.getId()) : null);
+            m.put("finalScore", showJudgeScore ? finalFsMap.get(w.getId()) : null);
             m.put("popularityScore", isResults ? finalPopScoreMap.getOrDefault(w.getId(), 15) : null);
             m.put("createdAt", w.getCreatedAt() != null ? w.getCreatedAt().toString() : null);
             m.put("workNumber", workNumberMap.getOrDefault(w.getId(), 0));
-            // 标记当前用户是否已投票
             if (user != null) {
                 m.put("hasVoted", contestService.hasVoted(w.getId(), user.getId()));
                 m.put("hasAbstractVoted", abstractVotedWorkId != null && abstractVotedWorkId.equals(w.getId()));
@@ -324,13 +318,11 @@ public class BuildingContestController {
                 m.put("hasVoted", false);
                 m.put("hasAbstractVoted", false);
             }
-            m.put("abstractVoteCount", showVoteCount ? w.getAbstractVoteCount() : -1);
+            m.put("abstractVoteCount", showVoteCount ? abstractVoteCountMap.getOrDefault(w.getId(), 0) : -1);
             return m;
         }).collect(Collectors.toList());
 
         result.put("works", workList);
-
-        // 阶段信息
         result.put("phase", phase.name());
         result.put("phaseLabel", getPhaseLabel(phase));
         result.put("canVote", canVote);
@@ -340,7 +332,6 @@ public class BuildingContestController {
         result.put("showVoteCount", showVoteCount);
         result.put("showJudgeScore", showJudgeScore);
 
-        // 时间节点（供进程条显示）
         Map<String, String> configMap = contestService.getConfigMap(activityId);
         if (!configMap.isEmpty()) {
             List<Map<String, String>> milestones = new ArrayList<>();
@@ -353,49 +344,48 @@ public class BuildingContestController {
             result.put("milestones", milestones);
         }
 
-        // 当前用户投稿状态 + 剩余票数
         if (user != null) {
-            BuildingContestWork myWork = contestService.getUserWork(activityId, user.getId());
+            ContestWork myWork = contestService.getUserWork(activityId, user.getId());
             if (myWork != null) {
                 result.put("myWorkStatus", myWork.getStatus().name());
             }
             result.put("remainingVotes", contestService.getRemainingVotes(activityId, user.getId()));
-            result.put("maxVotes", BuildingContestService.MAX_VOTES_PER_USER);
+            result.put("maxVotes", ContestService.MAX_VOTES_PER_USER);
             result.put("hasAbstractVoted", abstractVotedWorkId != null);
         }
 
-        // 颁奖台数据（仅 RESULTS 阶段）
         if (isResults && !works.isEmpty()) {
-            result.put("podium", buildPodiumData(works, displayList));
+            result.put("podium", buildPodiumData(works, displayList,
+                    voteCountMap, judgeScoreMap, abstractVoteCountMap, finalScoreMap));
         }
 
         return ResponseEntity.ok(result);
     }
 
-    /**
-     * 构建颁奖台数据：前3名 + 三个特别奖
-     */
-    private Map<String, Object> buildPodiumData(List<BuildingContestWork> allWorks, List<BuildingContestWork> sortedByFinalScore) {
+    private Map<String, Object> buildPodiumData(List<ContestWork> allWorks, List<ContestWork> sortedByFinalScore,
+                                                  Map<Long, Integer> voteCountMap,
+                                                  Map<Long, Double> judgeScoreMap,
+                                                  Map<Long, Integer> abstractVoteCountMap,
+                                                  Map<Long, Double> finalScoreMap) {
         Map<String, Object> podium = new HashMap<>();
 
-        // Top 3（按最终得分降序，取前3）
         List<Map<String, Object>> top3 = new ArrayList<>();
         for (int i = 0; i < Math.min(3, sortedByFinalScore.size()); i++) {
-            BuildingContestWork w = sortedByFinalScore.get(i);
+            ContestWork w = sortedByFinalScore.get(i);
             Map<String, Object> m = new HashMap<>();
             m.put("id", w.getId());
             m.put("title", w.getTitle());
             m.put("imageUrl", w.getImageUrl());
             m.put("authorName", w.getUser().getNickname());
             m.put("authorCampName", w.getUser().getCampName());
-            m.put("finalScore", w.getFinalScore());
+            m.put("finalScore", finalScoreMap.get(w.getId()));
             top3.add(m);
         }
         podium.put("top3", top3);
 
-        // 人气奖：票数最多
-        BuildingContestWork popWinner = allWorks.stream()
-                .max(Comparator.comparingInt(BuildingContestWork::getVoteCount))
+        ContestWork popWinner = allWorks.stream()
+                .max(Comparator.comparingInt((ContestWork w) ->
+                        voteCountMap.getOrDefault(w.getId(), 0)))
                 .orElse(null);
         if (popWinner != null) {
             Map<String, Object> m = new HashMap<>();
@@ -404,14 +394,14 @@ public class BuildingContestController {
             m.put("imageUrl", popWinner.getImageUrl());
             m.put("authorName", popWinner.getUser().getNickname());
             m.put("authorCampName", popWinner.getUser().getCampName());
-            m.put("voteCount", popWinner.getVoteCount());
+            m.put("voteCount", voteCountMap.getOrDefault(popWinner.getId(), 0));
             podium.put("popularityAward", m);
         }
 
-        // 最佳创意奖：评委分最高
-        BuildingContestWork creativityWinner = allWorks.stream()
-                .filter(w -> w.getJudgeScore() != null)
-                .max(Comparator.comparingDouble(BuildingContestWork::getJudgeScore))
+        ContestWork creativityWinner = allWorks.stream()
+                .filter(w -> judgeScoreMap.get(w.getId()) != null)
+                .max(Comparator.comparingDouble((ContestWork w) ->
+                        judgeScoreMap.getOrDefault(w.getId(), 0.0)))
                 .orElse(null);
         if (creativityWinner != null) {
             Map<String, Object> m = new HashMap<>();
@@ -420,22 +410,22 @@ public class BuildingContestController {
             m.put("imageUrl", creativityWinner.getImageUrl());
             m.put("authorName", creativityWinner.getUser().getNickname());
             m.put("authorCampName", creativityWinner.getUser().getCampName());
-            m.put("judgeScore", creativityWinner.getJudgeScore());
+            m.put("judgeScore", judgeScoreMap.get(creativityWinner.getId()));
             podium.put("creativityAward", m);
         }
 
-        // 抽象达人奖：抽象票最多
-        BuildingContestWork abstractWinner = allWorks.stream()
-                .max(Comparator.comparingInt(BuildingContestWork::getAbstractVoteCount))
+        ContestWork abstractWinner = allWorks.stream()
+                .max(Comparator.comparingInt((ContestWork w) ->
+                        abstractVoteCountMap.getOrDefault(w.getId(), 0)))
                 .orElse(null);
-        if (abstractWinner != null && abstractWinner.getAbstractVoteCount() > 0) {
+        if (abstractWinner != null && abstractVoteCountMap.getOrDefault(abstractWinner.getId(), 0) > 0) {
             Map<String, Object> m = new HashMap<>();
             m.put("id", abstractWinner.getId());
             m.put("title", abstractWinner.getTitle());
             m.put("imageUrl", abstractWinner.getImageUrl());
             m.put("authorName", abstractWinner.getUser().getNickname());
             m.put("authorCampName", abstractWinner.getUser().getCampName());
-            m.put("abstractVoteCount", abstractWinner.getAbstractVoteCount());
+            m.put("abstractVoteCount", abstractVoteCountMap.getOrDefault(abstractWinner.getId(), 0));
             podium.put("abstractAward", m);
         }
 
@@ -477,7 +467,9 @@ public class BuildingContestController {
      * 获取裁判视角的作品列表（含评分状态）
      */
     @GetMapping("/judge/works")
-    public ResponseEntity<Map<String, Object>> getJudgeWorks(HttpSession session) {
+    public ResponseEntity<Map<String, Object>> getJudgeWorks(
+            @RequestParam("slug") String slug,
+            HttpSession session) {
         Map<String, Object> result = new HashMap<>();
         User user = userService.getCurrentUser(session);
 
@@ -487,10 +479,9 @@ public class BuildingContestController {
             return ResponseEntity.ok(result);
         }
 
-        Activity activity = activityService.getActivityBySlug("building-master-1");
+        Activity activity = activityService.getActivityBySlug(slug);
         Long activityId = activity.getId();
 
-        // 裁判身份检查
         if (!contestService.isJudge(activityId, user.getId())) {
             result.put("success", false);
             result.put("message", "您不是本次活动的裁判");
@@ -498,10 +489,9 @@ public class BuildingContestController {
         }
 
         ContestPhase phase = contestService.getCurrentPhase(activityId);
-        List<BuildingContestWork> works = contestService.getApprovedWorks(activityId);
+        List<ContestWork> works = contestService.getApprovedWorks(activityId);
 
-        // 按投稿时间排序，生成作品编号
-        List<BuildingContestWork> sortedByTimeJ = works.stream()
+        List<ContestWork> sortedByTimeJ = works.stream()
                 .sorted((a, b) -> {
                     if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
                     if (a.getCreatedAt() == null) return 1;
@@ -523,7 +513,6 @@ public class BuildingContestController {
             m.put("authorName", w.getUser().getNickname());
             m.put("authorCampName", w.getUser().getCampName());
             m.put("workNumber", workNumberMapJ.getOrDefault(w.getId(), 0));
-            // 该裁判是否已评分
             Double myScore = contestService.getJudgeScoreForWork(w.getId(), user.getId());
             m.put("myScore", myScore);
             m.put("hasScored", myScore != null);
@@ -535,7 +524,6 @@ public class BuildingContestController {
         result.put("phase", phase.name());
         result.put("canScore", phase == ContestPhase.JUDGING);
 
-        // 评分进度
         int[] progress = contestService.getJudgeProgress(activityId, user.getId());
         result.put("scoredCount", progress[0]);
         result.put("totalCount", progress[1]);

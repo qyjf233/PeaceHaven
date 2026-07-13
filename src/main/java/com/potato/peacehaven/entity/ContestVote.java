@@ -8,15 +8,15 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "building_contest_vote",
+@Table(name = "contest_vote",
        uniqueConstraints = @UniqueConstraint(columnNames = {"work_id", "user_id"}))
-@Comment("建筑大赛投票记录表")
+@Comment("参赛作品投票记录表")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BuildingContestVote {
+public class ContestVote {
 
     /** 投票记录ID */
     @Id
@@ -28,7 +28,7 @@ public class BuildingContestVote {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_id", nullable = false)
     @Comment("关联作品")
-    private BuildingContestWork work;
+    private ContestWork work;
 
     /** 投票用户ID */
     @ManyToOne(fetch = FetchType.LAZY)

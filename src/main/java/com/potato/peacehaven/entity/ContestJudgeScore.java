@@ -8,19 +8,19 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * 建筑大赛裁判评分记录
+ * 参赛作品裁判评分记录
  * 每位裁判对每个作品的独立评分，打分后不可修改
  */
 @Entity
-@Table(name = "building_contest_judge_score",
+@Table(name = "contest_judge_score",
        uniqueConstraints = @UniqueConstraint(columnNames = {"work_id", "judge_id"}))
-@Comment("建筑大赛裁判评分表")
+@Comment("参赛作品裁判评分表")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BuildingContestJudgeScore {
+public class ContestJudgeScore {
 
     /** 评分记录ID */
     @Id
@@ -32,7 +32,7 @@ public class BuildingContestJudgeScore {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_id", nullable = false)
     @Comment("关联作品")
-    private BuildingContestWork work;
+    private ContestWork work;
 
     /** 裁判用户 */
     @ManyToOne(fetch = FetchType.EAGER)

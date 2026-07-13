@@ -9,15 +9,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "building_contest_work",
+@Table(name = "contest_work",
        uniqueConstraints = @UniqueConstraint(columnNames = {"activity_id", "user_id"}))
-@Comment("建筑大赛投稿作品表")
+@Comment("参赛作品表")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BuildingContestWork {
+public class ContestWork {
 
     /** 作品ID，自增主键 */
     @Id
@@ -57,28 +57,6 @@ public class BuildingContestWork {
     @Comment("审核状态：PENDING/APPROVED/REJECTED")
     @Builder.Default
     private WorkStatus status = WorkStatus.PENDING;
-
-    /** 网络投票票数 */
-    @Column(name = "vote_count", nullable = false)
-    @Comment("网络投票票数")
-    @Builder.Default
-    private Integer voteCount = 0;
-
-    /** 抽象票票数（每人限投一票） */
-    @Column(name = "abstract_vote_count", nullable = false)
-    @Comment("抽象票票数")
-    @Builder.Default
-    private Integer abstractVoteCount = 0;
-
-    /** 裁判平均分（满分10分，暂未评分为null） */
-    @Column(name = "judge_score")
-    @Comment("裁判平均分（满分10）")
-    private Double judgeScore;
-
-    /** 最终得分（裁判70% + 投票30%） */
-    @Column(name = "final_score")
-    @Comment("最终得分")
-    private Double finalScore;
 
     /** 创建时间，自动生成 */
     @CreationTimestamp

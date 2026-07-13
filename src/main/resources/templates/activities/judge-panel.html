@@ -312,7 +312,7 @@
     var contentEl = document.getElementById('judgeContent');
 
     function loadJudgeWorks() {
-        fetch('/api/contest/judge/works', { credentials: 'same-origin' })
+        fetch('/api/contest/judge/works?slug=building-master-1', { credentials: 'same-origin' })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (!data.success) {

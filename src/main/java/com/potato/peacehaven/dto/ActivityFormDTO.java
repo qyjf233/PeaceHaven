@@ -13,4 +13,5 @@ public class ActivityFormDTO {
     private String thumbnail;
     private String startDate;
     private String endDate;
+    private Boolean hasWorkSubmission;
 }

@@ -1,14 +1,18 @@
 package com.potato.peacehaven.controller;
 
+import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.enums.UserRole;
 import com.potato.peacehaven.repository.*;
+import com.potato.peacehaven.service.ActivityService;
 import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin")
@@ -17,8 +21,10 @@ public class AdminAuthController {
 
     private final UserService userService;
     private final ActivityRepository activityRepository;
+    private final ActivityService activityService;
     private final UserRepository userRepository;
     private final CombatMemberRepository combatMemberRepository;
+    private final ContestWorkRepository contestWorkRepository;
 
     /**
      * 管理员仪表盘首页
@@ -45,10 +51,23 @@ public class AdminAuthController {
     }
 
     /**
-     * 建筑大赛作品审核页
+     * 作品审核 - 活动列表页
      */
     @GetMapping("/contest-works")
-    public String contestWorksPage() {
+    public String contestWorksPage(Model model) {
+        List<Activity> activities = activityService.getActivitiesWithWorkSubmission();
+        model.addAttribute("activities", activities);
+        model.addAttribute("contestWorkRepository", contestWorkRepository);
         return "admin/contest-works";
+    }
+
+    /**
+     * 作品审核 - 指定活动的作品审核详情页
+     */
+    @GetMapping("/contest-works/{activityId}")
+    public String contestWorksDetailPage(@PathVariable Long activityId, Model model) {
+        Activity activity = activityService.getActivityById(activityId);
+        model.addAttribute("activity", activity);
+        return "admin/contest-works-detail";
     }
 }

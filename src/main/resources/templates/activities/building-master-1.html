@@ -1334,7 +1334,7 @@
 
     // === 加载作品列表 ===
     function loadWorks() {
-        fetch('/api/contest/works')
+        fetch('/api/contest/works?slug=building-master-1')
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 myWorkStatus = data.myWorkStatus || null;
@@ -1708,7 +1708,7 @@
             if (!confirm(msg)) return;
     
             var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
-            fetch('/api/contest/delete-work', {
+            fetch('/api/contest/delete-work?slug=building-master-1', {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': csrfToken }
             })
@@ -1828,6 +1828,7 @@
             formData.append('image', selectedFile);
             formData.append('title', title);
             formData.append('description', desc);
+            formData.append('slug', 'building-master-1');
 
             fetch('/api/contest/submit', {
                 method: 'POST',

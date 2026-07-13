@@ -1,8 +1,7 @@
 package com.potato.peacehaven.controller;
 
-import com.potato.peacehaven.entity.BuildingContestWork;
-import com.potato.peacehaven.service.ActivityService;
-import com.potato.peacehaven.service.BuildingContestService;
+import com.potato.peacehaven.entity.ContestWork;
+import com.potato.peacehaven.service.ContestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 管理员建筑大赛作品审核 API
+ * 管理员作品审核 API
  * 路径 /admin/api/contest/** 受 AdminInterceptor 鉴权保护
  */
 @Slf4j
@@ -24,8 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminContestApiController {
 
-    private final BuildingContestService contestService;
-    private final ActivityService activityService;
+    private final ContestService contestService;
 
     private static final int PAGE_SIZE = 9;
 
@@ -34,13 +32,16 @@ public class AdminContestApiController {
      */
     @GetMapping("/works")
     public ResponseEntity<Map<String, Object>> listWorks(
+            @RequestParam Long activityId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) String status) {
 
-        Long activityId = activityService.getActivityBySlug("building-master-1").getId();
-        Page<BuildingContestWork> workPage = contestService.getWorksForReview(activityId, status, page, PAGE_SIZE);
+        Page<ContestWork> workPage = contestService.getWorksForReview(activityId, status, page, PAGE_SIZE);
 
-        List<Map<String, Object>> works = workPage.getContent().stream().map(w -> {
+        List<ContestWork> pageWorks = workPage.getContent();
+        Map<Long, Integer> voteCountMap = contestService.getVoteCountMap(pageWorks);
+
+        List<Map<String, Object>> works = pageWorks.stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", w.getId());
             m.put("title", w.getTitle());
@@ -48,7 +49,7 @@ public class AdminContestApiController {
             m.put("imageUrl", w.getImageUrl());
             m.put("authorName", w.getUser().getNickname());
             m.put("authorPhone", w.getUser().getPhone());
-            m.put("voteCount", w.getVoteCount());
+            m.put("voteCount", voteCountMap.getOrDefault(w.getId(), 0));
             m.put("status", w.getStatus().name());
             m.put("createdAt", w.getCreatedAt() != null ? w.getCreatedAt().toString() : null);
             return m;
@@ -82,8 +83,8 @@ public class AdminContestApiController {
         }
 
         try {
-            BuildingContestWork.WorkStatus newStatus =
-                    "approve".equals(action) ? BuildingContestWork.WorkStatus.APPROVED : BuildingContestWork.WorkStatus.REJECTED;
+            ContestWork.WorkStatus newStatus =
+                    "approve".equals(action) ? ContestWork.WorkStatus.APPROVED : ContestWork.WorkStatus.REJECTED;
             contestService.reviewWork(id, newStatus);
             result.put("success", true);
             result.put("message", "approve".equals(action) ? "已通过" : "已拒绝");

@@ -78,6 +78,7 @@ public class AdminActivityController {
                         ? LocalDateTime.parse(form.getStartDate(), FORMATTER) : null)
                 .endDate(form.getEndDate() != null && !form.getEndDate().isEmpty()
                         ? LocalDateTime.parse(form.getEndDate(), FORMATTER) : null)
+                .hasWorkSubmission(form.getHasWorkSubmission() != null && form.getHasWorkSubmission())
                 .build();
     }
 
@@ -92,6 +93,7 @@ public class AdminActivityController {
                 ? activity.getStartDate().format(FORMATTER) : null);
         dto.setEndDate(activity.getEndDate() != null
                 ? activity.getEndDate().format(FORMATTER) : null);
+        dto.setHasWorkSubmission(activity.getHasWorkSubmission() != null && activity.getHasWorkSubmission());
         return dto;
     }
 }

@@ -9,19 +9,19 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * 建筑大赛抽象票记录
+ * 参赛作品抽象票记录
  * 每人每个活动只能投一票抽象票，通过 (activity_id, user_id) 唯一约束保证
  */
 @Entity
-@Table(name = "building_contest_abstract_vote",
+@Table(name = "contest_abstract_vote",
        uniqueConstraints = @UniqueConstraint(columnNames = {"activity_id", "user_id"}))
-@Comment("建筑大赛抽象票记录（每人每活动限一票）")
+@Comment("参赛作品抽象票记录（每人每活动限一票）")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BuildingContestAbstractVote {
+public class ContestAbstractVote {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,7 +37,7 @@ public class BuildingContestAbstractVote {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_id", nullable = false)
     @Comment("投给的作品")
-    private BuildingContestWork work;
+    private ContestWork work;
 
     /** 投票用户 */
     @ManyToOne(fetch = FetchType.LAZY)

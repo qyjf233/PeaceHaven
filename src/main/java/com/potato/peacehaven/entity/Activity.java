@@ -60,6 +60,12 @@ public class Activity {
     @Builder.Default
     private Long viewCount = 0L;
 
+    /** 是否启用作品提交流程 */
+    @Column(name = "has_work_submission", nullable = false)
+    @Comment("是否启用作品提交流程")
+    @Builder.Default
+    private Boolean hasWorkSubmission = false;
+
     /** 记录创建时间，自动生成 */
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

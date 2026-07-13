@@ -30,4 +30,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     /** 查询已结束的活动（结束时间在当前时间之前） */
     Page<Activity> findByEndDateBeforeOrderByStartDateDesc(LocalDateTime now, Pageable pageable);
+
+    /** 查询启用了作品提交流程的活动 */
+    List<Activity> findByHasWorkSubmissionTrue();
 }

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf}">
+    <title th:text="${activity.title} + ' - 作品审核 - PeaceHaven Admin'">作品审核</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <style>
+        .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-tab { padding: 8px 20px; border: 1px solid var(--admin-border); border-radius: 20px; background: #fff; cursor: pointer; font-size: 0.88rem; transition: all 0.2s; }
+        .filter-tab:hover { border-color: var(--admin-primary); }
+        .filter-tab.active { background: var(--admin-primary); color: #fff; border-color: var(--admin-primary); }
+        .filter-tab .count { font-size: 0.78rem; opacity: 0.8; margin-left: 4px; }
+        .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        .work-card { background: var(--admin-surface); border-radius: var(--admin-radius); box-shadow: var(--admin-shadow); overflow: hidden; }
+        .work-card-image { width: 100%; height: 200px; object-fit: cover; cursor: pointer; transition: opacity 0.2s; }
+        .work-card-image:hover { opacity: 0.85; }
+        .work-card-body { padding: 16px; }
+        .work-card-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+        .work-card-desc { font-size: 0.85rem; color: var(--admin-text-muted); margin-bottom: 10px; line-height: 1.4; }
+        .work-card-meta { display: flex; gap: 12px; font-size: 0.82rem; color: var(--admin-text-muted); margin-bottom: 10px; }
+        .work-status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
+        .work-status.PENDING { background: #fff3e0; color: #E65100; }
+        .work-status.APPROVED { background: #e8f5e9; color: #2E7D32; }
+        .work-status.REJECTED { background: #ffebee; color: #C62828; }
+        .work-actions { display: flex; gap: 6px; margin-top: 10px; }
+        .load-more-area { text-align: center; padding: 20px; }
+        .load-more-btn { padding: 12px 32px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: #fff; cursor: pointer; font-size: 0.92rem; transition: all 0.2s; }
+        .load-more-btn:hover:not(:disabled) { border-color: var(--admin-primary); color: var(--admin-primary); }
+        .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .image-preview-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; cursor: pointer; }
+        .image-preview-overlay.active { display: flex; }
+        .image-preview-overlay img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+        .no-works { text-align: center; padding: 60px 20px; color: var(--admin-text-muted); grid-column: 1/-1; }
+        .no-works .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1 th:text="'📝 ' + ${activity.title} + ' - 作品审核'">作品审核</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin/contest-works" class="btn-back">← 返回列表</a>
+            <a href="/admin" class="btn-back">管理后台</a>
+            <a href="/" class="btn-back">返回前台</a>
+        </div>
+    </header>
+
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+
+    <!-- 状态筛选标签 -->
+    <div class="filter-tabs" id="filterTabs">
+        <button class="filter-tab active" data-status="ALL">全部 <span class="count" id="countAll">0</span></button>
+        <button class="filter-tab" data-status="PENDING">待审核 <span class="count" id="countPending">-</span></button>
+        <button class="filter-tab" data-status="APPROVED">已通过 <span class="count" id="countApproved">-</span></button>
+        <button class="filter-tab" data-status="REJECTED">已拒绝 <span class="count" id="countRejected">-</span></button>
+    </div>
+
+    <!-- 作品卡片网格 -->
+    <div class="works-grid" id="worksGrid"></div>
+
+    <!-- 加载更多 -->
+    <div class="load-more-area" id="loadMoreArea" style="display:none;">
+        <button class="load-more-btn" id="loadMoreBtn">加载更多作品</button>
+    </div>
+</div>
+
+<!-- 图片预览弹窗 -->
+<div class="image-preview-overlay" id="imagePreview" onclick="this.classList.remove('active')">
+    <img id="previewImg" src="" alt="预览">
+</div>
+
+<script th:inline="javascript">
+(function() {
+    var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+    var activityId = [[${activity.id}]];
+    var currentPage = 0;
+    var currentStatus = 'ALL';
+    var hasNext = false;
+    var grid = document.getElementById('worksGrid');
+    var loadMoreArea = document.getElementById('loadMoreArea');
+    var loadMoreBtn = document.getElementById('loadMoreBtn');
+
+    // === 筛选标签切换 ===
+    document.getElementById('filterTabs').addEventListener('click', function(e) {
+        var tab = e.target.closest('.filter-tab');
+        if (!tab) return;
+        document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        currentStatus = tab.dataset.status;
+        resetAndLoad();
+    });
+
+    // === 加载更多 ===
+    loadMoreBtn.addEventListener('click', function() {
+        if (hasNext) loadWorks();
+    });
+
+    // === 图片预览 ===
+    function showPreview(url) {
+        document.getElementById('previewImg').src = url;
+        document.getElementById('imagePreview').classList.add('active');
+    }
+
+    // === 重置并加载 ===
+    function resetAndLoad() {
+        currentPage = 0;
+        grid.innerHTML = '';
+        loadWorks();
+    }
+
+    // === 加载作品 ===
+    function loadWorks() {
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = '加载中...';
+
+        var url = '/admin/api/contest/works?activityId=' + activityId + '&page=' + currentPage;
+        if (currentStatus !== 'ALL') url += '&status=' + currentStatus;
+
+        fetch(url, { headers: { 'X-CSRF-TOKEN': csrfToken } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                hasNext = data.hasNext;
+
+                if (data.works.length === 0 && currentPage === 0) {
+                    grid.innerHTML = '<div class="no-works"><div class="empty-icon">📭</div><p>暂无投稿作品</p></div>';
+                    loadMoreArea.style.display = 'none';
+                    return;
+                }
+
+                data.works.forEach(function(w) {
+                    grid.appendChild(createWorkCard(w));
+                });
+
+                if (currentStatus === 'ALL' && currentPage === 0) {
+                    document.getElementById('countAll').textContent = data.totalElements;
+                }
+
+                loadMoreArea.style.display = hasNext ? 'block' : 'none';
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = '加载更多作品';
+                currentPage++;
+            })
+            .catch(function(err) {
+                console.error('加载失败:', err);
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = '加载失败，点击重试';
+            });
+    }
+
+    // === 创建作品卡片 ===
+    function createWorkCard(w) {
+        var card = document.createElement('div');
+        card.className = 'work-card';
+        card.id = 'work-' + w.id;
+
+        var statusText = { PENDING: '待审核', APPROVED: '已通过', REJECTED: '已拒绝' };
+        var createdAt = w.createdAt ? w.createdAt.substring(0, 16).replace('T', ' ') : '-';
+
+        card.innerHTML =
+            '<img class="work-card-image" src="' + w.imageUrl + '" alt="' + escapeHtml(w.title) + '" loading="lazy" onclick="showPreview(\'' + w.imageUrl + '\')">' +
+            '<div class="work-card-body">' +
+                '<div class="work-card-title">' + escapeHtml(w.title) + '</div>' +
+                (w.description ? '<div class="work-card-desc">' + escapeHtml(w.description) + '</div>' : '') +
+                '<div class="work-card-meta">' +
+                    '<span>👤 ' + escapeHtml(w.authorName) + '</span>' +
+                    '<span>🗳 ' + w.voteCount + '票</span>' +
+                '</div>' +
+                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+                    '<span class="work-status ' + w.status + '">' + statusText[w.status] + '</span>' +
+                    '<span style="font-size:0.78rem; color:#999;">' + createdAt + '</span>' +
+                '</div>' +
+                '<div class="work-actions">' +
+                    (w.status !== 'APPROVED' ? '<button class="btn btn-sm btn-info" onclick="reviewWork(' + w.id + ', \'approve\')">✓ 通过</button>' : '') +
+                    (w.status !== 'REJECTED' ? '<button class="btn btn-sm btn-danger" onclick="reviewWork(' + w.id + ', \'reject\')">✗ 拒绝</button>' : '') +
+                    (w.status === 'APPROVED' ? '<span style="font-size:0.82rem; color:#4CAF50;">已通过审核</span>' : '') +
+                    (w.status === 'REJECTED' ? '<span style="font-size:0.82rem; color:#999;">已拒绝</span>' : '') +
+                '</div>' +
+            '</div>';
+
+        return card;
+    }
+
+    // === 审核操作 ===
+    window.reviewWork = function(workId, action) {
+        if (!confirm(action === 'approve' ? '确认通过该作品？' : '确认拒绝该作品？')) return;
+
+        fetch('/admin/api/contest/works/' + workId + '/review', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ action: action })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                resetAndLoad();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(function() { alert('操作失败，请重试'); });
+    };
+
+    // === 图片预览 ===
+    window.showPreview = showPreview;
+
+    // === HTML转义 ===
+    function escapeHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // === 初始加载 ===
+    loadWorks();
+})();
+</script>
+</body>
+</html>

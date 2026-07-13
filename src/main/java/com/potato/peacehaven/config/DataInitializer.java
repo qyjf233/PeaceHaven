@@ -8,7 +8,7 @@ import com.potato.peacehaven.repository.ActivityConfigRepository;
 import com.potato.peacehaven.repository.ActivityJudgeRepository;
 import com.potato.peacehaven.repository.ActivityRepository;
 import com.potato.peacehaven.repository.UserRepository;
-import com.potato.peacehaven.service.BuildingContestService;
+import com.potato.peacehaven.service.ContestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -45,6 +45,7 @@ public class DataInitializer implements ApplicationRunner {
                     .summary("展示建筑创意，交流建造技巧，评选最具创意与观赏性的庄园作品")
                     .startDate(LocalDateTime.of(2026, 7, 1, 0, 0))
                     .endDate(LocalDateTime.of(2026, 7, 31, 23, 59))
+                    .hasWorkSubmission(true)
                     .build();
             activity = activityRepository.save(activity);
             log.info("已自动创建建筑大赛活动记录: slug={}", slug);
@@ -62,7 +63,7 @@ public class DataInitializer implements ApplicationRunner {
 
             ActivityConfig config = ActivityConfig.builder()
                     .activityId(activity.getId())
-                    .configJson(BuildingContestService.mapToJson(configData))
+                    .configJson(ContestService.mapToJson(configData))
                     .build();
             configRepository.save(config);
             log.info("已创建建筑大赛时间配置");
@@ -101,7 +102,7 @@ public class DataInitializer implements ApplicationRunner {
 
             ActivityConfig config = ActivityConfig.builder()
                     .activityId(activity.getId())
-                    .configJson(BuildingContestService.mapToJson(configData))
+                    .configJson(ContestService.mapToJson(configData))
                     .build();
             configRepository.save(config);
             log.info("已创建擂台赛时间配置");
