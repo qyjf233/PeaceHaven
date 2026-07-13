@@ -16,12 +16,12 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         // 管理员鉴权拦截器
         registry.addInterceptor(adminInterceptor)
-                .addPathPatterns("/admin/**")
+                .addPathPatterns("/admin", "/admin/**")
                 .excludePathPatterns("/admin/login");
 
         // CSRF Token 校验拦截器
         registry.addInterceptor(csrfInterceptor)
-                .addPathPatterns("/admin/**", "/api/contest/**")
+                .addPathPatterns("/admin", "/admin/**", "/api/contest/**")
                 .excludePathPatterns("/admin/login", "/api/auth/**");
     }
 }

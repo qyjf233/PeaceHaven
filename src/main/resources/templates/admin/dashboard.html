@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>PeaceHaven 管理后台</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/" class="btn-back">← 返回前台</a>
+        </div>
+    </header>
+
+    <!-- 数据概览卡片 -->
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-info">
+                <div class="stat-number" th:text="${activityCount}">0</div>
+                <div class="stat-label">活动总数</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <div class="stat-number" th:text="${userCount}">0</div>
+                <div class="stat-label">注册用户</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⚔️</div>
+            <div class="stat-info">
+                <div class="stat-number" th:text="${combatMemberCount}">0</div>
+                <div class="stat-label">战斗组成员</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 功能菜单 -->
+    <div class="dashboard-menu">
+        <a href="/admin/activities" class="menu-card">
+            <div class="menu-icon">📋</div>
+            <div class="menu-title">活动管理</div>
+            <div class="menu-desc">创建、编辑和管理营地活动</div>
+        </a>
+        <a href="/admin/users" class="menu-card">
+            <div class="menu-icon">👥</div>
+            <div class="menu-title">用户管理</div>
+            <div class="menu-desc">查看和管理注册用户信息</div>
+        </a>
+        <a href="/admin/combat-members" class="menu-card">
+            <div class="menu-icon">⚔️</div>
+            <div class="menu-title">战斗组管理</div>
+            <div class="menu-desc">管理战斗组成员与编制</div>
+        </a>
+        <a href="/admin/contest-works" class="menu-card">
+            <div class="menu-icon">🏗️</div>
+            <div class="menu-title">作品审核</div>
+            <div class="menu-desc">审核建筑大赛参赛作品</div>
+        </a>
+    </div>
+</div>
+</body>
+</html>

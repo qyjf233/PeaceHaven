@@ -249,7 +249,7 @@
             if (data.success) {
                 if (data.role === 'ADMIN') {
                     showMsg('登录成功，正在跳转...', true);
-                    setTimeout(function() { window.location.href = '/admin/activities'; }, 600);
+                    setTimeout(function() { window.location.href = '/admin'; }, 600);
                 } else {
                     showMsg('你不是管理员，无法访问后台', false);
                     submitBtn.disabled = false;
