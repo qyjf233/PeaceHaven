@@ -517,31 +517,6 @@
 <th:block th:replace="~{fragments/footer :: scripts(auth=true)}"></th:block>
 
 <script>
-    // Theme toggle
-    const themeToggle = document.getElementById('themeToggle');
-    const savedTheme = localStorage.getItem('ph-theme') || 'day';
-    document.body.setAttribute('data-theme', savedTheme);
-    themeToggle.addEventListener('click', () => {
-        const current = document.body.getAttribute('data-theme');
-        const next = current === 'day' ? 'night' : 'day';
-        document.body.setAttribute('data-theme', next);
-        localStorage.setItem('ph-theme', next);
-    });
-
-    // Hamburger menu
-    const hamburger = document.getElementById('hamburger');
-    const navLinks = document.getElementById('navLinks');
-    hamburger.addEventListener('click', () => {
-        hamburger.classList.toggle('active');
-        navLinks.classList.toggle('open');
-    });
-    navLinks.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', () => {
-            hamburger.classList.remove('active');
-            navLinks.classList.remove('open');
-        });
-    });
-
     function handleRegister() {}
 
     // === 报名模块 ===

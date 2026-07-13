@@ -10,45 +10,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('ph-theme');
     if (savedTheme) body.setAttribute('data-theme', savedTheme);
 
-    themeToggle.addEventListener('click', () => {
-        const current = body.getAttribute('data-theme');
-        const next = current === 'day' ? 'night' : 'day';
-        body.setAttribute('data-theme', next);
-        localStorage.setItem('ph-theme', next);
-        // Reinit particles with new theme color
-        initParticles();
-    });
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const current = body.getAttribute('data-theme');
+            const next = current === 'day' ? 'night' : 'day';
+            body.setAttribute('data-theme', next);
+            localStorage.setItem('ph-theme', next);
+            // Reinit particles with new theme color
+            initParticles();
+        });
+    }
 
     // === Navbar Scroll Effect ===
     const navbar = document.getElementById('navbar');
     const backToTop = document.getElementById('backToTop');
 
-    window.addEventListener('scroll', () => {
-        const scrollY = window.scrollY;
-        navbar.classList.toggle('scrolled', scrollY > 50);
-        backToTop.classList.toggle('visible', scrollY > 500);
-    });
+    if (navbar && backToTop) {
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            navbar.classList.toggle('scrolled', scrollY > 50);
+            backToTop.classList.toggle('visible', scrollY > 500);
+        });
 
-    backToTop.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+        backToTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    } else if (navbar) {
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+    }
 
     // === Mobile Menu ===
     const hamburger = document.getElementById('hamburger');
     const navLinks = document.getElementById('navLinks');
 
-    hamburger.addEventListener('click', () => {
-        hamburger.classList.toggle('active');
-        navLinks.classList.toggle('open');
-    });
-
-    // Close menu on link click
-    navLinks.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', () => {
-            hamburger.classList.remove('active');
-            navLinks.classList.remove('open');
+    if (hamburger && navLinks) {
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navLinks.classList.toggle('open');
         });
-    });
+
+        // Close menu on link click
+        navLinks.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                navLinks.classList.remove('open');
+            });
+        });
+    }
 
     // === Active Nav Link on Scroll ===
     const sections = document.querySelectorAll('.section, .hero');
@@ -186,16 +196,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === Particle System ===
     const canvas = document.getElementById('particleCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas ? canvas.getContext('2d') : null;
     let particles = [];
     let animFrameId;
 
     function resizeCanvas() {
+        if (!canvas) return;
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     }
 
     function initParticles() {
+        if (!canvas || !ctx) return;
         resizeCanvas();
         particles = [];
         const count = Math.min(Math.floor(window.innerWidth / 25), 50);
@@ -216,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawParticles() {
+        if (!canvas || !ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         particles.forEach(p => {
@@ -259,18 +272,20 @@ document.addEventListener('DOMContentLoaded', () => {
         animFrameId = requestAnimationFrame(drawParticles);
     }
 
-    initParticles();
-    drawParticles();
+    if (canvas) {
+        initParticles();
+        drawParticles();
 
-    window.addEventListener('resize', () => {
-        resizeCanvas();
-    });
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+        });
+    }
 
     // === Smooth Scroll for Anchor Links ===
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
+            if (target && navbar) {
                 e.preventDefault();
                 const offset = navbar.offsetHeight;
                 const top = target.getBoundingClientRect().top + window.scrollY - offset;
@@ -295,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollTargets = ['hero', 'about', 'team', 'activities', 'benefits', 'footer'];
     const scrollSections = scrollTargets.map(id => document.getElementById(id)).filter(Boolean);
 
+    if (scrollDots.length > 0 && navbar) {
     // Click to navigate
     scrollDots.forEach(dot => {
         dot.addEventListener('click', () => {
@@ -335,5 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('scroll', updateScrollDots);
     updateScrollDots();
+    } // end scroll dots
 
 });

@@ -77,11 +77,11 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 静态资源不存在（404）- 不记录日志，减少噪音
+     * 静态资源/页面不存在（404）- 重新抛出，交由 Spring Boot 默认错误页机制处理
      */
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Void> handleNoResource(NoResourceFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    public void handleNoResource(NoResourceFoundException ex) throws NoResourceFoundException {
+        throw ex;
     }
 
     /**

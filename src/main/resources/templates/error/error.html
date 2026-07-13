@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: common(title='出错了 | PeaceHaven')}"></th:block>
+</head>
+<body data-theme="day">
+
+<!-- 导航栏 -->
+<div th:replace="~{fragments/navbar :: navbar(page='', mode='simple', prefix='/#')}"></div>
+
+<section class="error-page">
+    <div class="error-content">
+        <!-- 脉冲圆环 -->
+        <div class="pulse-ring">
+            <span class="error-num" th:text="${status}">!</span>
+        </div>
+
+        <h1 class="error-title" th:text="${error ?: '发生了一个错误'}">出错了</h1>
+        <p class="error-desc">前方遇到了一些意外，<br>请稍后再试，或返回首页。</p>
+
+        <div class="error-actions">
+            <a href="/" class="error-btn">回到长安</a>
+            <button class="error-btn-ghost" onclick="history.back()">返回上页</button>
+        </div>
+    </div>
+</section>
+
+<!-- 页尾 -->
+<div th:replace="~{fragments/footer :: footer(mode='compact')}"></div>
+
+<style>
+    .error-page {
+        min-height: 65vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 60px 20px;
+    }
+    .error-content {
+        max-width: 500px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* 脉冲圆环 */
+    .pulse-ring {
+        width: 130px; height: 130px;
+        border-radius: 50%;
+        border: 4px solid var(--accent-primary, #E8833A);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        position: relative;
+        animation: ring-pulse 2s ease-in-out infinite;
+    }
+    .pulse-ring::before, .pulse-ring::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        border: 2px solid var(--accent-primary, #E8833A);
+    }
+    .pulse-ring::before {
+        inset: -14px;
+        opacity: 0.4;
+        animation: ring-expand 2s ease-out infinite;
+    }
+    .pulse-ring::after {
+        inset: -28px;
+        opacity: 0.2;
+        animation: ring-expand 2s ease-out infinite 0.5s;
+    }
+    @keyframes ring-pulse {
+        0%,100% { transform: scale(1); }
+        50% { transform: scale(1.03); }
+    }
+    @keyframes ring-expand {
+        0%   { transform: scale(0.9); opacity: 0.4; }
+        100% { transform: scale(1.15); opacity: 0; }
+    }
+    .error-num {
+        font-size: 3.5rem;
+        font-weight: 900;
+        color: var(--accent-primary, #E8833A);
+        font-family: 'Noto Serif SC', serif;
+    }
+
+    .error-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+        font-family: 'Noto Serif SC', serif;
+    }
+    .error-desc {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        line-height: 1.8;
+        margin-bottom: 32px;
+    }
+    .error-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .error-btn {
+        display: inline-block;
+        padding: 12px 36px;
+        background: linear-gradient(135deg, var(--accent-primary, #E8833A), var(--accent-secondary, #E8654A));
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: 50px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .error-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(232, 131, 58, 0.35);
+    }
+    .error-btn-ghost {
+        display: inline-block;
+        padding: 12px 28px;
+        background: transparent;
+        color: var(--accent-primary, #E8833A);
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: 50px;
+        border: 2px solid var(--accent-primary, #E8833A);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .error-btn-ghost:hover {
+        background: var(--accent-primary, #E8833A);
+        color: #fff;
+    }
+
+    @media (max-width: 768px) {
+        .pulse-ring { width: 100px; height: 100px; }
+        .error-num { font-size: 2.8rem; }
+        .error-title { font-size: 1.3rem; }
+        .error-page { min-height: 55vh; padding: 40px 16px; }
+    }
+</style>
+
+<th:block th:replace="~{fragments/footer :: scripts(auth=false)}"></th:block>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: common(title='404 - 页面未找到 | PeaceHaven')}"></th:block>
+</head>
+<body data-theme="day">
+
+<!-- 导航栏 -->
+<div th:replace="~{fragments/navbar :: navbar(page='', mode='simple', prefix='/#')}"></div>
+
+<section class="error-page">
+    <div class="error-content">
+        <!-- 漫游的小人 -->
+        <div class="wanderer">
+            <div class="wanderer-body">
+                <div class="wanderer-head"></div>
+                <div class="wanderer-legs">
+                    <span></span><span></span>
+                </div>
+            </div>
+            <div class="wanderer-shadow"></div>
+        </div>
+
+        <div class="error-code-wrap">
+            <span class="error-code">4</span>
+            <span class="error-code zero">0</span>
+            <span class="error-code">4</span>
+        </div>
+
+        <h1 class="error-title">迷途之中</h1>
+        <p class="error-desc">这片区域似乎不存在于长安的版图上，<br>也许是你走错了方向。</p>
+
+        <div class="error-actions">
+            <a href="/" class="error-btn">回到长安</a>
+            <button class="error-btn-ghost" onclick="history.back()">返回上页</button>
+        </div>
+    </div>
+
+    <!-- 漂浮的粒子装饰 -->
+    <div class="floating-decor">
+        <span>?</span><span>!</span><span>~</span><span>•</span><span>?</span>
+    </div>
+</section>
+
+<!-- 页尾 -->
+<div th:replace="~{fragments/footer :: footer(mode='compact')}"></div>
+
+<style>
+    .error-page {
+        min-height: 65vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 60px 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .error-content {
+        max-width: 500px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* 漫游小人 */
+    .wanderer {
+        margin: 0 auto 20px;
+        width: 60px;
+        animation: wander 3s ease-in-out infinite;
+    }
+    .wanderer-body { position: relative; }
+    .wanderer-head {
+        width: 20px; height: 20px;
+        background: var(--accent-primary, #E8833A);
+        border-radius: 50%;
+        margin: 0 auto 2px;
+    }
+    .wanderer-body::after {
+        content: '';
+        display: block;
+        width: 16px; height: 22px;
+        background: var(--accent-primary, #E8833A);
+        border-radius: 4px 4px 0 0;
+        margin: 0 auto;
+    }
+    .wanderer-legs {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+    }
+    .wanderer-legs span {
+        display: block;
+        width: 5px; height: 16px;
+        background: var(--accent-primary, #E8833A);
+        border-radius: 0 0 3px 3px;
+        transform-origin: top;
+    }
+    .wanderer-legs span:first-child { animation: legL 0.6s ease-in-out infinite alternate; }
+    .wanderer-legs span:last-child  { animation: legR 0.6s ease-in-out infinite alternate; }
+    .wanderer-shadow {
+        width: 30px; height: 6px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 50%;
+        margin: 4px auto 0;
+        animation: shadow-pulse 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes wander { 0%,100% { transform: translateX(-15px); } 50% { transform: translateX(15px); } }
+    @keyframes legL  { from { transform: rotate(-15deg); } to { transform: rotate(15deg); } }
+    @keyframes legR  { from { transform: rotate(15deg); }  to { transform: rotate(-15deg); } }
+    @keyframes shadow-pulse { from { transform: scaleX(1); } to { transform: scaleX(0.7); } }
+
+    /* 错误码 */
+    .error-code-wrap {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 16px;
+    }
+    .error-code {
+        font-size: 7rem;
+        font-weight: 900;
+        line-height: 1;
+        color: transparent;
+        background: linear-gradient(135deg, var(--accent-primary, #E8833A), var(--accent-secondary, #E8654A));
+        -webkit-background-clip: text;
+        background-clip: text;
+        font-family: 'Noto Serif SC', serif;
+        animation: code-float 4s ease-in-out infinite;
+    }
+    .error-code:nth-child(1) { animation-delay: 0s; }
+    .error-code.zero {
+        animation: code-spin 6s linear infinite;
+        display: inline-block;
+    }
+    .error-code:nth-child(3) { animation-delay: 0.5s; }
+    @keyframes code-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    @keyframes code-spin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+
+    .error-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+        font-family: 'Noto Serif SC', serif;
+    }
+    .error-desc {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        line-height: 1.8;
+        margin-bottom: 32px;
+    }
+    .error-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .error-btn {
+        display: inline-block;
+        padding: 12px 36px;
+        background: linear-gradient(135deg, var(--accent-primary, #E8833A), var(--accent-secondary, #E8654A));
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: 50px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .error-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(232, 131, 58, 0.35);
+    }
+    .error-btn-ghost {
+        display: inline-block;
+        padding: 12px 28px;
+        background: transparent;
+        color: var(--accent-primary, #E8833A);
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: 50px;
+        border: 2px solid var(--accent-primary, #E8833A);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .error-btn-ghost:hover {
+        background: var(--accent-primary, #E8833A);
+        color: #fff;
+    }
+
+    /* 漂浮装饰 */
+    .floating-decor {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+    }
+    .floating-decor span {
+        position: absolute;
+        font-size: 2rem;
+        color: var(--accent-primary, #E8833A);
+        opacity: 0.12;
+        font-weight: 800;
+        animation: float-up 8s linear infinite;
+    }
+    .floating-decor span:nth-child(1) { left: 10%; animation-delay: 0s; font-size: 3rem; }
+    .floating-decor span:nth-child(2) { left: 30%; animation-delay: 1.5s; font-size: 1.5rem; }
+    .floating-decor span:nth-child(3) { left: 55%; animation-delay: 3s; }
+    .floating-decor span:nth-child(4) { left: 75%; animation-delay: 4.5s; font-size: 2.5rem; }
+    .floating-decor span:nth-child(5) { left: 90%; animation-delay: 6s; font-size: 1.8rem; }
+    @keyframes float-up {
+        0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+        10%  { opacity: 0.12; }
+        90%  { opacity: 0.12; }
+        100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+    }
+
+    @media (max-width: 768px) {
+        .error-code { font-size: 5rem; }
+        .error-title { font-size: 1.3rem; }
+        .error-page { min-height: 55vh; padding: 40px 16px; }
+        .wanderer { transform: scale(0.85); }
+    }
+</style>
+
+<th:block th:replace="~{fragments/footer :: scripts(auth=false)}"></th:block>
+</body>
+</html>

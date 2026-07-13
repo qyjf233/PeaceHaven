@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: common(title='500 - 服务器错误 | PeaceHaven')}"></th:block>
+</head>
+<body data-theme="day">
+
+<!-- 导航栏 -->
+<div th:replace="~{fragments/navbar :: navbar(page='', mode='simple', prefix='/#')}"></div>
+
+<section class="error-page">
+    <div class="error-content">
+        <!-- 故障齿轮 -->
+        <div class="gears">
+            <div class="gear gear-lg"></div>
+            <div class="gear gear-sm"></div>
+        </div>
+
+        <div class="error-code-wrap">
+            <span class="error-code glitch" data-text="500">500</span>
+        </div>
+
+        <h1 class="error-title">营地出了点状况</h1>
+        <p class="error-desc">管理组正在紧急修复中，<br>请稍后再来看看吧。</p>
+
+        <div class="error-actions">
+            <a href="/" class="error-btn">回到长安</a>
+            <button class="error-btn-ghost" onclick="location.reload()">重试一下</button>
+        </div>
+    </div>
+
+    <!-- 故障扫描线 -->
+    <div class="scanline"></div>
+</section>
+
+<!-- 页尾 -->
+<div th:replace="~{fragments/footer :: footer(mode='compact')}"></div>
+
+<style>
+    .error-page {
+        min-height: 65vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 60px 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .error-content {
+        max-width: 500px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* 齿轮 */
+    .gears {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0;
+        margin-bottom: 16px;
+        position: relative;
+        height: 80px;
+    }
+    .gear {
+        border: 6px solid var(--accent-primary, #E8833A);
+        border-radius: 50%;
+        position: relative;
+    }
+    .gear::before, .gear::after {
+        content: '';
+        position: absolute;
+        background: var(--accent-primary, #E8833A);
+        border-radius: 2px;
+    }
+    .gear-lg {
+        width: 60px; height: 60px;
+        animation: gear-spin 4s linear infinite;
+    }
+    .gear-lg::before { width: 6px; height: 76px; top: -14px; left: 50%; transform: translateX(-50%); }
+    .gear-lg::after  { width: 76px; height: 6px; left: -14px; top: 50%; transform: translateY(-50%); }
+    .gear-sm {
+        width: 38px; height: 38px;
+        margin-left: -12px;
+        margin-top: 20px;
+        animation: gear-spin-r 4s linear infinite;
+    }
+    .gear-sm::before { width: 5px; height: 52px; top: -12px; left: 50%; transform: translateX(-50%); }
+    .gear-sm::after  { width: 52px; height: 5px; left: -12px; top: 50%; transform: translateY(-50%); }
+    @keyframes gear-spin   { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes gear-spin-r { from { transform: rotate(22deg); } to { transform: rotate(-338deg); } }
+
+    /* 故障文字 */
+    .error-code-wrap { margin-bottom: 16px; }
+    .error-code {
+        font-size: 7rem;
+        font-weight: 900;
+        line-height: 1;
+        color: #E8654A;
+        font-family: 'Noto Serif SC', serif;
+        position: relative;
+        display: inline-block;
+    }
+    .glitch {
+        animation: glitch-skew 3s infinite linear alternate-reverse;
+    }
+    .glitch::before, .glitch::after {
+        content: attr(data-text);
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        font-size: inherit;
+        font-weight: inherit;
+        font-family: inherit;
+    }
+    .glitch::before {
+        color: #ff6b6b;
+        animation: glitch-1 2s infinite linear alternate-reverse;
+        clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+    }
+    .glitch::after {
+        color: #4ecdc4;
+        animation: glitch-2 2.5s infinite linear alternate-reverse;
+        clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+    }
+    @keyframes glitch-1 {
+        0%   { transform: translate(0); }
+        20%  { transform: translate(-3px, 2px); }
+        40%  { transform: translate(3px, -1px); }
+        60%  { transform: translate(-2px, 1px); }
+        80%  { transform: translate(2px, -2px); }
+        100% { transform: translate(0); }
+    }
+    @keyframes glitch-2 {
+        0%   { transform: translate(0); }
+        25%  { transform: translate(2px, 1px); }
+        50%  { transform: translate(-3px, -1px); }
+        75%  { transform: translate(1px, 2px); }
+        100% { transform: translate(0); }
+    }
+    @keyframes glitch-skew {
+        0%   { transform: skew(0deg); }
+        20%  { transform: skew(0deg); }
+        21%  { transform: skew(2deg); }
+        22%  { transform: skew(0deg); }
+        80%  { transform: skew(0deg); }
+        81%  { transform: skew(-1deg); }
+        82%  { transform: skew(0deg); }
+        100% { transform: skew(0deg); }
+    }
+
+    .error-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+        font-family: 'Noto Serif SC', serif;
+    }
+    .error-desc {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        line-height: 1.8;
+        margin-bottom: 32px;
+    }
+    .error-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .error-btn {
+        display: inline-block;
+        padding: 12px 36px;
+        background: linear-gradient(135deg, #E8833A, #E8654A);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: 50px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .error-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(232, 131, 58, 0.35);
+    }
+    .error-btn-ghost {
+        display: inline-block;
+        padding: 12px 28px;
+        background: transparent;
+        color: #E8654A;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: 50px;
+        border: 2px solid #E8654A;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .error-btn-ghost:hover {
+        background: #E8654A;
+        color: #fff;
+    }
+
+    /* 扫描线 */
+    .scanline {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 4px;
+        background: linear-gradient(90deg, transparent, rgba(232,101,74,0.15), transparent);
+        animation: scan 3s linear infinite;
+        pointer-events: none;
+    }
+    @keyframes scan {
+        0%   { top: -4px; }
+        100% { top: 100%; }
+    }
+
+    @media (max-width: 768px) {
+        .error-code { font-size: 5rem; }
+        .error-title { font-size: 1.3rem; }
+        .error-page { min-height: 55vh; padding: 40px 16px; }
+        .gears { height: 60px; }
+        .gear-lg { width: 46px; height: 46px; }
+        .gear-lg::before { height: 60px; top: -13px; }
+        .gear-lg::after  { width: 60px; left: -13px; }
+        .gear-sm { width: 30px; height: 30px; }
+        .gear-sm::before { height: 42px; top: -11px; }
+        .gear-sm::after  { width: 42px; left: -11px; }
+    }
+</style>
+
+<th:block th:replace="~{fragments/footer :: scripts(auth=false)}"></th:block>
+</body>
+</html>
