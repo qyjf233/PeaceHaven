@@ -278,9 +278,12 @@ public class AuthController {
 
     /**
      * 获取当前登录用户信息
+     * @param slug 当前活动 slug（可选），用于检查该活动的裁判身份
      */
     @GetMapping("/me")
-    public ResponseEntity<Map<String, Object>> me(HttpSession session) {
+    public ResponseEntity<Map<String, Object>> me(
+            @RequestParam(required = false) String slug,
+            HttpSession session) {
         Map<String, Object> result = new HashMap<>();
         User user = userService.getCurrentUser(session);
 
@@ -299,15 +302,16 @@ public class AuthController {
             result.put("role", user.getRole().name());
             result.put("status", user.getStatus().name());
 
-            // 检查是否为建筑大赛裁判
-            try {
-                Long activityId = activityService.getActivityBySlug("building-master-1").getId();
-                boolean isJudge = judgeRepository.existsByActivityIdAndUserId(activityId, user.getId());
-                result.put("isJudge", isJudge);
-                log.info("[裁判检查] 用户: {} (ID:{}), 活动ID: {}, isJudge: {}", user.getNickname(), user.getId(), activityId, isJudge);
-            } catch (Exception e) {
-                result.put("isJudge", false);
-                log.warn("[裁判检查] 查询失败: {}", e.getMessage());
+            // 检查是否为当前活动的裁判（仅传了 slug 时才检查）
+            if (slug != null && !slug.isEmpty()) {
+                try {
+                    Long activityId = activityService.getActivityBySlug(slug).getId();
+                    boolean isJudge = judgeRepository.existsByActivityIdAndUserId(activityId, user.getId());
+                    result.put("isJudge", isJudge);
+                    result.put("judgeSlug", isJudge ? slug : null);
+                } catch (Exception e) {
+                    result.put("isJudge", false);
+                }
             }
         } else {
             result.put("loggedIn", false);

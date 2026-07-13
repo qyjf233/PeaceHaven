@@ -11,8 +11,16 @@
         checkLoginStatus();
     });
 
+    // 从当前 URL 提取活动 slug（如 /activities/battle-showdown-1）
+    function getCurrentActivitySlug() {
+        var match = window.location.pathname.match(/^\/activities\/([^\/]+)$/);
+        return match ? match[1] : null;
+    }
+
     function checkLoginStatus(callback) {
-        fetch('/api/auth/me')
+        var slug = getCurrentActivitySlug();
+        var url = '/api/auth/me' + (slug ? '?slug=' + encodeURIComponent(slug) : '');
+        fetch(url)
             .then(r => r.json())
             .then(data => {
                 currentUser = data.loggedIn ? data : null;
@@ -54,7 +62,7 @@
                     '<button class="dropdown-item" id="editNicknameBtn">修改昵称</button>' +
                     '<button class="dropdown-item" id="editCampNameBtn">修改营地名</button>' +
                     (currentUser.role === 'ADMIN' ? '<a href="/admin/activities" class="dropdown-item">后台管理</a>' : '') +
-                    (currentUser.isJudge ? '<a href="/judge/building-master-1" class="dropdown-item">🏛 裁判评分</a>' : '') +
+                    (currentUser.isJudge ? '<a href="/judge/' + (currentUser.judgeSlug || '') + '" class="dropdown-item">🏛 裁判后台</a>' : '') +
                     '<button class="dropdown-item dropdown-logout" id="logoutBtn">退出登录</button>' +
                 '</div>';
 
