@@ -4,7 +4,9 @@ import com.potato.peacehaven.entity.CampMember;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.repository.CampMemberRepository;
 import com.potato.peacehaven.repository.UserRepository;
+import com.potato.peacehaven.service.AdminOperationLogService;
 import com.potato.peacehaven.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -27,6 +29,7 @@ public class AdminCampMemberController {
     private final CampMemberRepository campMemberRepository;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final AdminOperationLogService logService;
 
     /**
      * 成员列表页
@@ -44,7 +47,8 @@ public class AdminCampMemberController {
     @PostMapping
     public String add(@RequestParam String nickname,
                       @RequestParam(defaultValue = "0") Integer sortOrder,
-                      RedirectAttributes redirectAttributes) {
+                      RedirectAttributes redirectAttributes,
+                      HttpServletRequest request) {
         if (nickname == null || nickname.trim().isEmpty()) {
             redirectAttributes.addFlashAttribute("error", "昵称不能为空");
             return "redirect:/admin/camp-members";
@@ -59,6 +63,7 @@ public class AdminCampMemberController {
                 .sortOrder(sortOrder)
                 .build();
         campMemberRepository.save(member);
+        logService.record("营地成员", "新增", "添加成员：" + nickname.trim(), request);
 
         redirectAttributes.addFlashAttribute("message", "成员已添加：" + nickname.trim());
         return "redirect:/admin/camp-members";
@@ -71,7 +76,8 @@ public class AdminCampMemberController {
     public String update(@PathVariable Long id,
                          @RequestParam String nickname,
                          @RequestParam(defaultValue = "0") Integer sortOrder,
-                         RedirectAttributes redirectAttributes) {
+                         RedirectAttributes redirectAttributes,
+                         HttpServletRequest request) {
         CampMember member = campMemberRepository.findById(id).orElse(null);
         if (member == null) {
             redirectAttributes.addFlashAttribute("error", "成员不存在");
@@ -86,6 +92,7 @@ public class AdminCampMemberController {
         member.setNickname(nickname.trim());
         member.setSortOrder(sortOrder);
         campMemberRepository.save(member);
+        logService.record("营地成员", "修改", "更新成员：" + nickname.trim(), request);
 
         redirectAttributes.addFlashAttribute("message", "成员已更新：" + nickname.trim());
         return "redirect:/admin/camp-members";
@@ -95,8 +102,10 @@ public class AdminCampMemberController {
      * 删除成员
      */
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes, HttpServletRequest request) {
+        CampMember member = campMemberRepository.findById(id).orElse(null);
         campMemberRepository.deleteById(id);
+        logService.record("营地成员", "删除", "删除成员：" + (member != null ? member.getNickname() : id.toString()), request);
         redirectAttributes.addFlashAttribute("message", "成员已删除");
         return "redirect:/admin/camp-members";
     }
@@ -142,7 +151,7 @@ public class AdminCampMemberController {
     @PostMapping("/api/batch-process")
     @ResponseBody
     @Transactional
-    public ResponseEntity<Map<String, Object>> batchProcess(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> batchProcess(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         List<Long> checkedIds = new ArrayList<>();
         Object idsObj = body.get("checkedIds");
         if (idsObj instanceof List) {
@@ -187,6 +196,7 @@ public class AdminCampMemberController {
         result.put("success", true);
         result.put("addedCount", addedCount);
         result.put("removedCount", removedCount);
+        logService.record("营地成员", "修改", "批量处理：添加" + addedCount + "人，移除" + removedCount + "人", request);
         return ResponseEntity.ok(result);
     }
 }

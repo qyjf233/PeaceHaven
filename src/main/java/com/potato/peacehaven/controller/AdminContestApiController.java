@@ -1,7 +1,9 @@
 package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.entity.ContestWork;
+import com.potato.peacehaven.service.AdminOperationLogService;
 import com.potato.peacehaven.service.ContestService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class AdminContestApiController {
 
     private final ContestService contestService;
+    private final AdminOperationLogService logService;
 
     private static final int PAGE_SIZE = 9;
 
@@ -71,7 +74,8 @@ public class AdminContestApiController {
     @PostMapping("/works/{id}/review")
     public ResponseEntity<Map<String, Object>> reviewWork(
             @PathVariable Long id,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
 
         Map<String, Object> result = new HashMap<>();
         String action = body.get("action");
@@ -88,6 +92,7 @@ public class AdminContestApiController {
             contestService.reviewWork(id, newStatus);
             result.put("success", true);
             result.put("message", "approve".equals(action) ? "已通过" : "已拒绝");
+            logService.record("作品审核", "approve".equals(action) ? "审核通过" : "审核拒绝", "作品ID: " + id, request);
         } catch (RuntimeException e) {
             result.put("success", false);
             result.put("message", e.getMessage());

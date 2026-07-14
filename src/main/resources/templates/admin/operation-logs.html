@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作日志 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>📝 管理员操作日志</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin" class="btn-back">← 返回后台</a>
+        </div>
+    </header>
+
+    <!-- 筛选工具栏 -->
+    <div class="admin-toolbar" style="justify-content:flex-end; align-items:center;">
+        <form th:action="@{/admin/operation-logs}" method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <select name="module" style="padding:8px 12px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem;">
+                <option value="">全部模块</option>
+                <option th:each="m : ${modules}" th:value="${m}" th:text="${m}" th:selected="${m == selectedModule}"></option>
+            </select>
+            <input type="text" name="operator" th:value="${selectedOperator}" placeholder="操作人"
+                   style="padding:8px 12px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem; width:120px;">
+            <button type="submit" class="btn btn-primary btn-sm">筛选</button>
+            <a href="/admin/operation-logs" class="btn btn-secondary btn-sm">重置</a>
+        </form>
+    </div>
+
+    <!-- 日志列表 -->
+    <table class="admin-table">
+        <thead>
+        <tr>
+            <th>操作时间</th>
+            <th>操作人</th>
+            <th>模块</th>
+            <th>动作</th>
+            <th>详情</th>
+            <th>IP</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="log : ${logPage.content}">
+            <td data-label="操作时间" th:text="${#temporals.format(log.createdAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
+            <td data-label="操作人">
+                <span class="badge" style="background:#f3e5f5; color:#7B1FA2;" th:text="${log.operator}"></span>
+            </td>
+            <td data-label="模块">
+                <span class="badge" th:classappend="${
+                    log.module == '活动管理' ? 'module-activity' :
+                    log.module == '用户管理' ? 'module-user' :
+                    log.module == '营地成员' ? 'module-member' :
+                    log.module == '营地事务' ? 'module-affair' :
+                    log.module == '福利系统' ? 'module-welfare' :
+                    'module-contest'
+                }" th:text="${log.module}"></span>
+            </td>
+            <td data-label="动作">
+                <span class="badge" th:classappend="${
+                    log.action == '新增' ? 'action-create' :
+                    log.action == '修改' ? 'action-update' :
+                    log.action == '删除' ? 'action-delete' :
+                    'action-other'
+                }" th:text="${log.action}"></span>
+            </td>
+            <td data-label="详情" th:text="${log.detail}" style="max-width:320px; word-break:break-all;"></td>
+            <td data-label="IP" th:text="${log.ip}" style="color:var(--admin-text-muted); font-size:0.85rem;"></td>
+        </tr>
+        <tr th:if="${logPage.content.isEmpty()}">
+            <td colspan="6" class="empty-state">暂无操作日志</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- 分页 -->
+    <div th:if="${logPage.totalPages > 1}" style="display:flex; justify-content:center; gap:6px; margin-top:20px;">
+        <a th:if="${currentPage > 0}"
+           th:href="@{/admin/operation-logs(page=${currentPage - 1}, module=${selectedModule}, operator=${selectedOperator})}"
+           class="btn btn-secondary btn-sm">上一页</a>
+        <span style="padding:6px 14px; color:var(--admin-text-muted); font-size:0.88rem;"
+              th:text="'第 ' + (${currentPage + 1}) + ' / ' + ${logPage.totalPages} + ' 页，共 ' + ${logPage.totalElements} + ' 条'"></span>
+        <a th:if="${currentPage < logPage.totalPages - 1}"
+           th:href="@{/admin/operation-logs(page=${currentPage + 1}, module=${selectedModule}, operator=${selectedOperator})}"
+           class="btn btn-secondary btn-sm">下一页</a>
+    </div>
+</div>
+
+<style>
+    /* 模块徽章颜色 */
+    .module-activity { background: #e3f2fd; color: #1565C0; }
+    .module-user     { background: #fce4ec; color: #C62828; }
+    .module-member   { background: #e8f5e9; color: #2E7D32; }
+    .module-affair   { background: #fff3e0; color: #E65100; }
+    .module-welfare  { background: #f3e5f5; color: #7B1FA2; }
+    .module-contest  { background: #e0f2f1; color: #00695C; }
+
+    /* 动作徽章颜色 */
+    .action-create { background: #e8f5e9; color: #2E7D32; }
+    .action-update { background: #e3f2fd; color: #1565C0; }
+    .action-delete { background: #ffebee; color: #C62828; }
+    .action-other  { background: #f5f5f5; color: #616161; }
+</style>
+</body>
+</html>

@@ -4,6 +4,8 @@ import com.potato.peacehaven.entity.CampAffair;
 import com.potato.peacehaven.entity.CampMember;
 import com.potato.peacehaven.repository.CampAffairRepository;
 import com.potato.peacehaven.repository.CampMemberRepository;
+import com.potato.peacehaven.service.AdminOperationLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -27,6 +29,7 @@ public class AdminCampAffairController {
 
     private final CampAffairRepository campAffairRepository;
     private final CampMemberRepository campMemberRepository;
+    private final AdminOperationLogService logService;
 
     private static final List<String> AFFAIR_TYPES = List.of("资源战", "尸潮", "铁手", "巡逻");
 
@@ -67,7 +70,8 @@ public class AdminCampAffairController {
     @ResponseBody
     @Transactional
     public ResponseEntity<Map<String, Object>> add(@RequestBody Map<String, Object> body,
-                                                    RedirectAttributes redirectAttributes) {
+                                                    RedirectAttributes redirectAttributes,
+                                                    HttpServletRequest request) {
         String affairType = (String) body.get("affairType");
         String affairDate = (String) body.get("affairDate");
         Integer campRanking = body.get("campRanking") != null ? Integer.valueOf(body.get("campRanking").toString()) : null;
@@ -105,6 +109,7 @@ public class AdminCampAffairController {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("message", "已添加 " + affairType + "（" + affairDate + "）记录，共 " + count + " 人");
+        logService.record("营地事务", "新增", affairType + " " + affairDate + "，共" + count + "人", request);
         return ResponseEntity.ok(result);
     }
 
@@ -113,9 +118,10 @@ public class AdminCampAffairController {
      */
     @PostMapping("/{date}/delete")
     @Transactional
-    public String deleteByDate(@PathVariable String date, RedirectAttributes redirectAttributes) {
+    public String deleteByDate(@PathVariable String date, RedirectAttributes redirectAttributes, HttpServletRequest request) {
         LocalDate localDate = LocalDate.parse(date);
         campAffairRepository.deleteByAffairDate(localDate);
+        logService.record("营地事务", "删除", "删除" + date + "的所有事务记录", request);
         redirectAttributes.addFlashAttribute("message", "已删除 " + date + " 的所有事务记录");
         return "redirect:/admin/camp-affairs";
     }

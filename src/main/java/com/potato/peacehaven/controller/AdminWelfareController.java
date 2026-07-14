@@ -4,6 +4,8 @@ import com.potato.peacehaven.entity.CampMember;
 import com.potato.peacehaven.entity.WelfareRecord;
 import com.potato.peacehaven.repository.CampMemberRepository;
 import com.potato.peacehaven.repository.WelfareRecordRepository;
+import com.potato.peacehaven.service.AdminOperationLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -27,6 +29,7 @@ public class AdminWelfareController {
 
     private final WelfareRecordRepository welfareRecordRepository;
     private final CampMemberRepository campMemberRepository;
+    private final AdminOperationLogService logService;
 
     private static final List<String> WELFARE_TYPES = List.of("月度幸运儿", "最佳贡献");
 
@@ -64,7 +67,7 @@ public class AdminWelfareController {
     @PostMapping("/api/lottery")
     @ResponseBody
     @Transactional
-    public ResponseEntity<Map<String, Object>> lottery(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> lottery(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String welfareDate = (String) body.get("welfareDate");
         if (welfareDate == null) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "请选择日期"));
@@ -97,6 +100,7 @@ public class AdminWelfareController {
         result.put("success", true);
         result.put("message", "🎉 恭喜 " + String.join("、", winnerNames) + " 成为本月幸运儿！");
         result.put("winners", winnerNames);
+        logService.record("福利系统", "新增", "月度幸运儿抽奖 " + welfareDate + "：" + String.join("、", winnerNames), request);
         return ResponseEntity.ok(result);
     }
 
@@ -106,7 +110,7 @@ public class AdminWelfareController {
     @PostMapping
     @ResponseBody
     @Transactional
-    public ResponseEntity<Map<String, Object>> addContribution(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> addContribution(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String welfareDate = (String) body.get("welfareDate");
         Object membersObj = body.get("members");
 
@@ -144,6 +148,7 @@ public class AdminWelfareController {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("message", "已添加最佳贡献记录，共 " + count + " 人");
+        logService.record("福利系统", "新增", "最佳贡献 " + welfareDate + "，共" + count + "人", request);
         return ResponseEntity.ok(result);
     }
 
@@ -152,9 +157,10 @@ public class AdminWelfareController {
      */
     @PostMapping("/{date}/delete")
     @Transactional
-    public String deleteByDate(@PathVariable String date, RedirectAttributes redirectAttributes) {
+    public String deleteByDate(@PathVariable String date, RedirectAttributes redirectAttributes, HttpServletRequest request) {
         LocalDate localDate = LocalDate.parse(date);
         welfareRecordRepository.deleteByWelfareDate(localDate);
+        logService.record("福利系统", "删除", "删除" + date + "的福利记录", request);
         redirectAttributes.addFlashAttribute("message", "已删除 " + date + " 的福利记录");
         return "redirect:/admin/welfare";
     }

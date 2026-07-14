@@ -3,6 +3,8 @@ package com.potato.peacehaven.controller;
 import com.potato.peacehaven.dto.ActivityFormDTO;
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.service.ActivityService;
+import com.potato.peacehaven.service.AdminOperationLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 public class AdminActivityController {
 
     private final ActivityService activityService;
+    private final AdminOperationLogService logService;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     @GetMapping
@@ -35,9 +38,10 @@ public class AdminActivityController {
     }
 
     @PostMapping
-    public String create(@ModelAttribute ActivityFormDTO form, RedirectAttributes redirect) {
+    public String create(@ModelAttribute ActivityFormDTO form, RedirectAttributes redirect, HttpServletRequest request) {
         Activity activity = mapToEntity(form);
         activityService.createActivity(activity);
+        logService.record("活动管理", "新增", "创建活动：" + form.getTitle(), request);
         redirect.addFlashAttribute("message", "活动创建成功！");
         return "redirect:/admin/activities";
     }
@@ -52,16 +56,19 @@ public class AdminActivityController {
     }
 
     @PostMapping("/{id}")
-    public String update(@PathVariable Long id, @ModelAttribute ActivityFormDTO form, RedirectAttributes redirect) {
+    public String update(@PathVariable Long id, @ModelAttribute ActivityFormDTO form, RedirectAttributes redirect, HttpServletRequest request) {
         Activity activity = mapToEntity(form);
         activityService.updateActivity(id, activity);
+        logService.record("活动管理", "修改", "更新活动：" + form.getTitle(), request);
         redirect.addFlashAttribute("message", "活动更新成功！");
         return "redirect:/admin/activities";
     }
 
     @PostMapping("/{id}/delete")
-    public String deleteActivity(@PathVariable Long id, RedirectAttributes redirect) {
+    public String deleteActivity(@PathVariable Long id, RedirectAttributes redirect, HttpServletRequest request) {
+        Activity activity = activityService.getActivityById(id);
         activityService.deleteActivity(id);
+        logService.record("活动管理", "删除", "删除活动：" + (activity != null ? activity.getTitle() : id), request);
         redirect.addFlashAttribute("message", "活动已删除！");
         return "redirect:/admin/activities";
     }
