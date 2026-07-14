@@ -195,7 +195,6 @@
             return '<label class="scan-item">' +
                 '<input type="checkbox" data-uid="' + u.id + '" checked onchange="updateScanCount()">' +
                 '<span class="nick">' + (u.nickname || '未设置昵称') + '</span>' +
-                '<span class="phone">' + (u.phone || '') + '</span>' +
                 '</label>';
         }).join('');
         document.getElementById('scanList').innerHTML = html;

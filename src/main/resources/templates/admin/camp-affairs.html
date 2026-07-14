@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>营地事务管理 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
+    <style>
+        .form-row { margin-bottom: 12px; }
+        .form-row label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+        .form-row input, .form-row select { width: 100%; padding: 8px 12px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); font-size: 0.9rem; }
+        .form-actions { display: flex; gap: 8px; margin-top: 16px; }
+        .alert-error { padding: 14px 20px; border-radius: var(--admin-radius); margin-bottom: 20px; font-size: 0.95rem; background: #fdecea; color: #c62828; border: 1px solid #ef9a9a; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #fff; border-radius: 12px; padding: 28px; width: 90%; max-width: 780px; height: 540px; display: flex; flex-direction: column; overflow: hidden; }
+        .modal-content h2 { margin-bottom: 16px; font-size: 1.2rem; flex-shrink: 0; }
+
+        /* 新增事务弹窗：左右两栏 */
+        .add-form-layout { display: flex; gap: 24px; flex: 1; min-height: 0; overflow: hidden; }
+        .add-form-left { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .add-form-right { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; }
+
+        /* 成员勾选列表 */
+        .member-list { flex: 1; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; }
+        .member-check { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+        .member-check:hover { background: #f9f9f9; }
+        .member-check input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+        .member-check .m-nick { flex: 1; text-align: left; }
+        .member-check .m-rank { width: 56px; padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; text-align: center; flex-shrink: 0; }
+        .member-search { width: 100%; padding: 8px 12px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); font-size: 0.9rem; margin-bottom: 8px; outline: none; box-sizing: border-box; }
+        .member-search:focus { border-color: #E8833A; }
+        .member-toolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+        .member-toolbar .count { margin-left: auto; font-size: 0.85rem; color: #888; }
+
+        /* 记录表格 */
+        .date-group { margin-bottom: 24px; }
+        .date-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #eee; }
+        .date-header h3 { font-size: 1rem; margin: 0; }
+        .date-header .count { font-size: 0.85rem; color: #888; }
+        .type-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; color: #fff; }
+        .type-资源战 { background: #E8833A; }
+        .type-尸潮 { background: #8B5CF6; }
+        .type-铁手 { background: #EF4444; }
+        .type-巡逻 { background: #3B82F6; }
+
+        /* 图表区域 */
+        .chart-section { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .chart-section h3 { font-size: 1rem; margin-bottom: 12px; }
+        .chart-wrap { position: relative; height: 300px; }
+
+        /* 成员弹窗 */
+        .detail-modal .modal-content { max-width: 400px; }
+        .detail-list { max-height: 300px; overflow-y: auto; }
+        .detail-item { padding: 8px 12px; border-bottom: 1px solid #f5f5f5; font-size: 0.9rem; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>📋 营地事务管理</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin" class="btn-back">← 管理后台</a>
+            <a href="/admin/camp-members" class="btn-back">成员管理</a>
+            <a href="/" class="btn-back">← 返回前台</a>
+        </div>
+    </header>
+
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <div th:if="${error}" class="alert-error" th:text="${error}"></div>
+
+    <div style="margin-bottom: 16px; display:flex; gap:10px; align-items:center;">
+        <button class="btn btn-primary" onclick="openAddModal()">+ 新增事务记录</button>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+            <label style="font-size:0.88rem; color:#666;">从</label>
+            <input type="date" id="filterFrom" th:value="${dateFrom}" style="padding:6px 10px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem;">
+            <label style="font-size:0.88rem; color:#666;">至</label>
+            <input type="date" id="filterTo" th:value="${dateTo}" style="padding:6px 10px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem;">
+            <button class="btn" style="background:#4CAF50; color:#fff; padding:6px 16px; font-size:0.88rem;" onclick="applyFilter()">检索</button>
+            <button class="btn" style="padding:6px 16px; font-size:0.88rem;" onclick="resetFilter()">重置</button>
+        </div>
+    </div>
+
+    <!-- 事务趋势图 -->
+    <div class="chart-section">
+        <h3>📈 事务参与趋势</h3>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <!-- 事务记录列表（按日期分组） -->
+    <div th:each="entry : ${grouped}" class="date-group">
+        <div class="date-header">
+            <h3 th:text="${entry.key}"></h3>
+            <span class="count" th:text="'共 ' + ${#lists.size(entry.value)} + ' 人'"></span>
+            <form th:action="@{/admin/camp-affairs/{date}/delete(date=${entry.key})}" method="post" style="margin-left:auto;"
+                  onsubmit="return confirm('确定删除该日期的所有事务记录？')">
+                <input type="hidden" name="_csrf" th:value="${_csrf}">
+                <button type="submit" class="btn btn-sm btn-danger">删除该日</button>
+            </form>
+        </div>
+        <table class="admin-table">
+            <thead><tr><th>类型</th><th>昵称</th><th>个人排名</th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${entry.value}">
+                <td>
+                    <span class="type-badge" th:classappend="'type-' + ${r.affairType}" th:text="${r.affairType}"></span>
+                    <span th:if="${r.campRanking != null}" style="margin-left:6px; font-size:0.82rem; color:#888;">营地第<span th:text="${r.campRanking}"></span>名</span>
+                </td>
+                <td th:text="${r.nickname}"></td>
+                <td th:text="${r.memberRanking != null ? '第 ' + r.memberRanking + ' 名' : '-'}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div th:if="${#maps.isEmpty(grouped)}" style="text-align:center; padding:40px; color:#aaa;">暂无事务记录</div>
+</div>
+
+<!-- 新增事务弹窗 -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal-content">
+        <h2>新增事务记录</h2>
+        <form id="addForm" class="add-form-layout">
+            <input type="hidden" name="_csrf" th:value="${_csrf}">
+
+            <!-- 左半：成员列表 -->
+            <div class="add-form-left">
+                <input type="text" class="member-search" id="memberSearch" placeholder="搜索成员（支持中文 / 拼音 / 首字母）" oninput="filterMembers()">
+                <div class="member-toolbar">
+                    <button type="button" class="btn btn-sm" onclick="toggleMembers(true)" style="padding:3px 10px; font-size:0.8rem;">全选</button>
+                    <button type="button" class="btn btn-sm" onclick="toggleMembers(false)" style="padding:3px 10px; font-size:0.8rem;">全不选</button>
+                    <span class="count" id="memberCount"></span>
+                </div>
+                <div class="member-list" id="memberList">
+                    <label class="member-check" th:each="m : ${members}">
+                        <input type="checkbox" th:value="${m.nickname}" onchange="updateMemberCount()">
+                        <span class="m-nick" th:text="${m.nickname}"></span>
+                        <input type="number" class="m-rank" min="1" placeholder="#" onclick="event.stopPropagation()">
+                    </label>
+                    <div th:if="${#lists.isEmpty(members)}" style="text-align:center; padding:20px; color:#aaa;">暂无营地成员</div>
+                </div>
+            </div>
+
+            <!-- 右半：事务信息 -->
+            <div class="add-form-right">
+                <div class="form-row">
+                    <label>事务类型</label>
+                    <select id="f_type" required>
+                        <option th:each="t : ${affairTypes}" th:value="${t}" th:text="${t}"></option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>事务日期</label>
+                    <input type="date" id="f_date" required th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
+                </div>
+                <div class="form-row">
+                    <label>营地排名（可选）</label>
+                    <input type="number" id="f_campRanking" min="1" placeholder="全服排名">
+                </div>
+                <div style="flex:1;"></div>
+                <div class="form-actions" style="flex-direction:column;">
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;">确认提交</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModal()" style="width:100%;">取消</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 事务详情弹窗 -->
+<div class="modal-overlay detail-modal" id="detailModal">
+    <div class="modal-content" style="max-height:auto;">
+        <h2 id="detailTitle">事务详情</h2>
+        <div class="detail-list" id="detailList"></div>
+        <div class="form-actions">
+            <button class="btn btn-secondary" onclick="closeDetailModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openAddModal() {
+        document.getElementById('addModal').classList.add('active');
+        updateMemberCount();
+    }
+    function closeAddModal() {
+        document.getElementById('addModal').classList.remove('active');
+    }
+    function toggleMembers(checked) {
+        document.querySelectorAll('#memberList input[type=checkbox]').forEach(function(cb) { cb.checked = checked; });
+        updateMemberCount();
+    }
+    function updateMemberCount() {
+        var total = document.querySelectorAll('#memberList input[type=checkbox]').length;
+        var checked = document.querySelectorAll('#memberList input[type=checkbox]:checked').length;
+        document.getElementById('memberCount').textContent = '已选 ' + checked + ' / ' + total;
+    }
+
+    // === 拼音搜索 ===
+    var pinyinPro = window.pinyinPro || null;
+    // 预计算每个成员的拼音数据
+    var memberPinyinCache = [];
+    document.querySelectorAll('#memberList .member-check').forEach(function(row) {
+        var nick = row.querySelector('input[type=checkbox]').value;
+        var full = '';
+        var initials = '';
+        if (pinyinPro) {
+            full = pinyinPro.pinyin(nick, { toneType: 'none', type: 'array' }).join('');
+            initials = pinyinPro.pinyin(nick, { pattern: 'first', type: 'array' }).join('');
+        }
+        memberPinyinCache.push({ el: row, nick: nick, full: full, initials: initials });
+    });
+
+    function filterMembers() {
+        var q = document.getElementById('memberSearch').value.trim().toLowerCase();
+        memberPinyinCache.forEach(function(item) {
+            if (!q) {
+                item.el.style.display = '';
+                return;
+            }
+            var match = item.nick.toLowerCase().indexOf(q) !== -1
+                || item.full.indexOf(q) !== -1
+                || item.initials.indexOf(q) !== -1;
+            item.el.style.display = match ? '' : 'none';
+        });
+    }
+    document.getElementById('addModal').addEventListener('click', function(e) {
+        if (e.target === this) closeAddModal();
+    });
+
+    // AJAX 提交表单
+    document.getElementById('addForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var affairType = document.getElementById('f_type').value;
+        var affairDate = document.getElementById('f_date').value;
+        var campRanking = document.getElementById('f_campRanking').value || null;
+
+        var members = [];
+        document.querySelectorAll('#memberList .member-check').forEach(function(row) {
+            var cb = row.querySelector('input[type=checkbox]');
+            if (!cb.checked) return;
+            var nick = cb.value;
+            var rankInput = row.querySelector('.m-rank');
+            var rank = rankInput.value ? parseInt(rankInput.value) : null;
+            members.push({ nickname: nick, ranking: rank });
+        });
+
+        if (members.length === 0) { alert('请至少选择一名成员'); return; }
+
+        var btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+
+        fetch('/admin/camp-affairs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('input[name=_csrf]').value
+            },
+            body: JSON.stringify({
+                affairType: affairType,
+                affairDate: affairDate,
+                campRanking: campRanking,
+                members: members
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || '提交失败');
+                btn.disabled = false;
+                btn.textContent = '确认提交';
+            }
+        })
+        .catch(function() {
+            alert('网络错误，请重试');
+            btn.disabled = false;
+            btn.textContent = '确认提交';
+        });
+    });
+
+    // === 事务趋势图 ===
+    var TYPE_COLORS = { '资源战': '#E8833A', '尸潮': '#8B5CF6', '铁手': '#EF4444', '巡逻': '#3B82F6' };
+    var trendChart = null;
+
+    // 图表日期范围与页面 URL 参数同步
+    var pageFrom = new URLSearchParams(window.location.search).get('from') || '';
+    var pageTo = new URLSearchParams(window.location.search).get('to') || '';
+    var chartUrl = '/admin/camp-affairs/api/chart' +
+        (pageFrom ? '?from=' + pageFrom : '') +
+        (pageTo ? (pageFrom ? '&' : '?') + 'to=' + pageTo : '');
+
+    fetch(chartUrl)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var allDates = new Set();
+            var series = data.series || {};
+            for (var type in series) {
+                series[type].forEach(function(p) { allDates.add(p.date); });
+            }
+            var labels = Array.from(allDates).sort();
+            if (labels.length === 0) return;
+
+            var datasets = [];
+            for (var type in series) {
+                var map = {};
+                series[type].forEach(function(p) { map[p.date] = p.count; });
+                datasets.push({
+                    label: type,
+                    data: labels.map(function(d) { return map[d] || null; }),
+                    borderColor: TYPE_COLORS[type] || '#999',
+                    backgroundColor: TYPE_COLORS[type] || '#999',
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    spanGaps: true
+                });
+            }
+
+            trendChart = new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(ctx) {
+                                    return '点击查看详情';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: '参与人数' } },
+                        x: { title: { display: true, text: '日期' } }
+                    },
+                    onClick: function(e, elements) {
+                        if (elements.length === 0) return;
+                        var el = elements[0];
+                        var date = labels[el.index];
+                        var type = datasets[el.datasetIndex].label;
+                        showDetail(date, type);
+                    }
+                }
+            });
+        });
+
+    function showDetail(date, type) {
+        fetch('/admin/camp-affairs/api/members?date=' + date + '&type=' + type)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var campRank = data.members.length > 0 && data.members[0].campRanking != null
+                    ? ' · 营地第' + data.members[0].campRanking + '名' : '';
+                document.getElementById('detailTitle').textContent = data.type + ' · ' + data.date + '（' + data.members.length + ' 人）' + campRank;
+                if (data.members.length === 0) {
+                    document.getElementById('detailList').innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;">暂无记录</div>';
+                } else {
+                    document.getElementById('detailList').innerHTML = data.members.map(function(m) {
+                        return '<div class="detail-item"><span>' + m.nickname + '</span><span style="color:#888;">' + (m.memberRanking != null ? '第 ' + m.memberRanking + ' 名' : '') + '</span></div>';
+                    }).join('');
+                }
+                document.getElementById('detailModal').classList.add('active');
+            });
+    }
+    function closeDetailModal() {
+        document.getElementById('detailModal').classList.remove('active');
+    }
+    document.getElementById('detailModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDetailModal();
+    });
+
+    // === 日期筛选 ===
+    function applyFilter() {
+        var from = document.getElementById('filterFrom').value;
+        var to = document.getElementById('filterTo').value;
+        var params = new URLSearchParams();
+        if (from) params.set('from', from);
+        if (to) params.set('to', to);
+        window.location.href = '/admin/camp-affairs' + (params.toString() ? '?' + params.toString() : '');
+    }
+    function resetFilter() {
+        window.location.href = '/admin/camp-affairs';
+    }
+</script>
+</body>
+</html>

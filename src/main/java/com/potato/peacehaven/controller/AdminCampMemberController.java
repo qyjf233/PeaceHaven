@@ -123,7 +123,6 @@ public class AdminCampMemberController {
                     Map<String, Object> m = new HashMap<>();
                     m.put("id", u.getId());
                     m.put("nickname", u.getNickname());
-                    m.put("phone", u.getPhone());
                     return m;
                 })
                 .collect(Collectors.toList());
