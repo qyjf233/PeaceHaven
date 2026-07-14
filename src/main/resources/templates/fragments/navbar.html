@@ -2,10 +2,9 @@
      PeaceHaven 通用导航栏组件
      用法: <div th:replace="~{fragments/navbar :: navbar(page='home', mode='full', prefix='#')}"></div>
      参数:
-       page   - 当前页面标识: home / about / team / activities / combat-roster / benefits
+       page   - 当前页面标识: home / about / team / activities / benefits
        mode   - 导航栏模式: full(完整导航) / simple(仅logo+主题切换) / bare(仅logo)
        prefix - 锚点链接前缀: '#'(首页) / '/#'(其他页面)
-       isManager - 是否显示战斗组链接(由Controller传入)
      ============================================ -->
 
 <!-- 导航栏片段 -->
@@ -22,8 +21,6 @@
             <li><a th:href="${prefix + 'about'}" class="nav-link" th:classappend="${page == 'about'} ? 'active'">营地简介</a></li>
             <li><a th:href="${prefix + 'team'}" class="nav-link" th:classappend="${page == 'team'} ? 'active'">管理组</a></li>
             <li><a th:href="${page == 'home' ? '#activities' : '/activities'}" class="nav-link" th:classappend="${page == 'activities'} ? 'active'">活动</a></li>
-            <!-- 战斗组链接：首页由isManager控制，战斗组页面始终显示 -->
-            <li th:if="${page == 'combat-roster' or (isManager != null and isManager)}"><a href="/combat-roster" class="nav-link" th:classappend="${page == 'combat-roster'} ? 'active'">战斗组</a></li>
             <li><a th:href="${prefix + 'benefits'}" class="nav-link" th:classappend="${page == 'benefits'} ? 'active'">福利</a></li>
         </ul>
 

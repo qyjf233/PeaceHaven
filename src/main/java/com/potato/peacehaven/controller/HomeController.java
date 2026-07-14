@@ -2,15 +2,11 @@ package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.entity.SiteStats;
 import com.potato.peacehaven.entity.TeamMember;
-import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.repository.SiteStatsRepository;
 import com.potato.peacehaven.repository.TeamMemberRepository;
 import com.potato.peacehaven.repository.UserRepository;
 import com.potato.peacehaven.service.ActivityService;
-import com.potato.peacehaven.service.UserService;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,13 +23,9 @@ public class HomeController {
     private final SiteStatsRepository siteStatsRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
-    private final UserService userService;
-
-    @Value("${features.combat-roster.enabled:false}")
-    private boolean combatRosterEnabled;
 
     @GetMapping("/")
-    public String index(Model model, HttpSession session) {
+    public String index(Model model) {
         model.addAttribute("recentActivities", activityService.getRecentActivities());
 
         // 营地简介统计数据
@@ -53,11 +45,6 @@ public class HomeController {
         }
         model.addAttribute("teamMembers", members);
         model.addAttribute("nicknameMap", nicknameMap);
-
-        // 判断当前用户是否为管理组成员（用于导航栏条件渲染），且战斗组功能已启用
-        User user = userService.getCurrentUser(session);
-        boolean isManager = combatRosterEnabled && user != null && teamMemberRepository.existsByUserId(user.getId());
-        model.addAttribute("isManager", isManager);
 
         return "index";
     }

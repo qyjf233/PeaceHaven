@@ -23,7 +23,7 @@ public class AdminAuthController {
     private final ActivityRepository activityRepository;
     private final ActivityService activityService;
     private final UserRepository userRepository;
-    private final CombatMemberRepository combatMemberRepository;
+    private final CampMemberRepository campMemberRepository;
     private final ContestWorkRepository contestWorkRepository;
 
     /**
@@ -33,7 +33,7 @@ public class AdminAuthController {
     public String dashboard(Model model) {
         model.addAttribute("activityCount", activityRepository.count());
         model.addAttribute("userCount", userRepository.count());
-        model.addAttribute("combatMemberCount", combatMemberRepository.count());
+        model.addAttribute("campMemberCount", campMemberRepository.count());
         return "admin/dashboard";
     }
 

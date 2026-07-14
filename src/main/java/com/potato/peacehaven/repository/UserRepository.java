@@ -26,4 +26,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** 查询已有的营地名称（去重，前缀匹配） */
     @Query("SELECT DISTINCT u.campName FROM User u WHERE u.campName IS NOT NULL AND u.campName <> '' AND LOWER(u.campName) LIKE LOWER(CONCAT(:prefix, '%'))")
     List<String> findDistinctCampNamesByPrefix(@Param("prefix") String prefix);
+
+    /** 按营地名查询用户 */
+    List<User> findByCampName(String campName);
 }
