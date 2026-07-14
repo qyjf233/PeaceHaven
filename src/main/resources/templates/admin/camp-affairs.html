@@ -37,10 +37,17 @@
         .member-toolbar .count { margin-left: auto; font-size: 0.85rem; color: #888; }
 
         /* 记录表格 */
-        .date-group { margin-bottom: 24px; }
-        .date-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #eee; }
+        .date-group { margin-bottom: 16px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); overflow: hidden; background: var(--admin-surface); box-shadow: var(--admin-shadow); }
+        .date-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.2s; }
+        .date-header:hover { background: #f8f8f8; }
         .date-header h3 { font-size: 1rem; margin: 0; }
         .date-header .count { font-size: 0.85rem; color: #888; }
+        .date-header .expand-arrow { font-size: 0.7rem; color: #aaa; transition: transform 0.3s ease; margin-right: 4px; }
+        .date-group.expanded .expand-arrow { transform: rotate(90deg); }
+        .date-group .date-body { display: none; }
+        .date-group.expanded .date-body { display: block; }
+        .date-header .type-summary { display: flex; gap: 6px; margin-left: 8px; }
+        .date-header .type-summary .type-badge { font-size: 0.75rem; padding: 1px 8px; }
         .type-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; color: #fff; }
         .type-资源战 { background: #E8833A; }
         .type-尸潮 { background: #8B5CF6; }
@@ -90,30 +97,34 @@
         <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
     </div>
 
-    <!-- 事务记录列表（按日期分组） -->
-    <div th:each="entry : ${grouped}" class="date-group">
-        <div class="date-header">
+    <!-- 事务记录列表（按日期分组，手风琴折叠） -->
+    <div th:each="entry : ${grouped}" class="date-group" data-date-group>
+        <div class="date-header" onclick="toggleDateGroup(this)">
+            <span class="expand-arrow">▶</span>
             <h3 th:text="${entry.key}"></h3>
-            <span class="count" th:text="'共 ' + ${#lists.size(entry.value)} + ' 人'"></span>
+            <span class="count" th:text="'共 ' + ${#lists.size(entry.value)} + ' 条'"></span>
+            <div class="type-summary"></div>
             <form th:action="@{/admin/camp-affairs/{date}/delete(date=${entry.key})}" method="post" style="margin-left:auto;"
-                  onsubmit="return confirm('确定删除该日期的所有事务记录？')">
+                  onsubmit="return confirm('确定删除该日期的所有事务记录？')" onclick="event.stopPropagation()">
                 <input type="hidden" name="_csrf" th:value="${_csrf}">
                 <button type="submit" class="btn btn-sm btn-danger">删除该日</button>
             </form>
         </div>
-        <table class="admin-table">
-            <thead><tr><th>类型</th><th>昵称</th><th>个人排名</th></tr></thead>
-            <tbody>
-            <tr th:each="r : ${entry.value}">
-                <td>
-                    <span class="type-badge" th:classappend="'type-' + ${r.affairType}" th:text="${r.affairType}"></span>
-                    <span th:if="${r.campRanking != null}" style="margin-left:6px; font-size:0.82rem; color:#888;">营地第<span th:text="${r.campRanking}"></span>名</span>
-                </td>
-                <td th:text="${r.nickname}"></td>
-                <td th:text="${r.memberRanking != null ? '第 ' + r.memberRanking + ' 名' : '-'}"></td>
-            </tr>
-            </tbody>
-        </table>
+        <div class="date-body">
+            <table class="admin-table" style="box-shadow:none; border-radius:0;">
+                <thead><tr><th>类型</th><th>昵称</th><th>个人排名</th></tr></thead>
+                <tbody>
+                <tr th:each="r : ${entry.value}">
+                    <td>
+                        <span class="type-badge" th:classappend="'type-' + ${r.affairType}" th:text="${r.affairType}"></span>
+                        <span th:if="${r.campRanking != null}" style="margin-left:6px; font-size:0.82rem; color:#888;">营地第<span th:text="${r.campRanking}"></span>名</span>
+                    </td>
+                    <td th:text="${r.nickname}"></td>
+                    <td th:text="${r.memberRanking != null ? '第 ' + r.memberRanking + ' 名' : '-'}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div th:if="${#maps.isEmpty(grouped)}" style="text-align:center; padding:40px; color:#aaa;">暂无事务记录</div>
@@ -378,6 +389,20 @@
     document.getElementById('detailModal').addEventListener('click', function(e) {
         if (e.target === this) closeDetailModal();
     });
+
+    // === 手风琴折叠 ===
+    function toggleDateGroup(header) {
+        var group = header.parentElement;
+        var wasExpanded = group.classList.contains('expanded');
+        // 先收起所有
+        document.querySelectorAll('[data-date-group].expanded').forEach(function(g) {
+            g.classList.remove('expanded');
+        });
+        // 如果之前没展开，则展开当前
+        if (!wasExpanded) {
+            group.classList.add('expanded');
+        }
+    }
 
     // === 日期筛选 ===
     function applyFilter() {

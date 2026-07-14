@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>营地成员管理 - PeaceHaven Admin</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
     <style>
         .form-row { margin-bottom: 12px; }
         .form-row label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
@@ -53,7 +54,12 @@
     <div style="margin-bottom: 16px; display: flex; gap: 10px; align-items: center;">
         <button class="btn btn-primary" onclick="openAddModal()">+ 添加成员</button>
         <button class="btn" style="background:#4CAF50;color:#fff;" onclick="openScanModal()">🔍 一键识别添加</button>
-        <span style="margin-left: 8px; color: #777; font-size: 0.9rem;" th:text="'共 ' + ${#lists.size(members)} + ' 人'"></span>
+        <span style="margin-left: 8px; color: #777; font-size: 0.9rem;" th:text="'共 ' + ${#lists.size(members)} + ' 人'" id="totalCount"></span>
+        <div style="margin-left:auto;">
+            <input type="text" id="memberSearch" placeholder="搜索成员（中文 / 拼音 / 首字母）"
+                   style="padding:8px 14px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem; width:260px;"
+                   oninput="filterTable()">
+        </div>
     </div>
 
     <table class="admin-table">
@@ -65,7 +71,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="m : ${members}">
+        <tr th:each="m : ${members}" th:attr="data-nick=${m.nickname}">
             <td th:text="${m.sortOrder}"></td>
             <td th:text="${m.nickname}"></td>
             <td class="actions">
@@ -267,6 +273,34 @@
     document.getElementById('scanModal').addEventListener('click', function(e) {
         if (e.target === this) closeScanModal();
     });
+
+    // === 拼音搜索 ===
+    var pinyinPro = window.pinyinPro || null;
+    var tableRows = document.querySelectorAll('.admin-table tbody tr[data-nick]');
+    var pinyinCache = [];
+    tableRows.forEach(function(row) {
+        var nick = row.getAttribute('data-nick');
+        var full = '', initials = '';
+        if (pinyinPro && nick) {
+            full = pinyinPro.pinyin(nick, { toneType: 'none', type: 'array' }).join('');
+            initials = pinyinPro.pinyin(nick, { pattern: 'first', type: 'array' }).join('');
+        }
+        pinyinCache.push({ el: row, nick: nick || '', full: full, initials: initials });
+    });
+
+    function filterTable() {
+        var q = document.getElementById('memberSearch').value.trim().toLowerCase();
+        var visible = 0;
+        pinyinCache.forEach(function(item) {
+            if (!q) { item.el.style.display = ''; visible++; return; }
+            var match = item.nick.toLowerCase().indexOf(q) !== -1
+                || item.full.indexOf(q) !== -1
+                || item.initials.indexOf(q) !== -1;
+            item.el.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        document.getElementById('totalCount').textContent = q ? ('筛选 ' + visible + ' / ' + pinyinCache.length + ' 人') : ('共 ' + pinyinCache.length + ' 人');
+    }
 </script>
 </body>
 </html>

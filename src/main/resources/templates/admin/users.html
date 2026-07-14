@@ -37,7 +37,7 @@
         <tbody>
         <tr th:each="u : ${userPage.content}">
             <td th:text="${u.id}"></td>
-            <td th:text="${u.phone}"></td>
+            <td th:text="${u.phone != null and #strings.length(u.phone) >= 7} ? ${#strings.substring(u.phone, 0, 3) + '****' + #strings.substring(u.phone, #strings.length(u.phone) - 4)} : ${u.phone}"></td>
             <td th:text="${u.nickname}"></td>
             <td>
                 <span class="badge" th:classappend="${u.role.name() == 'ADMIN' ? 'badge-vote' : 'badge-basic'}"
