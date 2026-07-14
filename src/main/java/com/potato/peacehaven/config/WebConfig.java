@@ -11,6 +11,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final AdminInterceptor adminInterceptor;
     private final CsrfInterceptor csrfInterceptor;
+    private final PageVisitInterceptor pageVisitInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -23,5 +24,10 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(csrfInterceptor)
                 .addPathPatterns("/admin", "/admin/**", "/api/contest/**")
                 .excludePathPatterns("/admin/login", "/api/auth/**");
+
+        // 页面访问记录拦截器（仅 GET 页面请求）
+        registry.addInterceptor(pageVisitInterceptor)
+                .addPathPatterns("/", "/activities", "/activities/**", "/combat-roster",
+                        "/agreement", "/admin", "/admin/**");
     }
 }

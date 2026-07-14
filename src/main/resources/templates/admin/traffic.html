@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流量监控 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        .traffic-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .traffic-stat-card { background: var(--admin-surface); border-radius: var(--admin-radius); box-shadow: var(--admin-shadow); padding: 24px; text-align: center; }
+        .traffic-stat-card .num { font-size: 2rem; font-weight: 700; color: var(--admin-header); }
+        .traffic-stat-card .label { font-size: 0.85rem; color: var(--admin-text-muted); margin-top: 4px; }
+
+        .chart-card { background: var(--admin-surface); border-radius: var(--admin-radius); box-shadow: var(--admin-shadow); padding: 24px; margin-bottom: 24px; }
+        .chart-card h3 { font-size: 1.05rem; margin-bottom: 16px; color: var(--admin-header); display: flex; align-items: center; gap: 8px; }
+        .chart-card h3 .icon { font-size: 1.2rem; }
+        .chart-wrap { position: relative; height: 280px; }
+        .chart-wrap.tall { height: 350px; }
+
+        .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+        @media (max-width: 768px) {
+            .chart-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>📊 流量监控</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin" class="btn-back">← 返回后台</a>
+        </div>
+    </header>
+
+    <!-- 日期筛选 -->
+    <div style="margin-bottom:20px; display:flex; gap:8px; align-items:center; justify-content:flex-end;">
+        <label style="font-size:0.88rem; color:#666;">从</label>
+        <input type="date" id="filterFrom" th:value="${dateFrom}" style="padding:6px 10px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem;">
+        <label style="font-size:0.88rem; color:#666;">至</label>
+        <input type="date" id="filterTo" th:value="${dateTo}" style="padding:6px 10px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem;">
+        <button class="btn btn-primary btn-sm" onclick="loadData()">检索</button>
+        <button class="btn btn-secondary btn-sm" onclick="resetFilter()">重置</button>
+    </div>
+
+    <!-- 概览卡片 -->
+    <div class="traffic-stats">
+        <div class="traffic-stat-card">
+            <div class="num" id="statPv">-</div>
+            <div class="label">总访问量 (PV)</div>
+        </div>
+        <div class="traffic-stat-card">
+            <div class="num" id="statUv">-</div>
+            <div class="label">独立访客 (UV)</div>
+        </div>
+        <div class="traffic-stat-card">
+            <div class="num" id="statAvgPv">-</div>
+            <div class="label">日均 PV</div>
+        </div>
+    </div>
+
+    <!-- 图表1：每日PV趋势 -->
+    <div class="chart-card">
+        <h3><span class="icon">📈</span> 每日访问量 (PV)</h3>
+        <div class="chart-wrap"><canvas id="pvChart"></canvas></div>
+    </div>
+
+    <!-- 图表2：每日UV趋势 -->
+    <div class="chart-card">
+        <h3><span class="icon">👤</span> 每日独立访客 (UV)</h3>
+        <div class="chart-wrap"><canvas id="uvChart"></canvas></div>
+    </div>
+
+    <div class="chart-row">
+        <!-- 图表3：页面热度排行 -->
+        <div class="chart-card">
+            <h3><span class="icon">🔥</span> 页面热度排行</h3>
+            <div class="chart-wrap tall"><canvas id="pageChart"></canvas></div>
+        </div>
+
+        <!-- 图表4：Top IP -->
+        <div class="chart-card">
+            <h3><span class="icon">🌐</span> 访问最多 IP</h3>
+            <div class="chart-wrap tall"><canvas id="ipChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- 图表5：来源分布 -->
+    <div class="chart-card" style="max-width: 500px;">
+        <h3><span class="icon">🔗</span> 访问来源分布</h3>
+        <div class="chart-wrap"><canvas id="refChart"></canvas></div>
+    </div>
+</div>
+
+<script>
+    var CHART_COLORS = ['#E8833A', '#8B5CF6', '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#EC4899', '#6366F1', '#14B8A6', '#F97316'];
+    var charts = {};
+
+    function loadData() {
+        var from = document.getElementById('filterFrom').value;
+        var to = document.getElementById('filterTo').value;
+        if (!from || !to) return;
+
+        fetch('/admin/traffic/api/stats?from=' + from + '&to=' + to)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                renderStats(data);
+                renderPvChart(data.pvTrend || []);
+                renderUvChart(data.uvTrend || []);
+                renderPageChart(data.pageRank || []);
+                renderIpChart(data.topIps || []);
+                renderRefChart(data.topReferers || []);
+            })
+            .catch(function() { alert('加载数据失败'); });
+    }
+
+    function renderStats(data) {
+        document.getElementById('statPv').textContent = data.totalPv || 0;
+        document.getElementById('statUv').textContent = data.totalUv || 0;
+        var days = (data.pvTrend || []).length || 1;
+        document.getElementById('statAvgPv').textContent = Math.round((data.totalPv || 0) / days);
+    }
+
+    function destroyChart(key) {
+        if (charts[key]) { charts[key].destroy(); charts[key] = null; }
+    }
+
+    // PV趋势折线图
+    function renderPvChart(pvData) {
+        destroyChart('pv');
+        var labels = pvData.map(function(d) { return d.date; });
+        var values = pvData.map(function(d) { return d.pv; });
+        charts.pv = new Chart(document.getElementById('pvChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'PV',
+                    data: values,
+                    borderColor: '#E8833A',
+                    backgroundColor: 'rgba(232,131,58,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    // UV趋势折线图
+    function renderUvChart(uvData) {
+        destroyChart('uv');
+        var labels = uvData.map(function(d) { return d.date; });
+        var values = uvData.map(function(d) { return d.uv; });
+        charts.uv = new Chart(document.getElementById('uvChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'UV',
+                    data: values,
+                    borderColor: '#8B5CF6',
+                    backgroundColor: 'rgba(139,92,246,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    // 页面热度横向柱状图
+    function renderPageChart(pageData) {
+        destroyChart('page');
+        var labels = pageData.map(function(d) { return d.page; });
+        var values = pageData.map(function(d) { return d.count; });
+        charts.page = new Chart(document.getElementById('pageChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '访问次数',
+                    data: values,
+                    backgroundColor: CHART_COLORS.slice(0, labels.length),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    // Top IP 横向柱状图
+    function renderIpChart(ipData) {
+        destroyChart('ip');
+        var labels = ipData.map(function(d) { return d.ip; });
+        var values = ipData.map(function(d) { return d.count; });
+        charts.ip = new Chart(document.getElementById('ipChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '访问次数',
+                    data: values,
+                    backgroundColor: 'rgba(59,130,246,0.7)',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    // 来源分布饼图
+    function renderRefChart(refData) {
+        destroyChart('ref');
+        if (refData.length === 0) return;
+        var labels = refData.map(function(d) { return d.referer; });
+        var values = refData.map(function(d) { return d.count; });
+        charts.ref = new Chart(document.getElementById('refChart'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: CHART_COLORS.slice(0, labels.length),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 16 } }
+                }
+            }
+        });
+    }
+
+    function resetFilter() {
+        var today = new Date();
+        var thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        document.getElementById('filterFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+        document.getElementById('filterTo').value = today.toISOString().split('T')[0];
+        loadData();
+    }
+
+    // 初始加载
+    loadData();
+</script>
+</body>
+</html>
