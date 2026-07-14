@@ -46,8 +46,3 @@ aliyun:
     endpoint: cn-hangzhou.log.aliyuncs.com
     project: ${ALIYUN_SLS_PROJECT:}
     log-store: ${ALIYUN_SLS_LOGSTORE:}
-
-# 功能开关（true=启用，false=隐藏）
-features:
-  combat-roster:
-    enabled: false
