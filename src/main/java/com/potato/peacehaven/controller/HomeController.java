@@ -2,15 +2,18 @@ package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.entity.SiteStats;
 import com.potato.peacehaven.entity.TeamMember;
+import com.potato.peacehaven.entity.WelfareRecord;
 import com.potato.peacehaven.repository.SiteStatsRepository;
 import com.potato.peacehaven.repository.TeamMemberRepository;
 import com.potato.peacehaven.repository.UserRepository;
+import com.potato.peacehaven.repository.WelfareRecordRepository;
 import com.potato.peacehaven.service.ActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,7 @@ public class HomeController {
     private final SiteStatsRepository siteStatsRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
+    private final WelfareRecordRepository welfareRecordRepository;
 
     @GetMapping("/")
     public String index(Model model) {
@@ -45,6 +49,20 @@ public class HomeController {
         }
         model.addAttribute("teamMembers", members);
         model.addAttribute("nicknameMap", nicknameMap);
+
+        // 最近一次福利记录
+        java.time.LocalDate luckyDate = welfareRecordRepository.findLatestDateByType("月度幸运儿");
+        if (luckyDate != null) {
+            model.addAttribute("latestLuckyDate", luckyDate);
+            model.addAttribute("latestLuckyWinners", welfareRecordRepository.findByWelfareTypeAndWelfareDate("月度幸运儿", luckyDate));
+        }
+        java.time.LocalDate contribDate = welfareRecordRepository.findLatestDateByType("最佳贡献");
+        if (contribDate != null) {
+            List<WelfareRecord> contribs = welfareRecordRepository.findByWelfareTypeAndWelfareDate("最佳贡献", contribDate);
+            contribs.sort(Comparator.comparing(WelfareRecord::getContribution, Comparator.nullsLast(Comparator.reverseOrder())));
+            model.addAttribute("latestContribDate", contribDate);
+            model.addAttribute("latestContribWinners", contribs);
+        }
 
         return "index";
     }

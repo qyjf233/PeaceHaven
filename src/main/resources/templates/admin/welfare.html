@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>福利系统 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
+    <style>
+        .form-row { margin-bottom: 12px; }
+        .form-row label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+        .form-row input, .form-row select { width: 100%; padding: 8px 12px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); font-size: 0.9rem; box-sizing: border-box; }
+        .alert-error { padding: 14px 20px; border-radius: var(--admin-radius); margin-bottom: 20px; font-size: 0.95rem; background: #fdecea; color: #c62828; border: 1px solid #ef9a9a; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #fff; border-radius: 12px; padding: 28px; width: 90%; max-width: 780px; height: 540px; display: flex; flex-direction: column; overflow: hidden; }
+        .modal-content h2 { margin-bottom: 16px; font-size: 1.2rem; flex-shrink: 0; }
+
+        /* 左右布局 */
+        .welfare-form-layout { display: flex; gap: 24px; flex: 1; min-height: 0; overflow: hidden; }
+        .welfare-form-left { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .welfare-form-right { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; }
+
+        /* 成员列表 */
+        .member-list { flex: 1; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; }
+        .member-check { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+        .member-check:hover { background: #f9f9f9; }
+        .member-check input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+        .member-check .m-nick { flex: 1; text-align: left; }
+        .member-check .m-contrib { width: 90px; padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; text-align: center; flex-shrink: 0; }
+        .member-search { width: 100%; padding: 8px 12px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); font-size: 0.9rem; margin-bottom: 8px; outline: none; box-sizing: border-box; }
+        .member-search:focus { border-color: #E8833A; }
+        .member-toolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+        .member-toolbar .count { margin-left: auto; font-size: 0.85rem; color: #888; }
+
+        /* 抽奖模式 */
+        .lottery-panel { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+        .lottery-btn { padding: 20px 50px; font-size: 1.4rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #E8833A, #d35400); border: none; border-radius: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(232,131,58,0.4); transition: transform 0.2s, box-shadow 0.2s; }
+        .lottery-btn:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(232,131,58,0.5); }
+        .lottery-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .lottery-result { text-align: center; font-size: 1.1rem; padding: 20px; background: #fff8e1; border-radius: 12px; border: 1px solid #ffe082; max-width: 400px; }
+        .lottery-result .winners { font-size: 1.4rem; font-weight: 700; color: #E8833A; margin-top: 8px; }
+
+        /* 记录表格 */
+        .date-group { margin-bottom: 24px; }
+        .date-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #eee; }
+        .date-header h3 { font-size: 1rem; margin: 0; }
+        .date-header .count { font-size: 0.85rem; color: #888; }
+        .type-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; color: #fff; }
+        .type-月度幸运儿 { background: #E8833A; }
+        .type-最佳贡献 { background: #8B5CF6; }
+
+        .form-actions { display: flex; gap: 8px; margin-top: 16px; flex-direction: column; }
+    </style>
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>🎁 福利系统</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin" class="btn-back">← 管理后台</a>
+            <a href="/admin/camp-members" class="btn-back">成员管理</a>
+            <a href="/" class="btn-back">← 返回前台</a>
+        </div>
+    </header>
+
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <div th:if="${error}" class="alert-error" th:text="${error}"></div>
+
+    <div style="margin-bottom: 16px; display:flex; gap:10px; align-items:center;">
+        <button class="btn btn-primary" onclick="openAddModal()">+ 新增福利记录</button>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+            <label style="font-size:0.88rem; color:#666;">从</label>
+            <input type="date" id="filterFrom" th:value="${dateFrom}" style="padding:6px 10px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem;">
+            <label style="font-size:0.88rem; color:#666;">至</label>
+            <input type="date" id="filterTo" th:value="${dateTo}" style="padding:6px 10px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); font-size:0.88rem;">
+            <button class="btn" style="background:#4CAF50; color:#fff; padding:6px 16px; font-size:0.88rem;" onclick="applyFilter()">检索</button>
+            <button class="btn" style="padding:6px 16px; font-size:0.88rem;" onclick="resetFilter()">重置</button>
+        </div>
+    </div>
+
+    <!-- 福利记录列表（按日期分组） -->
+    <div th:each="entry : ${grouped}" class="date-group">
+        <div class="date-header">
+            <h3 th:text="${entry.key}"></h3>
+            <span class="count" th:text="'共 ' + ${#lists.size(entry.value)} + ' 人'"></span>
+            <form th:action="@{/admin/welfare/{date}/delete(date=${entry.key})}" method="post" style="margin-left:auto;"
+                  onsubmit="return confirm('确定删除该日期的所有福利记录？')">
+                <input type="hidden" name="_csrf" th:value="${_csrf}">
+                <button type="submit" class="btn btn-sm btn-danger">删除该日</button>
+            </form>
+        </div>
+        <table class="admin-table">
+            <thead><tr><th>类型</th><th>昵称</th><th>贡献</th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${entry.value}">
+                <td><span class="type-badge" th:classappend="'type-' + ${r.welfareType}" th:text="${r.welfareType}"></span></td>
+                <td th:text="${r.nickname}"></td>
+                <td th:text="${r.contribution != null ? r.contribution : '-'}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div th:if="${#maps.isEmpty(grouped)}" style="text-align:center; padding:40px; color:#aaa;">暂无福利记录</div>
+</div>
+
+<!-- 新增福利弹窗 -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal-content">
+        <h2>新增福利记录</h2>
+        <input type="hidden" name="_csrf" th:value="${_csrf}">
+        <div class="welfare-form-layout">
+            <!-- 左半：成员列表（仅最佳贡献模式显示） -->
+            <div class="welfare-form-left" id="memberPanel" style="display:none;">
+                <input type="text" class="member-search" id="memberSearch" placeholder="搜索成员" oninput="filterMembers()">
+                <div class="member-toolbar">
+                    <span class="count" id="memberCount">请选择3名成员</span>
+                </div>
+                <div class="member-list" id="memberList">
+                    <label class="member-check" th:each="m : ${members}">
+                        <input type="checkbox" th:value="${m.nickname}" onchange="updateMemberCount()">
+                        <span class="m-nick" th:text="${m.nickname}"></span>
+                        <input type="number" class="m-contrib" min="1" max="99999999" placeholder="贡献值" onclick="event.stopPropagation()" oninput="updateMemberCount()">
+                    </label>
+                    <div th:if="${#lists.isEmpty(members)}" style="text-align:center; padding:20px; color:#aaa;">暂无营地成员</div>
+                </div>
+            </div>
+
+            <!-- 左半：抽奖面板（仅月度幸运儿模式显示） -->
+            <div class="lottery-panel" id="lotteryPanel">
+                <div style="font-size:3rem;">🎰</div>
+                <div style="color:#888; font-size:0.9rem;">将从营地成员中随机抽取 <strong>2名</strong> 幸运儿</div>
+                <button class="lottery-btn" id="lotteryBtn" onclick="doLottery()">🎲 开始抽奖</button>
+                <div class="lottery-result" id="lotteryResult" style="display:none;"></div>
+            </div>
+
+            <!-- 右半：表单信息 -->
+            <div class="welfare-form-right">
+                <div class="form-row">
+                    <label>福利类型</label>
+                    <select id="f_type" onchange="switchMode()">
+                        <option th:each="t : ${welfareTypes}" th:value="${t}" th:text="${t}"></option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>日期</label>
+                    <input type="date" id="f_date" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
+                </div>
+                <div style="flex:1;"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" id="submitBtn" style="width:100%;" onclick="submitContribution()">确认提交</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModal()" style="width:100%;">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openAddModal() {
+        resetModalState();
+        document.getElementById('addModal').classList.add('active');
+        switchMode();
+    }
+    function resetModalState() {
+        // 重置抽奖按钮
+        var lb = document.getElementById('lotteryBtn');
+        lb.disabled = false;
+        lb.textContent = '🎲 开始抽奖';
+        lb.style.display = '';
+        document.getElementById('lotteryResult').style.display = 'none';
+        // 重置提交按钮
+        var sb = document.getElementById('submitBtn');
+        sb.disabled = true;
+        sb.textContent = '确认提交';
+        sb.style.opacity = '0.5';
+        // 清除所有勾选和输入
+        document.querySelectorAll('#memberList input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+        document.querySelectorAll('#memberList .m-contrib').forEach(function(inp) { inp.value = ''; });
+        document.querySelectorAll('#memberList .member-check').forEach(function(row) { row.style.display = ''; });
+        document.getElementById('memberSearch').value = '';
+    }
+    function closeAddModal() {
+        document.getElementById('addModal').classList.remove('active');
+        resetModalState();
+    }
+    document.getElementById('addModal').addEventListener('click', function(e) {
+        if (e.target === this) closeAddModal();
+    });
+
+    // === 模式切换 ===
+    function switchMode() {
+        var type = document.getElementById('f_type').value;
+        var isLottery = (type === '月度幸运儿');
+        document.getElementById('lotteryPanel').style.display = isLottery ? '' : 'none';
+        document.getElementById('memberPanel').style.display = isLottery ? 'none' : '';
+        document.getElementById('submitBtn').style.display = isLottery ? 'none' : '';
+        // 重置按钮状态
+        var lb = document.getElementById('lotteryBtn');
+        lb.disabled = false;
+        lb.textContent = '🎲 开始抽奖';
+        lb.style.display = '';
+        document.getElementById('lotteryResult').style.display = 'none';
+        if (!isLottery) updateMemberCount();
+    }
+
+    // === 月度幸运儿抽奖 ===
+    function doLottery() {
+        var date = document.getElementById('f_date').value;
+        if (!date) { alert('请先选择日期'); return; }
+
+        var btn = document.getElementById('lotteryBtn');
+        btn.disabled = true;
+        btn.textContent = '🎲 抽奖中...';
+
+        fetch('/admin/welfare/api/lottery', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('input[name=_csrf]').value
+            },
+            body: JSON.stringify({ welfareDate: date })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                document.getElementById('lotteryBtn').style.display = 'none';
+                var el = document.getElementById('lotteryResult');
+                el.style.display = '';
+                el.innerHTML = data.message + '<div class="winners">' + data.winners.join(' 🎉 ') + '</div>';
+                setTimeout(function() { closeAddModal(); location.reload(); }, 3000);
+            } else {
+                alert(data.message || '抽奖失败');
+                btn.disabled = false;
+                btn.textContent = '🎲 开始抽奖';
+            }
+        })
+        .catch(function() {
+            alert('网络错误，请重试');
+            btn.disabled = false;
+            btn.textContent = '🎲 开始抽奖';
+        });
+    }
+
+    // === 最佳贡献 ===
+    function updateMemberCount() {
+        var checked = document.querySelectorAll('#memberList input[type=checkbox]:checked');
+        var count = checked.length;
+        var allValid = true;
+
+        checked.forEach(function(cb) {
+            var row = cb.closest('.member-check');
+            var input = row.querySelector('.m-contrib');
+            var val = input.value;
+            if (!val || parseInt(val) <= 0 || parseInt(val) >= 100000000) allValid = false;
+        });
+
+        document.getElementById('memberCount').textContent = '已选 ' + count + ' / 3 人';
+        document.getElementById('submitBtn').disabled = !(count === 3 && allValid);
+        document.getElementById('submitBtn').style.opacity = (count === 3 && allValid) ? '1' : '0.5';
+    }
+
+    function submitContribution() {
+        var date = document.getElementById('f_date').value;
+        if (!date) { alert('请先选择日期'); return; }
+
+        var members = [];
+        document.querySelectorAll('#memberList input[type=checkbox]:checked').forEach(function(cb) {
+            var row = cb.closest('.member-check');
+            members.push({
+                nickname: cb.value,
+                contribution: row.querySelector('.m-contrib').value
+            });
+        });
+
+        if (members.length !== 3) { alert('请选择恰好3名成员'); return; }
+
+        var btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+
+        fetch('/admin/welfare', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('input[name=_csrf]').value
+            },
+            body: JSON.stringify({ welfareDate: date, members: members })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || '提交失败');
+                btn.disabled = false;
+                btn.textContent = '确认提交';
+                updateMemberCount();
+            }
+        })
+        .catch(function() {
+            alert('网络错误，请重试');
+            btn.disabled = false;
+            btn.textContent = '确认提交';
+            updateMemberCount();
+        });
+    }
+
+    // === 成员搜索（支持拼音） ===
+    var pinyinPro = window.pinyinPro || null;
+    var memberPinyinCache = [];
+    document.querySelectorAll('#memberList .member-check').forEach(function(row) {
+        var nick = row.querySelector('input[type=checkbox]').value;
+        var full = '', initials = '';
+        if (pinyinPro) {
+            full = pinyinPro.pinyin(nick, { toneType: 'none', type: 'array' }).join('');
+            initials = pinyinPro.pinyin(nick, { pattern: 'first', type: 'array' }).join('');
+        }
+        memberPinyinCache.push({ el: row, nick: nick, full: full, initials: initials });
+    });
+
+    function filterMembers() {
+        var q = document.getElementById('memberSearch').value.trim().toLowerCase();
+        memberPinyinCache.forEach(function(item) {
+            if (!q) { item.el.style.display = ''; return; }
+            var match = item.nick.toLowerCase().indexOf(q) !== -1
+                || item.full.indexOf(q) !== -1
+                || item.initials.indexOf(q) !== -1;
+            item.el.style.display = match ? '' : 'none';
+        });
+    }
+
+    // === 日期筛选 ===
+    function applyFilter() {
+        var from = document.getElementById('filterFrom').value;
+        var to = document.getElementById('filterTo').value;
+        var params = new URLSearchParams();
+        if (from) params.set('from', from);
+        if (to) params.set('to', to);
+        window.location.href = '/admin/welfare' + (params.toString() ? '?' + params.toString() : '');
+    }
+    function resetFilter() {
+        window.location.href = '/admin/welfare';
+    }
+</script>
+</body>
+</html>
