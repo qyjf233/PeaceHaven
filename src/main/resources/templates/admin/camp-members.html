@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>营地成员管理 - PeaceHaven Admin</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+    <meta name="_csrf" th:content="${_csrf}">
     <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
     <style>
         .form-row { margin-bottom: 12px; }
@@ -67,26 +69,29 @@
         <tr>
             <th style="width:80px;">排序</th>
             <th>昵称</th>
+            <th style="width:100px;">群状态</th>
             <th style="width:160px;">操作</th>
         </tr>
         </thead>
         <tbody>
-        <tr th:each="m : ${members}" th:attr="data-nick=${m.nickname}">
+        <tr th:each="m : ${members}" th:attr="data-nick=${m.nickname},data-id=${m.id}">
             <td th:text="${m.sortOrder}"></td>
             <td th:text="${m.nickname}"></td>
+            <td>
+                <span th:if="${groupNicknames.contains(m.nickname)}" class="group-badge group-badge-in">已加群</span>
+                <span th:unless="${groupNicknames.contains(m.nickname)}" class="group-badge group-badge-out">未加群</span>
+            </td>
             <td class="actions">
                 <button class="btn btn-sm btn-info"
                         th:attr="data-id=${m.id},data-nickname=${m.nickname},data-sort=${m.sortOrder}"
                         onclick="openEditModal(this)">编辑</button>
-                <form th:action="@{/admin/camp-members/{id}/delete(id=${m.id})}" method="post" style="display:inline"
-                      onsubmit="return confirm('确定删除该成员？')">
-                    <input type="hidden" name="_csrf" th:value="${_csrf}">
-                    <button type="submit" class="btn btn-sm btn-danger">删除</button>
-                </form>
+                <button class="btn btn-sm btn-danger"
+                        th:attr="data-id=${m.id},data-nickname=${m.nickname}"
+                        onclick="deleteCampMember(this)">删除</button>
             </td>
         </tr>
         <tr th:if="${#lists.isEmpty(members)}">
-            <td colspan="3" class="empty-state">暂无营地成员，点击上方按钮添加</td>
+            <td colspan="4" class="empty-state">暂无营地成员，点击上方按钮添加</td>
         </tr>
         </tbody>
     </table>
@@ -301,6 +306,138 @@
         });
         document.getElementById('totalCount').textContent = q ? ('筛选 ' + visible + ' / ' + pinyinCache.length + ' 人') : ('共 ' + pinyinCache.length + ' 人');
     }
+
+    // === 删除营地成员（含群聊联动） ===
+    function deleteCampMember(btn) {
+        var id = btn.dataset.id;
+        var nickname = btn.dataset.nickname;
+        var csrf = document.querySelector('meta[name=_csrf]').content;
+
+        // 先检查是否在群聊中
+        fetch('/admin/camp-members/' + id + '/check-group')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.inGroup) {
+                    // 在群里，显示三选一对话框
+                    showDeleteWithGroupDialog(id, nickname, data.wxid, csrf);
+                } else {
+                    // 不在群里，直接确认删除
+                    showDeleteSimpleDialog(id, nickname, csrf);
+                }
+            })
+            .catch(function() {
+                // 检查失败，默认简单删除
+                showDeleteSimpleDialog(id, nickname, csrf);
+            });
+    }
+
+    function showDeleteSimpleDialog(id, nickname, csrf) {
+        PHDialog.confirm({
+            title: '删除成员',
+            message: '确定删除营地成员 <b>' + escHtml(nickname) + '</b>？',
+            confirmText: '删除',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: function() { submitDeleteForm(id, csrf); }
+        });
+    }
+
+    function showDeleteWithGroupDialog(id, nickname, wxid, csrf) {
+        // 自定义三按钮对话框
+        var overlay = document.createElement('div');
+        overlay.className = 'ph-dialog-overlay ph-visible';
+        overlay.innerHTML =
+            '<div class="ph-dialog">' +
+                '<div class="ph-dialog-title">删除成员</div>' +
+                '<div class="ph-dialog-message">成员 <b>' + escHtml(nickname) + '</b> 当前在群聊中，请选择操作：</div>' +
+                '<div class="ph-dialog-actions" style="flex-wrap:wrap;gap:8px;">' +
+                    '<button class="ph-dialog-btn ph-dialog-btn-danger" id="dlgKickAll">同时踢出群聊</button>' +
+                    '<button class="ph-dialog-btn ph-dialog-btn-primary" id="dlgDeleteOnly">仅删除营地成员</button>' +
+                    '<button class="ph-dialog-btn ph-dialog-btn-secondary" id="dlgCancel">取消</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('#dlgKickAll').onclick = function() {
+            document.body.removeChild(overlay);
+            // 先删除营地成员，再踢出群聊
+            submitDeleteForm(id, csrf, function() { kickFromGroup(wxid); });
+        };
+        overlay.querySelector('#dlgDeleteOnly').onclick = function() {
+            document.body.removeChild(overlay);
+            submitDeleteForm(id, csrf);
+        };
+        overlay.querySelector('#dlgCancel').onclick = function() {
+            document.body.removeChild(overlay);
+        };
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) document.body.removeChild(overlay);
+        });
+    }
+
+    function submitDeleteForm(id, csrf, onSuccess) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/camp-members/' + id + '/delete';
+        form.style.display = 'none';
+
+        var csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_csrf';
+        csrfInput.value = csrf;
+        form.appendChild(csrfInput);
+
+        if (onSuccess) {
+            // 用 AJAX 方式提交，以便执行回调
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf },
+                redirect: 'manual'
+            }).then(function(resp) {
+                if (resp.type === 'opaqueredirect' || resp.ok) {
+                    onSuccess();
+                    setTimeout(function() { location.reload(); }, 1500);
+                } else {
+                    alert('删除失败');
+                }
+            }).catch(function() {
+                alert('网络错误');
+            });
+        } else {
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    function kickFromGroup(wxid) {
+        var csrf = document.querySelector('meta[name=_csrf]').content;
+        fetch('/admin/api/bot/group/kick-by-wxid', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            },
+            body: JSON.stringify({ wxid: wxid })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                console.log('已同时踢出群聊');
+            } else {
+                console.warn('踢出群聊失败：' + data.message);
+            }
+        })
+        .catch(function(e) {
+            console.warn('踢出群聊请求失败', e);
+        });
+    }
+
+    function escHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
 </script>
+<script th:src="@{/js/ph-dialog.js}"></script>
 </body>
 </html>

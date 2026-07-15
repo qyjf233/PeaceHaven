@@ -1,17 +1,14 @@
 package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.config.WechatApiProperties;
-import com.potato.peacehaven.entity.BotScheduleConfig;
-import com.potato.peacehaven.entity.BotTimedMessage;
-import com.potato.peacehaven.entity.BotMessageTemplate;
-import com.potato.peacehaven.repository.BotScheduleConfigRepository;
-import com.potato.peacehaven.repository.BotTimedMessageRepository;
-import com.potato.peacehaven.repository.BotMessageTemplateRepository;
+import com.potato.peacehaven.entity.*;
+import com.potato.peacehaven.repository.*;
 import com.potato.peacehaven.service.WechatApiConfigService;
 import com.potato.peacehaven.service.WechatApiService;
 import com.potato.peacehaven.service.WechatApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,9 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -32,6 +27,8 @@ public class AdminBotController {
     private final BotScheduleConfigRepository scheduleRepo;
     private final BotTimedMessageRepository messageRepo;
     private final BotMessageTemplateRepository templateRepo;
+    private final BotGroupMemberRepository groupMemberRepo;
+    private final CampMemberRepository campMemberRepo;
     private final WechatApiProperties wechatApiProps;
     private final WechatApiService wechatApiService;
     private final WechatApiConfigService wechatApiConfigService;
@@ -500,7 +497,11 @@ public class AdminBotController {
                 ? ((List<Object>) adminObj).stream().map(Object::toString).collect(Collectors.toList())
                 : List.of();
 
-        // 给每个成员添加角色标记
+        // 给每个成员添加角色标记 + 营地成员标记
+        Set<String> campNicknames = campMemberRepo.findAll().stream()
+                .map(CampMember::getNickname)
+                .collect(Collectors.toSet());
+
         for (Map<String, Object> m : members) {
             String wxid = m.get("wxid") != null ? m.get("wxid").toString() : "";
             if (wxid.equals(owner)) {
@@ -510,6 +511,12 @@ public class AdminBotController {
             } else {
                 m.put("role", "member");
             }
+            // 营地成员标记：displayName 优先，fallback nickName
+            String effectiveName = m.get("displayName") != null ? m.get("displayName").toString() : null;
+            if (effectiveName == null || effectiveName.isBlank()) {
+                effectiveName = m.get("nickName") != null ? m.get("nickName").toString() : "";
+            }
+            m.put("isCampMember", campNicknames.contains(effectiveName));
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -542,12 +549,158 @@ public class AdminBotController {
 
         WechatApiResponse resp = wechatApiService.removeMember(groupId, List.of(wxid));
         if (resp.isSuccess()) {
+            // 踢出成功后，检查该成员是否也是营地成员，如是则一并删除
+            boolean campMemberRemoved = removeLinkedCampMember(wxid);
+            // 同时从群成员表中删除
+            groupMemberRepo.findByWxid(wxid).ifPresent(groupMemberRepo::delete);
+            Map<String, Object> result = new HashMap<>();
+            result.put("campMemberRemoved", campMemberRemoved);
+            return Map.of("success", true, "message", "已踢出群聊", "data", result);
+        }
+        return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "踢出失败");
+    }
+
+    // ===== API: 同步群成员到数据库 =====
+
+    @ResponseBody
+    @PostMapping("/api/bot/group/sync")
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> syncGroupMembers() {
+        if (!wechatApiProps.isConfigured()) {
+            return Map.of("success", false, "message", "API 未配置");
+        }
+        if (!wechatApiProps.isDeviceBound()) {
+            return Map.of("success", false, "message", "设备未绑定");
+        }
+        String groupId = wechatApiProps.getGroupId();
+        if (groupId == null || groupId.isBlank()) {
+            return Map.of("success", false, "message", "群聊 ID 未配置");
+        }
+
+        WechatApiResponse resp = wechatApiService.getConfiguredGroupMembers();
+        if (!resp.isSuccess()) {
+            return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "获取失败");
+        }
+
+        Map<String, Object> data = resp.getDataAsMap();
+        if (data == null) {
+            return Map.of("success", false, "message", "响应数据为空");
+        }
+
+        Object memberListObj = data.get("memberList");
+        List<Map<String, Object>> members = (memberListObj instanceof List)
+                ? (List<Map<String, Object>>) memberListObj
+                : List.of();
+
+        String owner = data.get("chatroomOwner") != null ? data.get("chatroomOwner").toString() : null;
+        Object adminObj = data.get("adminWxid");
+        List<String> admins = (adminObj instanceof List)
+                ? ((List<Object>) adminObj).stream().map(Object::toString).collect(Collectors.toList())
+                : List.of();
+
+        LocalDateTime now = LocalDateTime.now();
+        List<String> wxids = new ArrayList<>();
+        int added = 0, updated = 0;
+
+        for (Map<String, Object> m : members) {
+            String wxid = m.get("wxid") != null ? m.get("wxid").toString() : "";
+            if (wxid.isBlank()) continue;
+            wxids.add(wxid);
+
+            String role = wxid.equals(owner) ? "owner"
+                        : admins.contains(wxid) ? "admin" : "member";
+
+            Optional<BotGroupMember> existing = groupMemberRepo.findByWxid(wxid);
+            if (existing.isPresent()) {
+                BotGroupMember gm = existing.get();
+                gm.setNickName(strOrNull(m.get("nickName")));
+                gm.setDisplayName(strOrNull(m.get("displayName")));
+                gm.setBigHeadImgUrl(strOrNull(m.get("bigHeadImgUrl")));
+                gm.setSmallHeadImgUrl(strOrNull(m.get("smallHeadImgUrl")));
+                gm.setRole(role);
+                gm.setSyncedAt(now);
+                groupMemberRepo.save(gm);
+                updated++;
+            } else {
+                BotGroupMember gm = BotGroupMember.builder()
+                        .wxid(wxid)
+                        .nickName(strOrNull(m.get("nickName")))
+                        .displayName(strOrNull(m.get("displayName")))
+                        .bigHeadImgUrl(strOrNull(m.get("bigHeadImgUrl")))
+                        .smallHeadImgUrl(strOrNull(m.get("smallHeadImgUrl")))
+                        .role(role)
+                        .syncedAt(now)
+                        .build();
+                groupMemberRepo.save(gm);
+                added++;
+            }
+        }
+
+        // 清理已退群成员
+        groupMemberRepo.deleteByWxidNotIn(wxids);
+        int removed = (int) groupMemberRepo.count() - wxids.size();
+        if (removed < 0) removed = 0;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", wxids.size());
+        result.put("added", added);
+        result.put("updated", updated);
+        result.put("removed", removed);
+        return Map.of("success", true, "data", result, "message", "同步完成");
+    }
+
+    // ===== API: 根据 wxid 踢出群聊（供营地成员删除页面调用） =====
+
+    @ResponseBody
+    @PostMapping("/api/bot/group/kick-by-wxid")
+    public Map<String, Object> kickByWxid(@RequestBody Map<String, String> body) {
+        if (!wechatApiProps.isConfigured() || !wechatApiProps.isDeviceBound()) {
+            return Map.of("success", false, "message", "设备未就绪");
+        }
+        String groupId = wechatApiProps.getGroupId();
+        if (groupId == null || groupId.isBlank()) {
+            return Map.of("success", false, "message", "群聊 ID 未配置");
+        }
+        String wxid = body.get("wxid");
+        if (wxid == null || wxid.isBlank()) {
+            return Map.of("success", false, "message", "缺少 wxid");
+        }
+
+        WechatApiResponse resp = wechatApiService.removeMember(groupId, List.of(wxid));
+        if (resp.isSuccess()) {
+            // 同时从群成员表中删除
+            groupMemberRepo.findByWxid(wxid).ifPresent(groupMemberRepo::delete);
             return Map.of("success", true, "message", "已踢出群聊");
         }
         return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "踢出失败");
     }
 
     // ===== Helper =====
+
+    /**
+     * 踢出群成员后，检查并删除关联的营地成员
+     */
+    private boolean removeLinkedCampMember(String wxid) {
+        Optional<BotGroupMember> gmOpt = groupMemberRepo.findByWxid(wxid);
+        if (gmOpt.isEmpty()) return false;
+
+        BotGroupMember gm = gmOpt.get();
+        String effectiveName = gm.getEffectiveName();
+
+        List<CampMember> campMembers = campMemberRepo.findAll();
+        for (CampMember cm : campMembers) {
+            if (cm.getNickname().equals(effectiveName)) {
+                campMemberRepo.delete(cm);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String strOrNull(Object obj) {
+        return obj != null ? obj.toString() : null;
+    }
 
     private Map<String, Object> toConfigMap(BotScheduleConfig cfg) {
         Map<String, Object> m = new HashMap<>();

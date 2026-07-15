@@ -1,7 +1,9 @@
 package com.potato.peacehaven.controller;
 
+import com.potato.peacehaven.entity.BotGroupMember;
 import com.potato.peacehaven.entity.CampMember;
 import com.potato.peacehaven.entity.User;
+import com.potato.peacehaven.repository.BotGroupMemberRepository;
 import com.potato.peacehaven.repository.CampMemberRepository;
 import com.potato.peacehaven.repository.UserRepository;
 import com.potato.peacehaven.service.AdminOperationLogService;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 public class AdminCampMemberController {
 
     private final CampMemberRepository campMemberRepository;
+    private final BotGroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
     private final UserService userService;
     private final AdminOperationLogService logService;
@@ -38,6 +41,13 @@ public class AdminCampMemberController {
     public String list(Model model) {
         List<CampMember> members = campMemberRepository.findAllByOrderBySortOrderAsc();
         model.addAttribute("members", members);
+
+        // 传递群成员有效昵称集合，用于前端显示"已加群"标签
+        Set<String> groupNicknames = groupMemberRepository.findAll().stream()
+                .map(BotGroupMember::getEffectiveName)
+                .collect(Collectors.toSet());
+        model.addAttribute("groupNicknames", groupNicknames);
+
         return "admin/camp-members";
     }
 
@@ -108,6 +118,31 @@ public class AdminCampMemberController {
         logService.record("营地成员", "删除", "删除成员：" + (member != null ? member.getNickname() : id.toString()), request);
         redirectAttributes.addFlashAttribute("message", "成员已删除");
         return "redirect:/admin/camp-members";
+    }
+
+    /**
+     * 检查营地成员是否在群聊中
+     */
+    @GetMapping("/{id}/check-group")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> checkGroup(@PathVariable Long id) {
+        CampMember member = campMemberRepository.findById(id).orElse(null);
+        if (member == null) {
+            return ResponseEntity.ok(Map.of("inGroup", false));
+        }
+
+        String nickname = member.getNickname();
+        List<BotGroupMember> groupMembers = groupMemberRepository.findAll();
+        for (BotGroupMember gm : groupMembers) {
+            if (gm.getEffectiveName().equals(nickname)) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("inGroup", true);
+                result.put("wxid", gm.getWxid());
+                result.put("effectiveName", gm.getEffectiveName());
+                return ResponseEntity.ok(result);
+            }
+        }
+        return ResponseEntity.ok(Map.of("inGroup", false));
     }
 
     /**

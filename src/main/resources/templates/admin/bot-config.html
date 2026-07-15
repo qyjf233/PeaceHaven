@@ -85,10 +85,6 @@
                         <button class="btn-modal btn-modal-save" onclick="cfgTestMessage()">测试消息</button>
                     </div>
                 </div>
-
-                <div class="cfg-section cfg-hint-section">
-                    <p class="cfg-hint">配置项通过环境变量或数据库加载，修改请编辑 .env 文件后重启服务。</p>
-                </div>
             </div>
 
             <div class="bot-panel" id="panel-scheduled-push">
@@ -263,6 +259,7 @@
                         <div class="gm-actions">
                             <input type="text" class="gm-search" id="gmSearch" placeholder="搜索昵称/wxid" oninput="filterMembers()">
                             <button class="btn-modal btn-modal-save gm-refresh" onclick="loadGroupMembers(true)">刷新列表</button>
+                            <button class="btn-modal gm-sync-btn" onclick="syncGroupMembers()">同步到数据库</button>
                         </div>
                     </div>
                     <div class="gm-stats" id="gmStats"></div>
@@ -1060,6 +1057,7 @@
             const roleBadge = role === 'owner' ? '<span class="gm-role gm-role-owner">群主</span>'
                               : role === 'admin' ? '<span class="gm-role gm-role-admin">管理员</span>'
                               : '';
+            const campBadge = m.isCampMember ? '<span class="gm-camp-badge">营地成员</span>' : '';
             const name = m.displayName || m.nickName || m.wxid || '未知';
             const subName = m.displayName ? (m.nickName || '') : '';
             const avatar = m.smallHeadImgUrl || m.bigHeadImgUrl || '';
@@ -1073,7 +1071,7 @@
             html += '<div class="gm-item" data-wxid="' + escHtml(wxid) + '">'
                 + '<div class="gm-avatar">' + (avatar ? '<img src="' + avatar + '" alt="">' : '<span class="gm-avatar-placeholder">' + (name.charAt(0)) + '</span>') + '</div>'
                 + '<div class="gm-info">'
-                + '<div class="gm-name">' + escHtml(name) + roleBadge + '</div>'
+                + '<div class="gm-name">' + escHtml(name) + roleBadge + campBadge + '</div>'
                 + '<div class="gm-sub">' + (subName ? escHtml(subName) + ' · ' : '') + escHtml(wxid) + '</div>'
                 + '</div>' + kickBtn + '</div>';
         }
@@ -1118,7 +1116,11 @@
     async function doKick(wxid, name) {
         const result = await api('POST', API_KICK, { wxid: wxid });
         if (result.success) {
-            showToast(name + ' 已踢出', 'success');
+            let msg = name + ' 已踢出';
+            if (result.data && result.data.campMemberRemoved) {
+                msg += '（同时移除了营地成员）';
+            }
+            showToast(msg, 'success');
             // 从列表中移除该成员
             gmMembers = gmMembers.filter(m => m.wxid !== wxid);
             renderMembers(gmMembers);
@@ -1126,6 +1128,32 @@
             document.getElementById('gmStats').innerHTML = '共 <b>' + gmMembers.length + '</b> 人';
         } else {
             showToast(result.message || '踢出失败', 'error');
+        }
+    }
+
+    /* ====== 同步群成员到数据库 ====== */
+    const API_SYNC = '/admin/api/bot/group/sync';
+
+    window.syncGroupMembers = function () {
+        PHDialog.confirm({
+            title: '同步群成员',
+            message: '将从微信服务器获取最新群成员列表并保存到数据库，是否继续？',
+            icon: '',
+            confirmText: '确认同步',
+            cancelText: '取消',
+            confirmStyle: 'primary',
+            onConfirm: doSyncGroupMembers
+        });
+    };
+
+    async function doSyncGroupMembers() {
+        showToast('正在同步...', '');
+        const result = await api('POST', API_SYNC);
+        if (result.success) {
+            const d = result.data;
+            showToast('同步完成：共 ' + d.total + ' 人，新增 ' + d.added + '，更新 ' + d.updated + '，移除 ' + d.removed, 'success');
+        } else {
+            showToast(result.message || '同步失败', 'error');
         }
     }
 
