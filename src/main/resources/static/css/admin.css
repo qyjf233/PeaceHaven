@@ -567,6 +567,259 @@ body {
     text-align: center;
 }
 
+/* ====== 基本配置面板 ====== */
+.cfg-section {
+    background: var(--admin-card);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    border: 1px solid var(--admin-border);
+}
+
+.cfg-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: var(--admin-text);
+}
+
+.cfg-status-grid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.cfg-status-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cfg-label {
+    font-size: 13px;
+    color: var(--admin-text-muted);
+}
+
+.cfg-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.cfg-badge.badge-ok {
+    background: rgba(76, 175, 80, 0.12);
+    color: #2e7d32;
+}
+
+.cfg-badge.badge-off {
+    background: rgba(158, 158, 158, 0.12);
+    color: #757575;
+}
+
+.cfg-refresh-btn {
+    background: transparent;
+    border: 1px solid var(--admin-border);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+    color: var(--admin-text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, color 0.2s;
+    padding: 0;
+}
+.cfg-refresh-btn:hover {
+    border-color: var(--admin-accent);
+    color: var(--admin-accent);
+}
+.cfg-refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.cfg-refresh-btn.spinning {
+    animation: cfg-spin 0.8s linear infinite;
+}
+@keyframes cfg-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.cfg-login-btn {
+    padding: 4px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+}
+.cfg-login-btn.offline {
+    background: #27ae60;
+    color: #fff;
+}
+.cfg-login-btn.offline:hover { background: #219a52; }
+.cfg-login-btn.online {
+    background: #e74c3c;
+    color: #fff;
+}
+.cfg-login-btn.online:hover { background: #c0392b; }
+.cfg-login-btn.checking {
+    background: rgba(158,158,158,0.2);
+    color: #999;
+    cursor: not-allowed;
+}
+.cfg-login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.cfg-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cfg-info-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.cfg-info-row:last-child {
+    border-bottom: none;
+}
+
+.cfg-info-label {
+    font-size: 13px;
+    color: var(--admin-text-muted);
+    min-width: 140px;
+    flex-shrink: 0;
+}
+
+.cfg-info-value {
+    font-size: 13px;
+    color: var(--admin-text);
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+}
+
+.cfg-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.cfg-form-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.cfg-form-label {
+    font-size: 13px;
+    color: var(--admin-text-muted);
+    min-width: 140px;
+    flex-shrink: 0;
+    text-align: right;
+}
+
+.cfg-form-input {
+    flex: 1;
+    max-width: 500px;
+}
+
+.cfg-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cfg-hint {
+    font-size: 12px;
+    color: var(--admin-text-muted);
+    margin: 0;
+}
+
+.cfg-hint-section {
+    background: transparent;
+    border: none;
+    padding: 8px 4px;
+}
+
+.cfg-log {
+    margin-top: 12px;
+    padding: 12px;
+    background: #1a1a2e;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.8;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.cfg-log p {
+    margin: 0;
+    color: #ccc;
+}
+
+/* QR 登录弹窗 */
+.qr-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+}
+.qr-overlay.show { display: flex; }
+.qr-box {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    text-align: center;
+    min-width: 300px;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.3);
+}
+.qr-box h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+    color: #333;
+}
+.qr-img {
+    width: 220px;
+    height: 220px;
+    object-fit: contain;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+.qr-status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #888;
+}
+.qr-status.success { color: #27ae60; font-weight: 600; }
+.qr-status.error { color: #e74c3c; }
+.qr-close {
+    margin-top: 16px;
+    padding: 6px 20px;
+    border: none;
+    background: #eee;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.qr-close:hover { background: #ddd; }
+
 @media (max-width: 768px) {
     .bot-config-layout {
         flex-direction: column;

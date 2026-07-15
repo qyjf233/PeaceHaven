@@ -6,6 +6,7 @@
     <meta name="_csrf" th:content="${_csrf}">
     <title>机器人配置 - PeaceHaven Admin</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
 </head>
 <body>
 <div class="admin-container">
@@ -19,7 +20,10 @@
     <div class="bot-config-layout">
         <nav class="bot-sidebar">
             <ul class="bot-nav-list">
-                <li class="bot-nav-item active" data-panel="scheduled-push">
+                <li class="bot-nav-item active" data-panel="basic-config">
+                    <span class="bot-nav-icon">⚙️</span><span class="bot-nav-label">基本配置</span>
+                </li>
+                <li class="bot-nav-item" data-panel="scheduled-push">
                     <span class="bot-nav-icon">⏰</span><span class="bot-nav-label">定时推送</span>
                 </li>
                 <li class="bot-nav-item" data-panel="manual-push">
@@ -35,7 +39,59 @@
         </nav>
 
         <main class="bot-content">
-            <div class="bot-panel active" id="panel-scheduled-push">
+            <!-- ====== 基本配置面板 ====== -->
+            <div class="bot-panel active" id="panel-basic-config">
+                <div class="cfg-section">
+                    <h3 class="cfg-title">连接状态</h3>
+                    <div class="cfg-status-grid">
+                        <div class="cfg-status-item">
+                            <span class="cfg-label">API 配置</span>
+                            <span class="cfg-badge" id="cfgConfiguredBadge">-</span>
+                        </div>
+                        <div class="cfg-status-item">
+                            <span class="cfg-label">设备绑定</span>
+                            <span class="cfg-badge" id="cfgDeviceBadge">-</span>
+                        </div>
+                        <div class="cfg-status-item">
+                            <span class="cfg-label">设备在线</span>
+                            <span class="cfg-badge badge-off" id="cfgOnlineBadge">检测中...</span>
+                            <button class="cfg-refresh-btn" onclick="refreshOnline()" id="btnRefreshOnline" title="刷新状态">↺</button>
+                            <button class="cfg-login-btn offline" id="btnLoginLogout" onclick="onLoginLogout()" disabled>状态检查中</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cfg-section">
+                    <h3 class="cfg-title">配置信息</h3>
+                    <div class="cfg-info-list">
+                        <div class="cfg-info-row">
+                            <span class="cfg-info-label">API 地址</span>
+                            <span class="cfg-info-value" id="cfgBaseUrl">-</span>
+                        </div>
+                        <div class="cfg-info-row">
+                            <span class="cfg-info-label">设备 ID (appId)</span>
+                            <span class="cfg-info-value" id="cfgAppId">-</span>
+                        </div>
+                        <div class="cfg-info-row">
+                            <span class="cfg-info-label">回调地址</span>
+                            <span class="cfg-info-value" id="cfgCallbackUrl">-</span>
+                        </div>
+                        <div class="cfg-info-row">
+                            <span class="cfg-info-label">目标群聊</span>
+                            <span class="cfg-info-value" id="cfgGroupId">-</span>
+                        </div>
+                    </div>
+                    <div class="cfg-actions" style="margin-top: 16px;">
+                        <button class="btn-modal btn-modal-save" onclick="cfgTestMessage()">测试消息</button>
+                    </div>
+                </div>
+
+                <div class="cfg-section cfg-hint-section">
+                    <p class="cfg-hint">配置项通过环境变量或数据库加载，修改请编辑 .env 文件后重启服务。</p>
+                </div>
+            </div>
+
+            <div class="bot-panel" id="panel-scheduled-push">
                 <div class="schedule-grid">
 
                     <!-- 尸潮 -->
@@ -241,12 +297,23 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- 扫码登录弹窗 -->
+<div class="qr-overlay" id="qrOverlay">
+    <div class="qr-box">
+        <h3>微信扫码登录</h3>
+        <img class="qr-img" id="qrImg" alt="登录二维码">
+        <div class="qr-status" id="qrStatus">等待扫码...</div>
+        <button class="qr-close" onclick="closeQrModal()">关闭</button>
+    </div>
+</div>
+
 <script>
 (function () {
     const CSRF = document.querySelector('meta[name="_csrf"]').getAttribute('content');
     const API_S = '/admin/api/bot/schedules';
     const API_M = '/admin/api/bot/messages';
     const API_T = '/admin/api/bot/templates';
+    const API_CFG = '/admin/api/bot/config';
     const DAY_OPTS = '<option value="1">周一</option><option value="2">周二</option>'
         + '<option value="3">周三</option><option value="4">周四</option>'
         + '<option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>';
@@ -280,6 +347,252 @@
         clearTimeout(t._timer);
         t._timer = setTimeout(() => t.className = 'toast', 2500);
     };
+
+    /* ====== 基本配置操作 ====== */
+    let deviceOnline = false; // 当前设备在线状态
+
+    function updateOnlineBadge(online) {
+        deviceOnline = online;
+        const badge = document.getElementById('cfgOnlineBadge');
+        if (!badge) return;
+        badge.className = 'cfg-badge ' + (online ? 'badge-ok' : 'badge-off');
+        badge.textContent = online ? '在线' : '离线';
+        updateLoginLogoutBtn(online);
+    }
+
+    /** 更新登录/退出按钮状态 */
+    function updateLoginLogoutBtn(online) {
+        const btn = document.getElementById('btnLoginLogout');
+        if (!btn) return;
+        btn.disabled = false;
+        if (online) {
+            btn.textContent = '退出登录';
+            btn.className = 'cfg-login-btn online';
+        } else {
+            btn.textContent = '扫码登录';
+            btn.className = 'cfg-login-btn offline';
+        }
+    }
+
+    /** 设置按钮为检查中状态 */
+    function setLoginLogoutChecking() {
+        const btn = document.getElementById('btnLoginLogout');
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = '状态检查中';
+        btn.className = 'cfg-login-btn checking';
+    }
+
+    /** 登录/退出按钮点击 */
+    window.onLoginLogout = function () {
+        if (deviceOnline) {
+            // 在线 → 二次确认后退出
+            PHDialog.confirm({
+                title: '退出登录',
+                message: '确认退出当前微信设备登录？退出后需重新扫码登录。',
+                icon: '⚠️',
+                confirmText: '确认退出',
+                cancelText: '取消',
+                confirmStyle: 'danger',
+                onConfirm: doLogout
+            });
+        } else {
+            // 离线 → 扫码登录
+            cfgLogin();
+        }
+    };
+
+    function updateStatusBadges(data) {
+        const cfgBadge = document.getElementById('cfgConfiguredBadge');
+        const devBadge = document.getElementById('cfgDeviceBadge');
+        if (cfgBadge) {
+            cfgBadge.className = 'cfg-badge ' + (data.configured ? 'badge-ok' : 'badge-off');
+            cfgBadge.textContent = data.configured ? '已配置' : '未配置';
+        }
+        if (devBadge) {
+            devBadge.className = 'cfg-badge ' + (data.deviceBound ? 'badge-ok' : 'badge-off');
+            devBadge.textContent = data.deviceBound ? '已绑定' : '未绑定';
+        }
+    }
+
+    function loadConfigToForm(data) {
+        document.getElementById('cfgBaseUrl').textContent = data.baseUrl || '未配置';
+        document.getElementById('cfgAppId').textContent = data.appId || '未配置';
+        document.getElementById('cfgCallbackUrl').textContent = data.callbackUrl || '未配置';
+        document.getElementById('cfgGroupId').textContent = data.groupId || '未配置';
+    }
+
+    /** 刷新在线状态 */
+    window.refreshOnline = async function () {
+        const btn = document.getElementById('btnRefreshOnline');
+        btn.disabled = true;
+        btn.classList.add('spinning');
+        setLoginLogoutChecking();
+        document.getElementById('cfgOnlineBadge').textContent = '检测中...';
+        const result = await api('POST', API_CFG + '/checkOnline');
+        updateOnlineBadge(result.online === true);
+        btn.disabled = false;
+        btn.classList.remove('spinning');
+    };
+
+    /** 退出登录 */
+    async function doLogout() {
+        setLoginLogoutChecking();
+        const result = await api('POST', API_CFG + '/logout');
+        if (result.success) {
+            updateOnlineBadge(false);
+            showToast('已退出登录', 'success');
+            // 刷新配置展示
+            const status = await api('GET', API_CFG + '/status');
+            if (status.success && status.data) {
+                updateStatusBadges(status.data);
+                loadConfigToForm(status.data);
+            }
+        } else {
+            showToast(result.message || '退出失败', 'error');
+            refreshOnline();
+        }
+    }
+
+    /* ====== 扫码登录流程 ====== */
+    let loginPollTimer = null;
+    let loginPollStopped = true;
+
+    window.cfgLogin = async function () {
+        showToast('正在获取登录二维码...', '');
+        const result = await api('GET', API_CFG + '/loginQrCode');
+        if (!result.success || !result.data) {
+            showToast(result.message || '获取二维码失败', 'error');
+            return;
+        }
+        const { qrUrl, qrImgBase64, uuid, appId } = result.data;
+
+        // 展示二维码
+        const qrImg = document.getElementById('qrImg');
+        if (qrUrl) {
+            qrImg.src = qrUrl;
+        } else if (qrImgBase64) {
+            qrImg.src = 'data:image/png;base64,' + qrImgBase64;
+        }
+        document.getElementById('qrStatus').textContent = '等待扫码...';
+        document.getElementById('qrStatus').className = 'qr-status';
+        document.getElementById('qrOverlay').classList.add('show');
+
+        // 开始轮询 checkLogin
+        startLoginPoll(appId, uuid);
+    };
+
+    function startLoginPoll(appId, uuid) {
+        stopLoginPoll();
+        loginPollStopped = false;
+        let attempts = 0;
+        const maxAttempts = 60;
+
+        async function poll() {
+            if (loginPollStopped) return;
+            attempts++;
+            if (attempts > maxAttempts) {
+                stopLoginPoll();
+                updateQrStatus('二维码已过期，请重新获取', 'error');
+                return;
+            }
+
+            const result = await api('POST', API_CFG + '/checkLogin', { appId, uuid });
+            if (loginPollStopped) return; // 在等待响应期间被停止了
+
+            if (!result.success) {
+                stopLoginPoll();
+                updateQrStatus('请求失败: ' + (result.message || ''), 'error');
+                return;
+            }
+
+            if (result.loggedIn) {
+                // 登录成功
+                stopLoginPoll();
+                const d = result.data || {};
+                const nick = d.nickName || d.wxid || '';
+                updateQrStatus('登录成功！' + (nick ? '（' + nick + '）' : ''), 'success');
+                updateOnlineBadge(true);
+                showToast('设备登录成功' + (nick ? '：' + nick : ''), 'success');
+                // 刷新配置展示
+                const status = await api('GET', API_CFG + '/status');
+                if (status.success && status.data) {
+                    updateStatusBadges(status.data);
+                    loadConfigToForm(status.data);
+                }
+                return;
+            }
+
+            if (result.status === 4) {
+                // 已取消
+                stopLoginPoll();
+                updateQrStatus('已取消登录', 'error');
+                return;
+            }
+
+            if (result.status === 1) {
+                // 已扫码未确认
+                const nick = result.data && result.data.nickName ? result.data.nickName : '';
+                updateQrStatus('已扫码，请在手机上确认' + (nick ? '（' + nick + '）' : ''), '');
+            } else {
+                // status==0 或其他，继续等待
+                updateQrStatus('等待扫码...（第' + attempts + '次）', '');
+            }
+
+            // 响应返回后才开始计时下一次，避免并发请求
+            if (!loginPollStopped) {
+                loginPollTimer = setTimeout(poll, 5000);
+            }
+        }
+
+        // 首次立即发起
+        poll();
+    }
+
+    function stopLoginPoll() {
+        loginPollStopped = true;
+        if (loginPollTimer) {
+            clearTimeout(loginPollTimer);
+            loginPollTimer = null;
+        }
+    }
+
+    function updateQrStatus(text, cls) {
+        const el = document.getElementById('qrStatus');
+        el.textContent = text;
+        el.className = 'qr-status' + (cls ? ' ' + cls : '');
+    }
+
+    window.closeQrModal = function () {
+        stopLoginPoll();
+        document.getElementById('qrOverlay').classList.remove('show');
+    };
+
+    window.cfgTestMessage = async function () {
+        if (!confirm('向配置的群聊发送一条测试消息？')) return;
+        showToast('正在发送...', '');
+        const result = await api('POST', API_CFG + '/testMessage');
+        if (result.success) {
+            showToast('测试消息发送成功', 'success');
+        } else {
+            showToast(result.message || '发送失败', 'error');
+        }
+    };
+
+    // 页面加载时加载配置状态 + 自动检测在线
+    (async function () {
+        const result = await api('GET', API_CFG + '/status');
+        if (result.success && result.data) {
+            updateStatusBadges(result.data);
+            loadConfigToForm(result.data);
+            // 配置完整且设备已绑定时，自动检测在线状态
+            if (result.data.configured && result.data.deviceBound) {
+                refreshOnline();
+            } else {
+                updateOnlineBadge(false);
+            }
+        }
+    })();
 
     /* ====== 弹窗开关 ====== */
     window.openModal = function (type, name, btnEl) {
@@ -636,5 +949,6 @@
     };
 })();
 </script>
+<script th:src="@{/js/ph-dialog.js}"></script>
 </body>
 </html>
