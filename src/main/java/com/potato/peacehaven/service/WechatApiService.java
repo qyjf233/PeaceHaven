@@ -200,16 +200,24 @@ public class WechatApiService {
      * @param toWxid 接收方 wxid（好友）或 xxx@chatroom（群聊）
      * @param content 消息正文，支持 \n 换行
      * @param mentionList @成员的 wxid 列表（仅群聊有效），可为 null
-     * @param mentionAll 是否 @所有人
+     * @param mentionAll 是否 @所有人（群聊有效，需群主或管理员权限）
      */
     public WechatApiResponse sendText(String toWxid, String content,
                                       List<String> mentionList, boolean mentionAll) {
+        // @全体：ats="notify@all"，content 需包含 @所有人
+        if (mentionAll) {
+            if (!content.contains("@所有人")) {
+                content = "@所有人 " + content;
+            }
+            Map<String, Object> body = bodyWith("toWxid", toWxid, "content", content);
+            body.put("ats", "notify@all");
+            return post("/message/postText", body);
+        }
+
+        // @特定成员：ats=wxid1,wxid2，content 需包含 @昵称（由调用方保证）
         Map<String, Object> body = bodyWith("toWxid", toWxid, "content", content);
         if (mentionList != null && !mentionList.isEmpty()) {
             body.put("ats", String.join(",", mentionList));
-        }
-        if (mentionAll) {
-            body.put("mentionAll", true);
         }
         return post("/message/postText", body);
     }

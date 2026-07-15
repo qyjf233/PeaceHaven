@@ -318,6 +318,8 @@
         + '<option value="3">周三</option><option value="4">周四</option>'
         + '<option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>';
     const FIXED_TYPES = ['尸潮', '铁手', '巡逻', '资源战', '争霸赛'];
+    const TYPE_DATA = {'尸潮':'zombie_horde','铁手':'iron_hand','巡逻':'patrol','资源战':'resource_war','争霸赛':'championship'};
+    const DOW_PREFIX = {'0':'每天','1':'每周一','5':'周五','6':'每周六','7':'每周日'};
 
     let currentType = '';
     let cachedMessages = [];
@@ -706,11 +708,63 @@
         const result = await api('PUT', API_S + '/' + id, { eventTime: time, dayOfWeek: dow });
         if (result.success) {
             showToast('保存成功', 'success');
-            setTimeout(() => location.reload(), 600);
+            refreshCard(currentType, id, time, dow);
+            closeModal();
         } else {
             showToast(result.message || '保存失败', 'error');
         }
     };
+
+    /**
+     * 局部刷新卡片：更新 info 文本 + 按钮 data-time 属性
+     */
+    function refreshCard(type, cfgId, time, dow) {
+        const dataType = TYPE_DATA[type];
+        if (!dataType) return;
+        const card = document.querySelector('.s-card[data-type="' + dataType + '"]');
+        if (!card) return;
+
+        // 更新 info 文本
+        const infoEl = card.querySelector('.s-card-info');
+        if (infoEl) {
+            const isResourceWar = type === '资源战';
+            const isChampionship = type === '争霸赛';
+            const isPatrol = type === '巡逻';
+
+            if (isChampionship) {
+                // 争霸赛有两条记录，按 dow 找到对应行更新
+                const prefix = DOW_PREFIX[dow] || ('周' + dow);
+                const spans = infoEl.querySelectorAll('span > span');
+                // 重刷新整个 info
+                let html = '';
+                const btns = card.querySelectorAll('.s-card-btn');
+                btns.forEach(btn => {
+                    const bdow = btn.dataset.dow;
+                    const btime = btn.dataset.cfgId == cfgId ? time : (btn.dataset.time || '待设置');
+                    const pfx = DOW_PREFIX[bdow] || ('周' + bdow);
+                    html += '<span>' + pfx + ' ' + btime + '</span><br>';
+                });
+                infoEl.innerHTML = html;
+            } else if (isResourceWar) {
+                infoEl.innerHTML = '<span>每周一 ' + time + '</span>';
+            } else if (isPatrol) {
+                const [h, m] = time.split(':').map(Number);
+                const endH = (h + 2) % 24;
+                const endTime = String(endH).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+                infoEl.innerHTML = '<span>每天 ' + time + '~' + endTime + '</span>';
+            } else {
+                const prefix = DOW_PREFIX[dow] || ('每周' + dow);
+                infoEl.innerHTML = '<span>' + prefix + ' ' + time + '</span>';
+            }
+        }
+
+        // 更新按钮的 data-time 属性
+        const btn = card.querySelector('.s-card-btn[data-cfg-id="' + cfgId + '"]');
+        if (btn) {
+            btn.dataset.time = time;
+            btn.dataset.dow = dow;
+        }
+    }
 
     window.initSchedule = function () {
         showToast('请先在 DataInitializer 中初始化该日程', 'error');

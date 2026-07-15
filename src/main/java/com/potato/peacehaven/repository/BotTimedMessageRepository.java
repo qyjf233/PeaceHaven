@@ -8,4 +8,6 @@ import java.util.List;
 public interface BotTimedMessageRepository extends JpaRepository<BotTimedMessage, Long> {
 
     List<BotTimedMessage> findByEventTypeOrderByAdvanceMinutesDesc(String eventType);
+
+    List<BotTimedMessage> findByEventTypeAndEnabledTrue(String eventType);
 }

@@ -13,4 +13,6 @@ public interface BotScheduleConfigRepository extends JpaRepository<BotScheduleCo
     Optional<BotScheduleConfig> findByEventTypeAndDayOfWeek(String eventType, Integer dayOfWeek);
 
     List<BotScheduleConfig> findByEventTypeOrderByEventDatetimeAsc(String eventType);
+
+    List<BotScheduleConfig> findByDayOfWeekIn(List<Integer> dayOfWeeks);
 }
