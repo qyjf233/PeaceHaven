@@ -1,13 +1,7 @@
 package com.potato.peacehaven.config;
 
-import com.potato.peacehaven.entity.Activity;
-import com.potato.peacehaven.entity.ActivityConfig;
-import com.potato.peacehaven.entity.ActivityJudge;
-import com.potato.peacehaven.entity.User;
-import com.potato.peacehaven.repository.ActivityConfigRepository;
-import com.potato.peacehaven.repository.ActivityJudgeRepository;
-import com.potato.peacehaven.repository.ActivityRepository;
-import com.potato.peacehaven.repository.UserRepository;
+import com.potato.peacehaven.entity.*;
+import com.potato.peacehaven.repository.*;
 import com.potato.peacehaven.service.ContestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +10,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -28,11 +23,27 @@ public class DataInitializer implements ApplicationRunner {
     private final ActivityConfigRepository configRepository;
     private final ActivityJudgeRepository judgeRepository;
     private final UserRepository userRepository;
+    private final BotScheduleConfigRepository botScheduleConfigRepository;
 
     @Override
     public void run(ApplicationArguments args) {
         initBuildingContest();
         initBattleShowdown();
+        initBotSchedules();
+    }
+
+    /** 初始化机器人定时推送基础配置（首次启动时） */
+    private void initBotSchedules() {
+        if (botScheduleConfigRepository.count() > 0) return;
+
+        botScheduleConfigRepository.save(BotScheduleConfig.builder()
+                .eventType("zombie_horde").dayOfWeek(6).eventTime(LocalTime.of(20, 30)).build());
+        botScheduleConfigRepository.save(BotScheduleConfig.builder()
+                .eventType("iron_hand").dayOfWeek(7).eventTime(LocalTime.of(20, 30)).build());
+        botScheduleConfigRepository.save(BotScheduleConfig.builder()
+                .eventType("patrol").dayOfWeek(0).eventTime(LocalTime.of(19, 30)).build());
+
+        log.info("已初始化机器人定时推送基础配置");
     }
 
     private void initBuildingContest() {

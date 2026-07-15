@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf}">
+    <title>机器人配置 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>机器人配置</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin" class="btn-back">← 返回管理后台</a>
+        </div>
+    </header>
+
+    <div class="bot-config-layout">
+        <nav class="bot-sidebar">
+            <ul class="bot-nav-list">
+                <li class="bot-nav-item active" data-panel="scheduled-push">
+                    <span class="bot-nav-icon">⏰</span><span class="bot-nav-label">定时推送</span>
+                </li>
+                <li class="bot-nav-item" data-panel="manual-push">
+                    <span class="bot-nav-icon">📤</span><span class="bot-nav-label">主动推送</span>
+                </li>
+                <li class="bot-nav-item" data-panel="group-members">
+                    <span class="bot-nav-icon">👥</span><span class="bot-nav-label">群聊成员</span>
+                </li>
+                <li class="bot-nav-item" data-panel="group-manage">
+                    <span class="bot-nav-icon">💬</span><span class="bot-nav-label">群聊管理</span>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="bot-content">
+            <div class="bot-panel active" id="panel-scheduled-push">
+                <div class="schedule-grid">
+
+                    <!-- 尸潮 -->
+                    <div class="s-card" data-type="zombie_horde">
+                        <div class="s-card-accent"></div>
+                        <div class="s-card-body">
+                            <div class="s-card-icon">🧟</div>
+                            <div class="s-card-name">尸潮</div>
+                            <div class="s-card-info">
+                                <th:block th:if="${scheduleByType.containsKey('zombie_horde') and !scheduleByType['zombie_horde'].isEmpty()}">
+                                    <span th:each="cfg : ${scheduleByType['zombie_horde']}">每周六
+                                        <span th:text="${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : '--:--'}">20:30</span>
+                                    </span>
+                                </th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('zombie_horde')}">未配置</th:block>
+                            </div>
+                        </div>
+                        <div class="s-card-foot">
+                            <th:block th:if="${scheduleByType.containsKey('zombie_horde') and !scheduleByType['zombie_horde'].isEmpty()}">
+                                <button th:each="cfg : ${scheduleByType['zombie_horde']}" class="s-card-btn"
+                                        th:attr="data-cfg-id=${cfg.id},data-time=${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : ''},data-dow=${cfg.dayOfWeek}"
+                                        onclick="openModal('zombie_horde','尸潮',this)">编辑</button>
+                            </th:block>
+                            <th:block th:unless="${scheduleByType.containsKey('zombie_horde')}">
+                                <button class="s-card-btn" onclick="openModal('zombie_horde','尸潮',this)">编辑</button>
+                            </th:block>
+                        </div>
+                    </div>
+
+                    <!-- 铁手 -->
+                    <div class="s-card" data-type="iron_hand">
+                        <div class="s-card-accent"></div>
+                        <div class="s-card-body">
+                            <div class="s-card-icon">🦾</div>
+                            <div class="s-card-name">铁手</div>
+                            <div class="s-card-info">
+                                <th:block th:if="${scheduleByType.containsKey('iron_hand') and !scheduleByType['iron_hand'].isEmpty()}">
+                                    <span th:each="cfg : ${scheduleByType['iron_hand']}">每周日
+                                        <span th:text="${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : '--:--'}">20:30</span>
+                                    </span>
+                                </th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('iron_hand')}">未配置</th:block>
+                            </div>
+                        </div>
+                        <div class="s-card-foot">
+                            <th:block th:if="${scheduleByType.containsKey('iron_hand') and !scheduleByType['iron_hand'].isEmpty()}">
+                                <button th:each="cfg : ${scheduleByType['iron_hand']}" class="s-card-btn"
+                                        th:attr="data-cfg-id=${cfg.id},data-time=${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : ''},data-dow=${cfg.dayOfWeek}"
+                                        onclick="openModal('iron_hand','铁手',this)">编辑</button>
+                            </th:block>
+                            <th:block th:unless="${scheduleByType.containsKey('iron_hand')}">
+                                <button class="s-card-btn" onclick="openModal('iron_hand','铁手',this)">编辑</button>
+                            </th:block>
+                        </div>
+                    </div>
+
+                    <!-- 资源战 -->
+                    <div class="s-card" data-type="resource_war">
+                        <div class="s-card-accent"></div>
+                        <div class="s-card-body">
+                            <div class="s-card-icon">⚔️</div>
+                            <div class="s-card-name">资源战</div>
+                            <div class="s-card-info">
+                                <th:block th:if="${scheduleByType.containsKey('resource_war') and !scheduleByType['resource_war'].isEmpty()}">
+                                    已配置 <span th:text="${#lists.size(scheduleByType['resource_war'])}">0</span> 条
+                                </th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('resource_war') and !scheduleByType['resource_war'].isEmpty()}">每周一 · 待配置</th:block>
+                            </div>
+                        </div>
+                        <div class="s-card-foot">
+                            <button class="s-card-btn" onclick="openModal('resource_war','资源战',this)">编辑</button>
+                        </div>
+                    </div>
+
+                    <!-- 巡逻 -->
+                    <div class="s-card" data-type="patrol">
+                        <div class="s-card-accent"></div>
+                        <div class="s-card-body">
+                            <div class="s-card-icon">🚶</div>
+                            <div class="s-card-name">巡逻</div>
+                            <div class="s-card-info">
+                                <th:block th:if="${scheduleByType.containsKey('patrol') and !scheduleByType['patrol'].isEmpty()}">
+                                    <span th:each="cfg : ${scheduleByType['patrol']}">每天
+                                        <span th:text="${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : '--:--'}">19:30</span>~<span th:text="${cfg.eventTime != null ? #temporals.format(cfg.eventTime.plusHours(2),'HH:mm') : '--:--'}">21:30</span>
+                                    </span>
+                                </th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('patrol')}">未配置</th:block>
+                            </div>
+                        </div>
+                        <div class="s-card-foot">
+                            <th:block th:if="${scheduleByType.containsKey('patrol') and !scheduleByType['patrol'].isEmpty()}">
+                                <button th:each="cfg : ${scheduleByType['patrol']}" class="s-card-btn"
+                                        th:attr="data-cfg-id=${cfg.id},data-time=${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : ''},data-dow=0"
+                                        onclick="openModal('patrol','巡逻',this)">编辑</button>
+                            </th:block>
+                            <th:block th:unless="${scheduleByType.containsKey('patrol')}">
+                                <button class="s-card-btn" onclick="openModal('patrol','巡逻',this)">编辑</button>
+                            </th:block>
+                        </div>
+                    </div>
+
+                    <!-- 争霸赛 -->
+                    <div class="s-card" data-type="championship">
+                        <div class="s-card-accent"></div>
+                        <div class="s-card-body">
+                            <div class="s-card-icon">🏆</div>
+                            <div class="s-card-name">争霸赛</div>
+                            <div class="s-card-info">
+                                <th:block th:if="${scheduleByType.containsKey('championship') and !scheduleByType['championship'].isEmpty()}">
+                                    已配置 <span th:text="${#lists.size(scheduleByType['championship'])}">0</span> 条
+                                </th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('championship') and !scheduleByType['championship'].isEmpty()}">周五/六 · 待配置</th:block>
+                            </div>
+                        </div>
+                        <div class="s-card-foot">
+                            <button class="s-card-btn" onclick="openModal('championship','争霸赛',this)">编辑</button>
+                        </div>
+                    </div>
+
+                    <!-- 约战 -->
+                    <div class="s-card" data-type="battle_appointment">
+                        <div class="s-card-accent"></div>
+                        <div class="s-card-body">
+                            <div class="s-card-icon">🎯</div>
+                            <div class="s-card-name">约战</div>
+                            <div class="s-card-info">
+                                <th:block th:if="${scheduleByType.containsKey('battle_appointment') and !scheduleByType['battle_appointment'].isEmpty()}">
+                                    <span th:text="${#lists.size(scheduleByType['battle_appointment'])}">0</span> 条约战
+                                </th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('battle_appointment') and !scheduleByType['battle_appointment'].isEmpty()}">暂无约战</th:block>
+                            </div>
+                        </div>
+                        <div class="s-card-foot">
+                            <button class="s-card-btn" onclick="openModal('battle_appointment','约战',this)">编辑</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="bot-panel" id="panel-manual-push">
+                <div class="bot-panel-placeholder"><p>主动推送功能配置区域（待实现）</p></div>
+            </div>
+            <div class="bot-panel" id="panel-group-members">
+                <div class="bot-panel-placeholder"><p>群聊成员管理区域（待实现）</p></div>
+            </div>
+            <div class="bot-panel" id="panel-group-manage">
+                <div class="bot-panel-placeholder"><p>群聊管理功能区域（待实现）</p></div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ====== 编辑弹窗 ====== -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3 id="modalTitle">编辑</h3>
+            <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-tabs">
+                <button class="modal-tab active" onclick="switchTab(this,'tab-schedule')">日程设置</button>
+                <button class="modal-tab" onclick="switchTab(this,'tab-messages')">定时消息</button>
+                <button class="modal-tab" onclick="switchTab(this,'tab-templates')">消息模板</button>
+            </div>
+            <div class="modal-tab-content active" id="tab-schedule">
+                <div id="scheduleArea"></div>
+            </div>
+            <div class="modal-tab-content" id="tab-messages">
+                <div id="messagesArea"></div>
+            </div>
+            <div class="modal-tab-content" id="tab-templates">
+                <div id="templatesArea"></div>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-modal btn-modal-cancel" onclick="closeModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function () {
+    const CSRF = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+    const API_S = '/admin/api/bot/schedules';
+    const API_M = '/admin/api/bot/messages';
+    const API_T = '/admin/api/bot/templates';
+    const DAY_OPTS = '<option value="1">周一</option><option value="2">周二</option>'
+        + '<option value="3">周三</option><option value="4">周四</option>'
+        + '<option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>';
+    const FIXED_TYPES = ['zombie_horde', 'iron_hand', 'patrol'];
+
+    let currentType = '';
+    let cachedMessages = [];
+
+    /* ====== API ====== */
+    async function api(method, url, body) {
+        const opts = { method, headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json' } };
+        if (body) opts.body = JSON.stringify(body);
+        return (await fetch(url, opts)).json();
+    }
+
+    /* ====== 侧边栏 ====== */
+    document.querySelectorAll('.bot-nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.bot-nav-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            document.querySelectorAll('.bot-panel').forEach(p =>
+                p.classList.toggle('active', p.id === 'panel-' + item.dataset.panel));
+        });
+    });
+
+    /* ====== Toast ====== */
+    window.showToast = function (msg, type) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast show ' + (type || '');
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.className = 'toast', 2500);
+    };
+
+    /* ====== 弹窗开关 ====== */
+    window.openModal = function (type, name, btnEl) {
+        currentType = type;
+        document.getElementById('modalTitle').textContent = name;
+
+        // 重置 tab
+        document.querySelectorAll('.modal-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+        document.querySelectorAll('.modal-tab-content').forEach((c, i) => c.classList.toggle('active', i === 0));
+
+        // 渲染日程 Tab
+        if (FIXED_TYPES.includes(type)) {
+            renderFixedSchedule(btnEl);
+        } else {
+            document.getElementById('scheduleArea').innerHTML =
+                '<p class="modal-placeholder">该类型的日程设置（待实现）</p>';
+        }
+
+        // 加载定时消息
+        loadMessages(type);
+
+        // 加载消息模板
+        loadTemplates(type);
+
+        document.getElementById('editModal').classList.add('show');
+    };
+
+    window.closeModal = function () {
+        document.getElementById('editModal').classList.remove('show');
+    };
+
+    window.switchTab = function (btn, targetId) {
+        document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(targetId).classList.add('active');
+    };
+
+    document.getElementById('editModal').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    /* ====== 日程设置 - 固定类型渲染 ====== */
+    function renderFixedSchedule(btnEl) {
+        const area = document.getElementById('scheduleArea');
+        const cfgId  = btnEl ? btnEl.dataset.cfgId : '';
+        const time   = btnEl && btnEl.dataset.time ? btnEl.dataset.time : '20:00';
+        const dow    = btnEl && btnEl.dataset.dow ? btnEl.dataset.dow : '6';
+        const isPatrol = currentType === 'patrol';
+
+        let html = '<div class="m-form-row">'
+            + '<label>周期</label>'
+            + '<select class="m-input" id="mDayOfWeek">' + DAY_OPTS + '</select>'
+            + '</div>'
+            + '<div class="m-form-row">'
+            + '<label>' + (isPatrol ? '开始时间' : '时间') + '</label>'
+            + '<input type="time" class="m-input" id="mEventTime" value="' + time + '">'
+            + (isPatrol ? '<span class="m-hint">~ 自动 +2h</span>' : '')
+            + '</div>';
+
+        if (!cfgId) {
+            html += '<div class="m-form-row"><button class="btn-modal btn-modal-save" onclick="initSchedule()">初始化</button></div>';
+        } else {
+            html += '<div class="m-form-row"><button class="btn-modal btn-modal-save" onclick="saveSchedule(' + cfgId + ')">保存</button></div>';
+        }
+
+        area.innerHTML = html;
+        document.getElementById('mDayOfWeek').value = dow;
+        if (isPatrol) document.getElementById('mDayOfWeek').disabled = true;
+    }
+
+    /* ====== 保存日程 ====== */
+    window.saveSchedule = async function (id) {
+        const time = document.getElementById('mEventTime').value;
+        const dow  = document.getElementById('mDayOfWeek').value;
+        if (!time) { showToast('请选择时间', 'error'); return; }
+
+        const result = await api('PUT', API_S + '/' + id, { eventTime: time, dayOfWeek: dow });
+        if (result.success) {
+            showToast('保存成功', 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast(result.message || '保存失败', 'error');
+        }
+    };
+
+    window.initSchedule = function () {
+        showToast('请先在 DataInitializer 中初始化该日程', 'error');
+    };
+
+    /* ====== 定时消息 ====== */
+    async function loadMessages(type) {
+        const area = document.getElementById('messagesArea');
+        area.innerHTML = '<p class="modal-placeholder">加载中...</p>';
+
+        const result = await api('GET', API_M + '/' + type);
+        if (!result.success) { area.innerHTML = '<p class="modal-placeholder">加载失败</p>'; return; }
+
+        cachedMessages = result.data || [];
+        renderMessages(cachedMessages);
+    }
+
+    function renderMessages(msgs) {
+        const area = document.getElementById('messagesArea');
+        let html = '';
+
+        if (msgs.length === 0) {
+            html = '<p class="msg-empty">暂无定时消息</p>';
+        } else {
+            html = '<ul class="msg-list">';
+            msgs.forEach(m => {
+                const advText = formatAdvance(m.advanceMinutes);
+                const mentionLabel = m.mentionAll ? '@全体' : '不@全体';
+                html += '<li class="msg-item" data-id="' + m.id + '">'
+                    + '<div class="msg-info">'
+                    + '<span class="msg-badge">' + advText + '</span>'
+                    + '<span class="msg-mention ' + (m.mentionAll ? 'mention-on' : '') + '">' + mentionLabel + '</span>'
+                    + (m.messageText ? '<span class="msg-text">' + m.messageText + '</span>' : '')
+                    + '</div>'
+                    + '<button class="msg-del" onclick="deleteMsg(' + m.id + ')" title="删除">×</button>'
+                    + '</li>';
+            });
+            html += '</ul>';
+        }
+
+        html += '<div class="msg-add-form">'
+            + '<div class="m-form-row">'
+            + '<label>提前</label>'
+            + '<input type="number" class="m-input m-input-sm" id="msgAdv" value="30" min="1">'
+            + '<span class="m-hint">分钟</span>'
+            + '</div>'
+            + '<div class="m-form-row">'
+            + '<label>@全体</label>'
+            + '<label class="m-switch"><input type="checkbox" id="msgMention"><span class="m-slider"></span></label>'
+            + '</div>'
+            + '<div class="m-form-row">'
+            + '<button class="btn-modal btn-modal-save" onclick="addMsg()">添加消息</button>'
+            + '</div>'
+            + '</div>';
+
+        area.innerHTML = html;
+    }
+
+    function formatAdvance(mins) {
+        if (mins >= 60) {
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return '提前' + h + '小时' + (m > 0 ? m + '分钟' : '');
+        }
+        return '提前' + mins + '分钟';
+    }
+
+    window.addMsg = async function () {
+        const adv = parseInt(document.getElementById('msgAdv').value);
+        const mention = document.getElementById('msgMention').checked;
+        if (!adv || adv < 1) { showToast('请输入有效的分钟数', 'error'); return; }
+
+        const result = await api('POST', API_M, {
+            eventType: currentType,
+            advanceMinutes: adv,
+            mentionAll: mention
+        });
+
+        if (result.success) {
+            showToast('添加成功', 'success');
+            loadMessages(currentType);
+        } else {
+            showToast(result.message || '添加失败', 'error');
+        }
+    };
+
+    window.deleteMsg = async function (id) {
+        if (!confirm('删除该定时消息？')) return;
+        const result = await api('DELETE', API_M + '/' + id);
+        if (result.success) {
+            showToast('已删除', 'success');
+            cachedMessages = cachedMessages.filter(m => m.id !== id);
+            renderMessages(cachedMessages);
+            loadTemplates(currentType); // 刷新模板列表
+        } else {
+            showToast(result.message || '删除失败', 'error');
+        }
+    };
+
+    /* ====== 消息模板 ====== */
+    async function loadTemplates(type) {
+        const area = document.getElementById('templatesArea');
+        area.innerHTML = '<p class="modal-placeholder">加载中...</p>';
+
+        const result = await api('GET', API_T + '/' + type);
+        if (!result.success) { area.innerHTML = '<p class="modal-placeholder">加载失败</p>'; return; }
+
+        renderTemplates(result.data || []);
+    }
+
+    function renderTemplates(templates) {
+        const area = document.getElementById('templatesArea');
+        const defaultTpl = templates.find(t => t.timedMessageId === null || t.timedMessageId === undefined);
+        const specificTpls = templates.filter(t => t.timedMessageId !== null && t.timedMessageId !== undefined);
+
+        let html = '';
+
+        // --- 默认模板 ---
+        html += '<div class="tpl-section">';
+        html += '<div class="tpl-section-head"><span class="tpl-section-label">默认消息模板</span>'
+             + '<span class="m-hint">支持变量: ${time} = 提前分钟数</span></div>';
+
+        if (defaultTpl) {
+            html += '<div class="tpl-item" data-id="' + defaultTpl.id + '">'
+                 + '<textarea class="tpl-textarea" id="defaultTplText">' + escapeHtml(defaultTpl.templateText) + '</textarea>'
+                 + '<div class="tpl-item-actions">'
+                 + '<button class="btn-modal btn-modal-save btn-sm" onclick="saveDefaultTpl()">保存</button>'
+                 + '</div></div>';
+        } else {
+            html += '<div class="tpl-item">'
+                 + '<textarea class="tpl-textarea" id="defaultTplText" placeholder="还有${time}分钟开始啦，大家记得准时上线！"></textarea>'
+                 + '<div class="tpl-item-actions">'
+                 + '<button class="btn-modal btn-modal-save btn-sm" onclick="saveDefaultTpl()">保存</button>'
+                 + '</div></div>';
+        }
+        html += '</div>';
+
+        // --- 专属模板列表 ---
+        html += '<div class="tpl-section">';
+        html += '<div class="tpl-section-head"><span class="tpl-section-label">专属消息模板</span>'
+             + '<span class="m-hint">绑定到具体定时消息，优先级高于默认模板</span></div>';
+
+        if (specificTpls.length > 0) {
+            html += '<ul class="msg-list">';
+            specificTpls.forEach(tpl => {
+                const linkedMsg = cachedMessages.find(m => m.id === tpl.timedMessageId);
+                const label = linkedMsg ? formatAdvance(linkedMsg.advanceMinutes) + (linkedMsg.mentionAll ? ' @全体' : '') : '已删除的消息';
+                html += '<li class="msg-item">'
+                     + '<div class="msg-info" style="flex-direction:column;align-items:flex-start;gap:4px;">'
+                     + '<span class="msg-badge">' + label + '</span>'
+                     + '<span class="tpl-preview">' + escapeHtml(tpl.templateText) + '</span>'
+                     + '</div>'
+                     + '<button class="msg-del" onclick="deleteTpl(' + tpl.id + ')" title="删除">×</button>'
+                     + '</li>';
+            });
+            html += '</ul>';
+        } else {
+            html += '<p class="msg-empty">暂无专属模板</p>';
+        }
+
+        // --- 添加专属模板 ---
+        html += '<div class="tpl-add-form">';
+        // 定时消息下拉
+        if (cachedMessages.length > 0) {
+            html += '<div class="m-form-row"><label>绑定消息</label>'
+                 + '<select class="m-input" id="tplMsgSelect">';
+            cachedMessages.forEach(m => {
+                const label = formatAdvance(m.advanceMinutes) + (m.mentionAll ? ' @全体' : '');
+                html += '<option value="' + m.id + '">' + label + '</option>';
+            });
+            html += '</select></div>';
+            html += '<div class="m-form-row"><label>模板内容</label></div>'
+                 + '<textarea class="tpl-textarea" id="specificTplText" placeholder="还有${time}分钟开始啦！"></textarea>'
+                 + '<div class="m-form-row" style="margin-top:8px;">'
+                 + '<button class="btn-modal btn-modal-save" onclick="addSpecificTpl()">添加专属模板</button>'
+                 + '</div>';
+        } else {
+            html += '<p class="m-hint">请先在「定时消息」Tab 中添加消息</p>';
+        }
+        html += '</div>';
+        html += '</div>';
+
+        area.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    window.saveDefaultTpl = async function () {
+        const text = document.getElementById('defaultTplText').value.trim();
+        if (!text) { showToast('模板内容不能为空', 'error'); return; }
+
+        const result = await api('POST', API_T, {
+            eventType: currentType,
+            templateText: text
+        });
+        if (result.success) {
+            showToast('默认模板已保存', 'success');
+            loadTemplates(currentType);
+        } else {
+            showToast(result.message || '保存失败', 'error');
+        }
+    };
+
+    window.addSpecificTpl = async function () {
+        const msgId = document.getElementById('tplMsgSelect').value;
+        const text = document.getElementById('specificTplText').value.trim();
+        if (!msgId) { showToast('请选择绑定的消息', 'error'); return; }
+        if (!text) { showToast('模板内容不能为空', 'error'); return; }
+
+        const result = await api('POST', API_T, {
+            eventType: currentType,
+            timedMessageId: parseInt(msgId),
+            templateText: text
+        });
+        if (result.success) {
+            showToast('专属模板已添加', 'success');
+            loadTemplates(currentType);
+        } else {
+            showToast(result.message || '添加失败', 'error');
+        }
+    };
+
+    window.deleteTpl = async function (id) {
+        if (!confirm('删除该消息模板？')) return;
+        const result = await api('DELETE', API_T + '/' + id);
+        if (result.success) {
+            showToast('已删除', 'success');
+            loadTemplates(currentType);
+        } else {
+            showToast(result.message || '删除失败', 'error');
+        }
+    };
+})();
+</script>
+</body>
+</html>
