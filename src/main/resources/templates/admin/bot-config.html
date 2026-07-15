@@ -257,7 +257,19 @@
                 <div class="bot-panel-placeholder"><p>主动推送功能配置区域（待实现）</p></div>
             </div>
             <div class="bot-panel" id="panel-group-members">
-                <div class="bot-panel-placeholder"><p>群聊成员管理区域（待实现）</p></div>
+                <div class="cfg-section">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">群聊成员</h3>
+                        <div class="gm-actions">
+                            <input type="text" class="gm-search" id="gmSearch" placeholder="搜索昵称/wxid" oninput="filterMembers()">
+                            <button class="btn-modal btn-modal-save gm-refresh" onclick="loadGroupMembers(true)">刷新列表</button>
+                        </div>
+                    </div>
+                    <div class="gm-stats" id="gmStats"></div>
+                    <div class="gm-list" id="gmList">
+                        <div class="gm-loading">点击左侧「群聊成员」加载数据</div>
+                    </div>
+                </div>
             </div>
             <div class="bot-panel" id="panel-group-manage">
                 <div class="bot-panel-placeholder"><p>群聊管理功能区域（待实现）</p></div>
@@ -338,6 +350,10 @@
             item.classList.add('active');
             document.querySelectorAll('.bot-panel').forEach(p =>
                 p.classList.toggle('active', p.id === 'panel-' + item.dataset.panel));
+            // 懒加载：切换到群聊成员时自动加载
+            if (item.dataset.panel === 'group-members' && !gmLoaded) {
+                loadGroupMembers(false);
+            }
         });
     });
 
@@ -1001,6 +1017,118 @@
             showToast(result.message || '删除失败', 'error');
         }
     };
+
+    /* ====== 群聊成员 ====== */
+    const API_GM = '/admin/api/bot/group/members';
+    let gmLoaded = false;
+    let gmMembers = [];
+
+    window.loadGroupMembers = async function (isRefresh) {
+        const listEl = document.getElementById('gmList');
+        if (isRefresh) listEl.innerHTML = '<div class="gm-loading">加载中...</div>';
+
+        const result = await api('GET', API_GM);
+        if (!result.success) {
+            listEl.innerHTML = '<div class="gm-empty">' + (result.message || '获取失败') + '</div>';
+            return;
+        }
+
+        gmMembers = result.data.members || [];
+        gmLoaded = true;
+
+        // 统计信息
+        const statsEl = document.getElementById('gmStats');
+        const owner = result.data.owner;
+        const admins = result.data.admins || [];
+        statsEl.innerHTML = '共 <b>' + gmMembers.length + '</b> 人'
+            + (owner ? ' &nbsp;·&nbsp; 群主 <b>' + owner + '</b>' : '')
+            + (admins.length > 0 ? ' &nbsp;·&nbsp; 管理员 <b>' + admins.length + '</b> 人' : '');
+
+        renderMembers(gmMembers);
+    };
+
+    function renderMembers(members) {
+        const listEl = document.getElementById('gmList');
+        if (!members || members.length === 0) {
+            listEl.innerHTML = '<div class="gm-empty">无匹配成员</div>';
+            return;
+        }
+
+        let html = '';
+        for (const m of members) {
+            const role = m.role || 'member';
+            const roleBadge = role === 'owner' ? '<span class="gm-role gm-role-owner">群主</span>'
+                              : role === 'admin' ? '<span class="gm-role gm-role-admin">管理员</span>'
+                              : '';
+            const name = m.displayName || m.nickName || m.wxid || '未知';
+            const subName = m.displayName ? (m.nickName || '') : '';
+            const avatar = m.smallHeadImgUrl || m.bigHeadImgUrl || '';
+            const wxid = m.wxid || '';
+
+            // 仅普通成员显示踢出按钮
+            const kickBtn = role === 'member'
+                ? '<button class="gm-kick-btn" onclick="kickMember(\'' + escHtml(wxid) + '\',\'' + escHtml(name) + '\')" title="踢出群聊">✕</button>'
+                : '';
+
+            html += '<div class="gm-item" data-wxid="' + escHtml(wxid) + '">'
+                + '<div class="gm-avatar">' + (avatar ? '<img src="' + avatar + '" alt="">' : '<span class="gm-avatar-placeholder">' + (name.charAt(0)) + '</span>') + '</div>'
+                + '<div class="gm-info">'
+                + '<div class="gm-name">' + escHtml(name) + roleBadge + '</div>'
+                + '<div class="gm-sub">' + (subName ? escHtml(subName) + ' · ' : '') + escHtml(wxid) + '</div>'
+                + '</div>' + kickBtn + '</div>';
+        }
+        listEl.innerHTML = html;
+    }
+
+    window.filterMembers = function () {
+        const keyword = document.getElementById('gmSearch').value.trim().toLowerCase();
+        if (!keyword) {
+            renderMembers(gmMembers);
+            return;
+        }
+        const filtered = gmMembers.filter(m => {
+            const name = (m.displayName || m.nickName || '').toLowerCase();
+            const wxid = (m.wxid || '').toLowerCase();
+            return name.includes(keyword) || wxid.includes(keyword);
+        });
+        renderMembers(filtered);
+    };
+
+    function escHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    /* ====== 踢出群成员 ====== */
+    const API_KICK = '/admin/api/bot/group/kick';
+
+    window.kickMember = function (wxid, name) {
+        PHDialog.confirm({
+            title: '踢出成员',
+            message: '确认将 <b>' + escHtml(name) + '</b> 踢出群聊？',
+            icon: '',
+            confirmText: '确认',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: function () { doKick(wxid, name); }
+        });
+    };
+
+    async function doKick(wxid, name) {
+        const result = await api('POST', API_KICK, { wxid: wxid });
+        if (result.success) {
+            showToast(name + ' 已踢出', 'success');
+            // 从列表中移除该成员
+            gmMembers = gmMembers.filter(m => m.wxid !== wxid);
+            renderMembers(gmMembers);
+            // 更新统计
+            document.getElementById('gmStats').innerHTML = '共 <b>' + gmMembers.length + '</b> 人';
+        } else {
+            showToast(result.message || '踢出失败', 'error');
+        }
+    }
+
 })();
 </script>
 <script th:src="@{/js/ph-dialog.js}"></script>

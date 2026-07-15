@@ -301,17 +301,17 @@ public class WechatApiService {
 
     /** 创建群聊（传入初始成员 wxid 列表，至少2人+自己共3人起群） */
     public WechatApiResponse createChatroom(List<String> memberList) {
-        return post("/group/createChatroom", bodyWith("memberList", memberList));
+        return post("/group/createChatroom", bodyWith("wxids", memberList));
     }
 
     /** 邀请成员入群 */
     public WechatApiResponse inviteMember(String chatroomId, List<String> memberList) {
-        return post("/group/inviteMember", bodyWith("chatroomId", chatroomId, "memberList", memberList));
+        return post("/group/inviteMember", bodyWith("chatroomId", chatroomId, "wxids", String.join(",", memberList), "reason", ""));
     }
 
-    /** 移除群成员（需群主权限） */
+    /** 移除群成员（需群主或管理员权限） */
     public WechatApiResponse removeMember(String chatroomId, List<String> memberList) {
-        return post("/group/removeMember", bodyWith("chatroomId", chatroomId, "memberList", memberList));
+        return post("/group/removeMember", bodyWith("chatroomId", chatroomId, "wxids", String.join(",", memberList)));
     }
 
     /** 获取群成员列表 */

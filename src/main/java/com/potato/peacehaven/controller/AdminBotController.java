@@ -460,6 +460,93 @@ public class AdminBotController {
         return Map.of("success", true);
     }
 
+    // ===== API: 获取群聊成员列表 =====
+
+    @ResponseBody
+    @GetMapping("/api/bot/group/members")
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getGroupMembers() {
+        if (!wechatApiProps.isConfigured()) {
+            return Map.of("success", false, "message", "API 未配置");
+        }
+        if (!wechatApiProps.isDeviceBound()) {
+            return Map.of("success", false, "message", "设备未绑定");
+        }
+        String groupId = wechatApiProps.getGroupId();
+        if (groupId == null || groupId.isBlank()) {
+            return Map.of("success", false, "message", "群聊 ID 未配置");
+        }
+
+        WechatApiResponse resp = wechatApiService.getConfiguredGroupMembers();
+        if (!resp.isSuccess()) {
+            return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "获取失败");
+        }
+
+        Map<String, Object> data = resp.getDataAsMap();
+        if (data == null) {
+            return Map.of("success", false, "message", "响应数据为空");
+        }
+
+        // 提取成员列表
+        Object memberListObj = data.get("memberList");
+        List<Map<String, Object>> members = (memberListObj instanceof List)
+                ? (List<Map<String, Object>>) memberListObj
+                : List.of();
+
+        // 提取群主和管理员 wxid
+        String owner = data.get("chatroomOwner") != null ? data.get("chatroomOwner").toString() : null;
+        Object adminObj = data.get("adminWxid");
+        List<String> admins = (adminObj instanceof List)
+                ? ((List<Object>) adminObj).stream().map(Object::toString).collect(Collectors.toList())
+                : List.of();
+
+        // 给每个成员添加角色标记
+        for (Map<String, Object> m : members) {
+            String wxid = m.get("wxid") != null ? m.get("wxid").toString() : "";
+            if (wxid.equals(owner)) {
+                m.put("role", "owner");
+            } else if (admins.contains(wxid)) {
+                m.put("role", "admin");
+            } else {
+                m.put("role", "member");
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("members", members);
+        result.put("total", members.size());
+        result.put("owner", owner);
+        result.put("admins", admins);
+        return Map.of("success", true, "data", result);
+    }
+
+    // ===== API: 踢出群成员 =====
+
+    @ResponseBody
+    @PostMapping("/api/bot/group/kick")
+    public Map<String, Object> kickMember(@RequestBody Map<String, String> body) {
+        if (!wechatApiProps.isConfigured()) {
+            return Map.of("success", false, "message", "API 未配置");
+        }
+        if (!wechatApiProps.isDeviceBound()) {
+            return Map.of("success", false, "message", "设备未绑定");
+        }
+        String groupId = wechatApiProps.getGroupId();
+        if (groupId == null || groupId.isBlank()) {
+            return Map.of("success", false, "message", "群聊 ID 未配置");
+        }
+        String wxid = body.get("wxid");
+        if (wxid == null || wxid.isBlank()) {
+            return Map.of("success", false, "message", "缺少 wxid");
+        }
+
+        WechatApiResponse resp = wechatApiService.removeMember(groupId, List.of(wxid));
+        if (resp.isSuccess()) {
+            return Map.of("success", true, "message", "已踢出群聊");
+        }
+        return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "踢出失败");
+    }
+
     // ===== Helper =====
 
     private Map<String, Object> toConfigMap(BotScheduleConfig cfg) {
