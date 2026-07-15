@@ -37,11 +37,11 @@ public class DataInitializer implements ApplicationRunner {
         if (botScheduleConfigRepository.count() > 0) return;
 
         botScheduleConfigRepository.save(BotScheduleConfig.builder()
-                .eventType("zombie_horde").dayOfWeek(6).eventTime(LocalTime.of(20, 30)).build());
+                .eventType("尸潮").dayOfWeek(6).eventTime(LocalTime.of(20, 30)).build());
         botScheduleConfigRepository.save(BotScheduleConfig.builder()
-                .eventType("iron_hand").dayOfWeek(7).eventTime(LocalTime.of(20, 30)).build());
+                .eventType("铁手").dayOfWeek(7).eventTime(LocalTime.of(20, 30)).build());
         botScheduleConfigRepository.save(BotScheduleConfig.builder()
-                .eventType("patrol").dayOfWeek(0).eventTime(LocalTime.of(19, 30)).build());
+                .eventType("巡逻").dayOfWeek(0).eventTime(LocalTime.of(19, 30)).build());
 
         log.info("已初始化机器人定时推送基础配置");
     }

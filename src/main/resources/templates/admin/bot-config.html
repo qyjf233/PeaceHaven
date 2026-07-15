@@ -45,22 +45,22 @@
                             <div class="s-card-icon">🧟</div>
                             <div class="s-card-name">尸潮</div>
                             <div class="s-card-info">
-                                <th:block th:if="${scheduleByType.containsKey('zombie_horde') and !scheduleByType['zombie_horde'].isEmpty()}">
-                                    <span th:each="cfg : ${scheduleByType['zombie_horde']}">每周六
+                                <th:block th:if="${scheduleByType.containsKey('尸潮') and !scheduleByType['尸潮'].isEmpty()}">
+                                    <span th:each="cfg : ${scheduleByType['尸潮']}">每周六
                                         <span th:text="${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : '--:--'}">20:30</span>
                                     </span>
                                 </th:block>
-                                <th:block th:unless="${scheduleByType.containsKey('zombie_horde')}">未配置</th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('尸潮')}">未配置</th:block>
                             </div>
                         </div>
                         <div class="s-card-foot">
-                            <th:block th:if="${scheduleByType.containsKey('zombie_horde') and !scheduleByType['zombie_horde'].isEmpty()}">
-                                <button th:each="cfg : ${scheduleByType['zombie_horde']}" class="s-card-btn"
+                            <th:block th:if="${scheduleByType.containsKey('尸潮') and !scheduleByType['尸潮'].isEmpty()}">
+                                <button th:each="cfg : ${scheduleByType['尸潮']}" class="s-card-btn"
                                         th:attr="data-cfg-id=${cfg.id},data-time=${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : ''},data-dow=${cfg.dayOfWeek}"
-                                        onclick="openModal('zombie_horde','尸潮',this)">编辑</button>
+                                        onclick="openModal('尸潮','尸潮',this)">编辑</button>
                             </th:block>
-                            <th:block th:unless="${scheduleByType.containsKey('zombie_horde')}">
-                                <button class="s-card-btn" onclick="openModal('zombie_horde','尸潮',this)">编辑</button>
+                            <th:block th:unless="${scheduleByType.containsKey('尸潮')}">
+                                <button class="s-card-btn" onclick="openModal('尸潮','尸潮',this)">编辑</button>
                             </th:block>
                         </div>
                     </div>
@@ -72,22 +72,22 @@
                             <div class="s-card-icon">🦾</div>
                             <div class="s-card-name">铁手</div>
                             <div class="s-card-info">
-                                <th:block th:if="${scheduleByType.containsKey('iron_hand') and !scheduleByType['iron_hand'].isEmpty()}">
-                                    <span th:each="cfg : ${scheduleByType['iron_hand']}">每周日
+                                <th:block th:if="${scheduleByType.containsKey('铁手') and !scheduleByType['铁手'].isEmpty()}">
+                                    <span th:each="cfg : ${scheduleByType['铁手']}">每周日
                                         <span th:text="${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : '--:--'}">20:30</span>
                                     </span>
                                 </th:block>
-                                <th:block th:unless="${scheduleByType.containsKey('iron_hand')}">未配置</th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('铁手')}">未配置</th:block>
                             </div>
                         </div>
                         <div class="s-card-foot">
-                            <th:block th:if="${scheduleByType.containsKey('iron_hand') and !scheduleByType['iron_hand'].isEmpty()}">
-                                <button th:each="cfg : ${scheduleByType['iron_hand']}" class="s-card-btn"
+                            <th:block th:if="${scheduleByType.containsKey('铁手') and !scheduleByType['铁手'].isEmpty()}">
+                                <button th:each="cfg : ${scheduleByType['铁手']}" class="s-card-btn"
                                         th:attr="data-cfg-id=${cfg.id},data-time=${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : ''},data-dow=${cfg.dayOfWeek}"
-                                        onclick="openModal('iron_hand','铁手',this)">编辑</button>
+                                        onclick="openModal('铁手','铁手',this)">编辑</button>
                             </th:block>
-                            <th:block th:unless="${scheduleByType.containsKey('iron_hand')}">
-                                <button class="s-card-btn" onclick="openModal('iron_hand','铁手',this)">编辑</button>
+                            <th:block th:unless="${scheduleByType.containsKey('铁手')}">
+                                <button class="s-card-btn" onclick="openModal('铁手','铁手',this)">编辑</button>
                             </th:block>
                         </div>
                     </div>
@@ -99,14 +99,14 @@
                             <div class="s-card-icon">⚔️</div>
                             <div class="s-card-name">资源战</div>
                             <div class="s-card-info">
-                                <th:block th:if="${scheduleByType.containsKey('resource_war') and !scheduleByType['resource_war'].isEmpty()}">
-                                    已配置 <span th:text="${#lists.size(scheduleByType['resource_war'])}">0</span> 条
+                                <th:block th:if="${scheduleByType.containsKey('资源战') and !scheduleByType['资源战'].isEmpty()}">
+                                    已配置 <span th:text="${#lists.size(scheduleByType['资源战'])}">0</span> 条
                                 </th:block>
-                                <th:block th:unless="${scheduleByType.containsKey('resource_war') and !scheduleByType['resource_war'].isEmpty()}">每周一 · 待配置</th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('资源战') and !scheduleByType['资源战'].isEmpty()}">每周一 · 待配置</th:block>
                             </div>
                         </div>
                         <div class="s-card-foot">
-                            <button class="s-card-btn" onclick="openModal('resource_war','资源战',this)">编辑</button>
+                            <button class="s-card-btn" onclick="openModal('资源战','资源战',this)">编辑</button>
                         </div>
                     </div>
 
@@ -117,22 +117,22 @@
                             <div class="s-card-icon">🚶</div>
                             <div class="s-card-name">巡逻</div>
                             <div class="s-card-info">
-                                <th:block th:if="${scheduleByType.containsKey('patrol') and !scheduleByType['patrol'].isEmpty()}">
-                                    <span th:each="cfg : ${scheduleByType['patrol']}">每天
+                                <th:block th:if="${scheduleByType.containsKey('巡逻') and !scheduleByType['巡逻'].isEmpty()}">
+                                    <span th:each="cfg : ${scheduleByType['巡逻']}">每天
                                         <span th:text="${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : '--:--'}">19:30</span>~<span th:text="${cfg.eventTime != null ? #temporals.format(cfg.eventTime.plusHours(2),'HH:mm') : '--:--'}">21:30</span>
                                     </span>
                                 </th:block>
-                                <th:block th:unless="${scheduleByType.containsKey('patrol')}">未配置</th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('巡逻')}">未配置</th:block>
                             </div>
                         </div>
                         <div class="s-card-foot">
-                            <th:block th:if="${scheduleByType.containsKey('patrol') and !scheduleByType['patrol'].isEmpty()}">
-                                <button th:each="cfg : ${scheduleByType['patrol']}" class="s-card-btn"
+                            <th:block th:if="${scheduleByType.containsKey('巡逻') and !scheduleByType['巡逻'].isEmpty()}">
+                                <button th:each="cfg : ${scheduleByType['巡逻']}" class="s-card-btn"
                                         th:attr="data-cfg-id=${cfg.id},data-time=${cfg.eventTime != null ? #temporals.format(cfg.eventTime,'HH:mm') : ''},data-dow=0"
-                                        onclick="openModal('patrol','巡逻',this)">编辑</button>
+                                        onclick="openModal('巡逻','巡逻',this)">编辑</button>
                             </th:block>
-                            <th:block th:unless="${scheduleByType.containsKey('patrol')}">
-                                <button class="s-card-btn" onclick="openModal('patrol','巡逻',this)">编辑</button>
+                            <th:block th:unless="${scheduleByType.containsKey('巡逻')}">
+                                <button class="s-card-btn" onclick="openModal('巡逻','巡逻',this)">编辑</button>
                             </th:block>
                         </div>
                     </div>
@@ -144,14 +144,14 @@
                             <div class="s-card-icon">🏆</div>
                             <div class="s-card-name">争霸赛</div>
                             <div class="s-card-info">
-                                <th:block th:if="${scheduleByType.containsKey('championship') and !scheduleByType['championship'].isEmpty()}">
-                                    已配置 <span th:text="${#lists.size(scheduleByType['championship'])}">0</span> 条
+                                <th:block th:if="${scheduleByType.containsKey('争霸赛') and !scheduleByType['争霸赛'].isEmpty()}">
+                                    已配置 <span th:text="${#lists.size(scheduleByType['争霸赛'])}">0</span> 条
                                 </th:block>
-                                <th:block th:unless="${scheduleByType.containsKey('championship') and !scheduleByType['championship'].isEmpty()}">周五/六 · 待配置</th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('争霸赛') and !scheduleByType['争霸赛'].isEmpty()}">周五/六 · 待配置</th:block>
                             </div>
                         </div>
                         <div class="s-card-foot">
-                            <button class="s-card-btn" onclick="openModal('championship','争霸赛',this)">编辑</button>
+                            <button class="s-card-btn" onclick="openModal('争霸赛','争霸赛',this)">编辑</button>
                         </div>
                     </div>
 
@@ -162,14 +162,14 @@
                             <div class="s-card-icon">🎯</div>
                             <div class="s-card-name">约战</div>
                             <div class="s-card-info">
-                                <th:block th:if="${scheduleByType.containsKey('battle_appointment') and !scheduleByType['battle_appointment'].isEmpty()}">
-                                    <span th:text="${#lists.size(scheduleByType['battle_appointment'])}">0</span> 条约战
+                                <th:block th:if="${scheduleByType.containsKey('约战') and !scheduleByType['约战'].isEmpty()}">
+                                    <span th:text="${#lists.size(scheduleByType['约战'])}">0</span> 条约战
                                 </th:block>
-                                <th:block th:unless="${scheduleByType.containsKey('battle_appointment') and !scheduleByType['battle_appointment'].isEmpty()}">暂无约战</th:block>
+                                <th:block th:unless="${scheduleByType.containsKey('约战') and !scheduleByType['约战'].isEmpty()}">暂无约战</th:block>
                             </div>
                         </div>
                         <div class="s-card-foot">
-                            <button class="s-card-btn" onclick="openModal('battle_appointment','约战',this)">编辑</button>
+                            <button class="s-card-btn" onclick="openModal('约战','约战',this)">编辑</button>
                         </div>
                     </div>
 
@@ -229,7 +229,7 @@
     const DAY_OPTS = '<option value="1">周一</option><option value="2">周二</option>'
         + '<option value="3">周三</option><option value="4">周四</option>'
         + '<option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>';
-    const FIXED_TYPES = ['zombie_horde', 'iron_hand', 'patrol'];
+    const FIXED_TYPES = ['尸潮', '铁手', '巡逻'];
 
     let currentType = '';
     let cachedMessages = [];
@@ -310,13 +310,21 @@
         const cfgId  = btnEl ? btnEl.dataset.cfgId : '';
         const time   = btnEl && btnEl.dataset.time ? btnEl.dataset.time : '20:00';
         const dow    = btnEl && btnEl.dataset.dow ? btnEl.dataset.dow : '6';
-        const isPatrol = currentType === 'patrol';
+        const isPatrol = currentType === '巡逻';
 
-        let html = '<div class="m-form-row">'
-            + '<label>周期</label>'
-            + '<select class="m-input" id="mDayOfWeek">' + DAY_OPTS + '</select>'
-            + '</div>'
-            + '<div class="m-form-row">'
+        let html = '';
+        if (isPatrol) {
+            html += '<div class="m-form-row">'
+                + '<label>周期</label>'
+                + '<span class="m-input m-fixed-text">每天</span>'
+                + '</div>';
+        } else {
+            html += '<div class="m-form-row">'
+                + '<label>周期</label>'
+                + '<select class="m-input" id="mDayOfWeek">' + DAY_OPTS + '</select>'
+                + '</div>';
+        }
+        html += '<div class="m-form-row">'
             + '<label>' + (isPatrol ? '开始时间' : '时间') + '</label>'
             + '<input type="time" class="m-input" id="mEventTime" value="' + time + '">'
             + (isPatrol ? '<span class="m-hint">~ 自动 +2h</span>' : '')
@@ -329,14 +337,13 @@
         }
 
         area.innerHTML = html;
-        document.getElementById('mDayOfWeek').value = dow;
-        if (isPatrol) document.getElementById('mDayOfWeek').disabled = true;
+        if (!isPatrol) document.getElementById('mDayOfWeek').value = dow;
     }
 
     /* ====== 保存日程 ====== */
     window.saveSchedule = async function (id) {
         const time = document.getElementById('mEventTime').value;
-        const dow  = document.getElementById('mDayOfWeek').value;
+        const dow  = currentType === '巡逻' ? '0' : document.getElementById('mDayOfWeek').value;
         if (!time) { showToast('请选择时间', 'error'); return; }
 
         const result = await api('PUT', API_S + '/' + id, { eventTime: time, dayOfWeek: dow });

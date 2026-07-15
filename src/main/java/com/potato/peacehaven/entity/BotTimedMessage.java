@@ -21,7 +21,7 @@ public class BotTimedMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 关联的事件类型：zombie_horde / iron_hand / ... */
+    /** 关联的事件类型：尸潮 / 铁手 / 资源战 / 巡逻 / 争霸赛 / 约战 */
     @Column(name = "event_type", nullable = false, length = 30)
     @Comment("关联事件类型")
     private String eventType;

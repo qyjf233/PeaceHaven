@@ -23,7 +23,7 @@ public class BotScheduleConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 事件类型：zombie_horde / iron_hand / resource_war / patrol / championship / battle_appointment */
+    /** 事件类型：尸潮 / 铁手 / 资源战 / 巡逻 / 争霸赛 / 约战 */
     @Column(nullable = false, length = 30)
     @Comment("事件类型")
     private String eventType;

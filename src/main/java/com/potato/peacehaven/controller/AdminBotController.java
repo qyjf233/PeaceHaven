@@ -95,7 +95,7 @@ public class AdminBotController {
         }
 
         // 同一天+同类型只能配一条（资源战/争霸赛）
-        if (!"battle_appointment".equals(type)) {
+        if (!"约战".equals(type)) {
             final Integer dow = dayOfWeek;
             boolean exists = scheduleRepo.findByEventType(type).stream()
                     .anyMatch(c -> date.equals(c.getEventDate())
