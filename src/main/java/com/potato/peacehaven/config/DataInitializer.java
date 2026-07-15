@@ -42,6 +42,12 @@ public class DataInitializer implements ApplicationRunner {
                 .eventType("铁手").dayOfWeek(7).eventTime(LocalTime.of(20, 30)).build());
         botScheduleConfigRepository.save(BotScheduleConfig.builder()
                 .eventType("巡逻").dayOfWeek(0).eventTime(LocalTime.of(19, 30)).build());
+        botScheduleConfigRepository.save(BotScheduleConfig.builder()
+                .eventType("资源战").dayOfWeek(1).build());
+        botScheduleConfigRepository.save(BotScheduleConfig.builder()
+                .eventType("争霸赛").dayOfWeek(5).build());
+        botScheduleConfigRepository.save(BotScheduleConfig.builder()
+                .eventType("争霸赛").dayOfWeek(6).build());
 
         log.info("已初始化机器人定时推送基础配置");
     }
