@@ -1,14 +1,22 @@
 package com.potato.peacehaven.ai.summary;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.potato.peacehaven.ai.llm.LlmClient;
 import com.potato.peacehaven.ai.llm.LlmMessage;
 import com.potato.peacehaven.ai.retrieval.ContextRetrievalService.ContextMessage;
 import com.potato.peacehaven.config.AiProperties;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -27,14 +35,57 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class LlmConversationSummaryService implements ConversationSummaryService {
 
     private final LlmClient llmClient;
     private final AiProperties aiProps;
+    private final ObjectMapper objectMapper;
 
     /** chatroomId -> 缓存条目 */
     private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
+
+    private static final Path SNAPSHOT_DIR = Path.of("data", "cache");
+    private static final File SNAPSHOT_FILE = SNAPSHOT_DIR.resolve("summary-cache.json").toFile();
+
+    public LlmConversationSummaryService(LlmClient llmClient, AiProperties aiProps, ObjectMapper objectMapper) {
+        this.llmClient = llmClient;
+        this.aiProps = aiProps;
+        this.objectMapper = objectMapper;
+    }
+
+    @PostConstruct
+    public void loadFromDisk() {
+        if (!SNAPSHOT_FILE.exists()) return;
+        try {
+            Map<String, CacheEntry> loaded = objectMapper.readValue(SNAPSHOT_FILE,
+                    new TypeReference<Map<String, CacheEntry>>() {});
+            // 只加载未过期的条目
+            long ttlMs = aiProps.getReply().getSummaryCacheSeconds() * 1000L;
+            long now = System.currentTimeMillis();
+            for (var entry : loaded.entrySet()) {
+                if (now - entry.getValue().timestamp() <= ttlMs) {
+                    cache.put(entry.getKey(), entry.getValue());
+                }
+            }
+            if (!cache.isEmpty()) {
+                log.info("[Summary] 从磁盘加载 {} 条摘要缓存（过滤过期后）", cache.size());
+            }
+        } catch (Exception e) {
+            log.warn("[Summary] 磁盘快照加载失败: {}", e.getMessage());
+        }
+    }
+
+    @PreDestroy
+    public void saveToDisk() {
+        if (cache.isEmpty()) return;
+        try {
+            Files.createDirectories(SNAPSHOT_DIR);
+            objectMapper.writeValue(SNAPSHOT_FILE, new HashMap<>(cache));
+            log.info("[Summary] 快照写入磁盘: {} 条摘要", cache.size());
+        } catch (Exception e) {
+            log.error("[Summary] 快照写入失败: {}", e.getMessage());
+        }
+    }
 
     /** 噪音消息精确匹配集合 */
     private static final java.util.Set<String> NOISE_EXACT = java.util.Set.of(

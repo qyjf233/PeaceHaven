@@ -1,8 +1,15 @@
 package com.potato.peacehaven.ai.vectorstore;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -20,6 +27,50 @@ import java.util.stream.Collectors;
 public class InMemoryVectorStore implements VectorStore {
 
     private final ConcurrentHashMap<String, VectorDocument> store = new ConcurrentHashMap<>();
+
+    /** 磁盘持久化路径 */
+    private static final Path SNAPSHOT_DIR = Path.of("data", "cache");
+    private static final File SNAPSHOT_FILE = SNAPSHOT_DIR.resolve("vector-store.json").toFile();
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @PostConstruct
+    public void loadFromDisk() {
+        if (!SNAPSHOT_FILE.exists()) {
+            log.info("[VectorStore] 无磁盘快照，等待定时索引重建");
+            return;
+        }
+        try {
+            List<VectorDocument> docs = objectMapper.readValue(SNAPSHOT_FILE,
+                    new TypeReference<List<VectorDocument>>() {});
+            for (VectorDocument doc : docs) {
+                if (doc != null && doc.getId() != null && doc.getVector() != null) {
+                    store.put(doc.getId(), doc);
+                }
+            }
+            log.info("[VectorStore] 从磁盘加载 {} 条向量（快照大小 {}KB）",
+                    store.size(), SNAPSHOT_FILE.length() / 1024);
+        } catch (Exception e) {
+            log.warn("[VectorStore] 磁盘快照加载失败，等待重建: {}", e.getMessage());
+        }
+    }
+
+    @PreDestroy
+    public void saveToDisk() {
+        if (store.isEmpty()) {
+            log.info("[VectorStore] 存储为空，跳过写盘");
+            return;
+        }
+        try {
+            Files.createDirectories(SNAPSHOT_DIR);
+            List<VectorDocument> docs = new ArrayList<>(store.values());
+            objectMapper.writeValue(SNAPSHOT_FILE, docs);
+            log.info("[VectorStore] 快照写入磁盘: {} 条（{}KB）",
+                    docs.size(), SNAPSHOT_FILE.length() / 1024);
+        } catch (Exception e) {
+            log.error("[VectorStore] 快照写入失败: {}", e.getMessage());
+        }
+    }
 
     @Override
     public void upsert(String id, float[] vector, Map<String, String> metadata) {

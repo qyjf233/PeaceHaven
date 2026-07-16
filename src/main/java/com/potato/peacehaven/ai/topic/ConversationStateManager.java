@@ -1,11 +1,19 @@
 package com.potato.peacehaven.ai.topic;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.potato.peacehaven.config.AiProperties;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -17,13 +25,46 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class ConversationStateManager {
 
     private final AiProperties aiProps;
+    private final ObjectMapper objectMapper;
 
     /** chatroomId -> ConversationState */
     private final ConcurrentHashMap<String, ConversationState> states = new ConcurrentHashMap<>();
+
+    private static final Path SNAPSHOT_DIR = Path.of("data", "cache");
+    private static final File SNAPSHOT_FILE = SNAPSHOT_DIR.resolve("conversation-state.json").toFile();
+
+    public ConversationStateManager(AiProperties aiProps, ObjectMapper objectMapper) {
+        this.aiProps = aiProps;
+        this.objectMapper = objectMapper;
+    }
+
+    @PostConstruct
+    public void loadFromDisk() {
+        if (!SNAPSHOT_FILE.exists()) return;
+        try {
+            Map<String, ConversationState> loaded = objectMapper.readValue(SNAPSHOT_FILE,
+                    new TypeReference<Map<String, ConversationState>>() {});
+            states.putAll(loaded);
+            log.info("[ConvState] 从磁盘加载 {} 个对话状态", states.size());
+        } catch (Exception e) {
+            log.warn("[ConvState] 磁盘快照加载失败: {}", e.getMessage());
+        }
+    }
+
+    @PreDestroy
+    public void saveToDisk() {
+        if (states.isEmpty()) return;
+        try {
+            Files.createDirectories(SNAPSHOT_DIR);
+            objectMapper.writeValue(SNAPSHOT_FILE, new HashMap<>(states));
+            log.info("[ConvState] 快照写入磁盘: {} 个状态", states.size());
+        } catch (Exception e) {
+            log.error("[ConvState] 快照写入失败: {}", e.getMessage());
+        }
+    }
 
     /**
      * 更新对话状态
