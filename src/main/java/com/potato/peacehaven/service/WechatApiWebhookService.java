@@ -142,7 +142,10 @@ public class WechatApiWebhookService {
             saveChatRecord(event, pureContent);
 
             // AI 分身回复流水线（异步执行，不阻塞 webhook）
-            if (aiProps.isReady() && !event.isGroupSelfSent()) {
+            String targetGroup = props.getGroupId();
+            if (aiProps.isReady()
+                    && !event.isGroupSelfSent()
+                    && targetGroup != null && targetGroup.equals(chatroomId)) {
                 String senderWxid = event.getGroupSenderWxid();
                 if (senderWxid == null) senderWxid = event.getFromWxid();
                 String senderNick = resolveSenderNick(senderWxid);
