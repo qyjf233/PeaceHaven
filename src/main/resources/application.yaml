@@ -15,7 +15,7 @@ spring:
     jdbc:
       initialize-schema: always  # 自动建表 SPRING_SESSION / SPRING_SESSION_ATTRIBUTES
   datasource:
-    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db
+    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db_pre
     username: peacehaven_server
     password: XHJdashuaige2508@
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -46,3 +46,29 @@ aliyun:
     endpoint: cn-hangzhou.log.aliyuncs.com
     project: ${ALIYUN_SLS_PROJECT:}
     log-store: ${ALIYUN_SLS_LOGSTORE:}
+
+# AI 分身系统配置
+ai:
+  enabled: false
+  llm:
+    provider: openai
+    api-key: ${AI_LLM_API_KEY:}
+    base-url: ${AI_LLM_BASE_URL:}
+    model: ${AI_LLM_MODEL:deepseek-chat}
+    temperature: 0.85
+    max-tokens: 200
+  embedding:
+    api-key: ${AI_EMBED_API_KEY:}
+    base-url: ${AI_EMBED_BASE_URL:}
+    model: ${AI_EMBED_MODEL:text-embedding-3-small}
+    dimensions: 1536
+  reply:
+    max-per-day: 50
+    cooldown-seconds: 30
+    random-rate: 0.15
+    only-at: false
+    context-size: 15
+    rag-top-k: 8
+  prompt:
+    persona-name: ${AI_PERSONA_NAME:}
+    custom-instructions: ""

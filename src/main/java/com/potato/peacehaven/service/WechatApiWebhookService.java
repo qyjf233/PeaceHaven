@@ -1,5 +1,7 @@
 package com.potato.peacehaven.service;
 
+import com.potato.peacehaven.ai.pipeline.AiReplyPipeline;
+import com.potato.peacehaven.config.AiProperties;
 import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.dto.WechatApiCallbackEvent;
 import com.potato.peacehaven.entity.BotChatRecord;
@@ -32,6 +34,8 @@ public class WechatApiWebhookService {
     private final BotChatRecordRepository chatRecordRepo;
     private final BotGroupMemberRepository groupMemberRepo;
     private final WechatApiProperties props;
+    private final AiProperties aiProps;
+    private final AiReplyPipeline aiReplyPipeline;
 
     /** 群名本地缓存（1 小时 TTL，避免每条消息都查 DB） */
     private final RoomNameCache roomNameCache = new RoomNameCache();
@@ -136,6 +140,16 @@ public class WechatApiWebhookService {
 
             // 目标群聊文本消息 → 持久化到聊天记录表（用于 RAG 向量化）
             saveChatRecord(event, pureContent);
+
+            // AI 分身回复流水线（异步执行，不阻塞 webhook）
+            if (aiProps.isReady() && !event.isGroupSelfSent()) {
+                String senderWxid = event.getGroupSenderWxid();
+                if (senderWxid == null) senderWxid = event.getFromWxid();
+                String senderNick = resolveSenderNick(senderWxid);
+                aiReplyPipeline.processGroupMessage(
+                        chatroomId, senderWxid, senderNick,
+                        pureContent, mentioned);
+            }
         } else {
             log.info("[Webhook] 私聊文本消息 from={}, content={}",
                     event.getFromWxid(),
