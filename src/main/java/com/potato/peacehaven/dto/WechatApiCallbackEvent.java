@@ -1,5 +1,6 @@
 package com.potato.peacehaven.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -241,6 +242,23 @@ public class WechatApiCallbackEvent {
     public static class WxString {
         @JsonProperty("string")
         private String string;
+
+        public WxString() {}
+
+        public WxString(String string) {
+            this.string = string;
+        }
+
+        /**
+         * 兼容 WechatApi 返回纯字符串的情况（如 MsgSource 有时直接返回 XML 字符串而非 {"string":"..."} 对象）
+         */
+        @JsonCreator
+        public static WxString fromString(String value) {
+            if (value == null) return null;
+            WxString ws = new WxString();
+            ws.string = value;
+            return ws;
+        }
 
         /**
          * 安全获取值，null 时返回 null
