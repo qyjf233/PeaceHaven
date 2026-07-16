@@ -50,7 +50,7 @@ public class PromptBuilder {
      * 后续可在记忆提取时记录 generated_by_prompt=v3.2，分析哪个版本效果最好。
      * </p>
      */
-    public static final String PROMPT_VERSION = "v3.2";
+    public static final String PROMPT_VERSION = "v3.4";
 
     private final AiProperties aiProps;
     private final SpeakingStyleExtractor styleExtractor;
@@ -147,12 +147,35 @@ public class PromptBuilder {
         sb.append("6. 群聊已切换主题时，自然跟随新主题\n");
         sb.append("7. 根据上下文关系调整表达：朋友随意可玩笑，同事克制，陌生人简洁礼貌\n\n");
 
-        // ── 风格锚定 ──
+        // ── 风格统计（注意：是统计数据，不是规则）──
         if (styleDesc != null && !styleDesc.isBlank()) {
-            sb.append("# 语言风格\n");
-            sb.append(styleDesc).append("\n");
-            sb.append("严格按照此风格组织语言，模仿其中的语气、句式和表达习惯。\n\n");
+            sb.append("# 语言风格统计\n");
+            sb.append("以下来自用户长期聊天风格统计，不是固定回复模板：\n");
+            sb.append(styleDesc).append("\n\n");
         }
+
+        // ── 人格维度（从 style-description 分离）──
+        String personality = resolvePersonality();
+        if (personality != null && !personality.isBlank()) {
+            sb.append("# 人格特征\n");
+            sb.append(personality).append("\n\n");
+        }
+
+        // ── 风格表达原则（Style Suppression Layer）──
+        sb.append("# 风格表达原则\n");
+        sb.append("风格频率分布：普通表达 70%、轻松口语 20%、特色词/个人梗 10%、强烈招牌句式 <5%。\n");
+        sb.append("不要提高特色表达出现频率。\n");
+        sb.append("风格预算：本次回复最多使用一个特色表达。如果普通回复即可，不使用特色表达。\n");
+        sb.append("不要连续多次使用同一个口头禅或句式。\n");
+        sb.append("不要为了体现人格而强行加入口头禅、梗、固定句式或夸张表达。\n");
+        sb.append("如果普通回复已经自然，不要额外添加风格元素。\n\n");
+
+        // ── 人格真实性（不要表演人格）──
+        sb.append("# 人格真实性\n");
+        sb.append("你的目标不是展示用户有哪些特色。不要像演员一样刻意扮演。\n");
+        sb.append("真人聊天中，大部分时候只是自然交流。\n");
+        sb.append("如果一句普通的话符合当前场景，优先选择普通表达。\n");
+        sb.append("不要为了证明「像本人」而使用特色词。\n\n");
 
         // ── 人格优先级（6 级决策层）──
         sb.append("# 人格决策优先级（从高到低）\n");
@@ -254,9 +277,11 @@ public class PromptBuilder {
         String sampleText = buildStyleSamples(ragRecords);
         if (!sampleText.isBlank()) {
             ctx.append("# 本人历史回复参考\n");
-            ctx.append("以下是本人过去的真实回复，学习其中的用词、句式、标点、语气和回复长度：\n");
+            ctx.append("以下是本人过去的真实回复，参考其中的用词、句式和语气：\n");
             ctx.append(sampleText).append("\n");
-            ctx.append("注意：学习说话方式，不要照搬其中的具体话题、名词或人名。\n\n");
+            ctx.append("注意：学习说话方式，不要照搬具体话题、名词或人名。\n");
+            ctx.append("这些样本中可能包含特色表达，但它们属于低频行为，只能参考不代表默认使用。\n");
+            ctx.append("如果样本中特色词较多，这是检索偏差，真实聊天中大部分回复是普通表达。\n\n");
         }
 
         // ── 当前注意（反锚定提示，条件注入）──
@@ -281,7 +306,16 @@ public class PromptBuilder {
         return records.stream()
                 .filter(r -> r.getContent() != null && !r.getContent().isBlank())
                 .limit(8) // 控制样本数量，避免 prompt 过长
-                .map(r -> "本人: " + r.getContent())
+                .map(r -> {
+                    String tag = r.getStyleType() != null ? r.getStyleType() : "common";
+                    String freqLabel = switch (tag) {
+                        case "rare" -> "[极少]";
+                        case "catchphrase" -> "[偶尔]";
+                        case "humor" -> "[偶尔]";
+                        default -> "";
+                    };
+                    return "本人" + freqLabel + ": " + r.getContent();
+                })
                 .collect(Collectors.joining("\n"));
     }
 
@@ -297,6 +331,29 @@ public class PromptBuilder {
     private String resolveCurrentStyleDesc() {
         String manual = aiProps.getPrompt().getStyleDescription();
         return (manual != null && !manual.isBlank()) ? manual : null;
+    }
+
+    /**
+     * 解析人格维度配置为 Prompt 文本
+     */
+    private String resolvePersonality() {
+        AiProperties.PersonalityConfig p = aiProps.getPrompt().getPersonality();
+        if (p == null) return null;
+
+        StringBuilder sb = new StringBuilder();
+        if (p.getHumorLevel() != null && !p.getHumorLevel().isBlank()) {
+            sb.append("幽默感: ").append(p.getHumorLevel()).append("\n");
+        }
+        if (p.getSarcasmLevel() != null && !p.getSarcasmLevel().isBlank()) {
+            sb.append("吐槽/调侃: ").append(p.getSarcasmLevel()).append("\n");
+        }
+        if (p.getCasualLevel() != null && !p.getCasualLevel().isBlank()) {
+            sb.append("随意程度: ").append(p.getCasualLevel()).append("\n");
+        }
+        if (p.getWarmthLevel() != null && !p.getWarmthLevel().isBlank()) {
+            sb.append("温暖度: ").append(p.getWarmthLevel()).append("\n");
+        }
+        return sb.length() > 0 ? sb.toString().trim() : null;
     }
 
     private String resolveStyleDesc(List<RetrievedRecord> ragRecords) {

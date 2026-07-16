@@ -37,6 +37,7 @@ public class ChatHistoryRetrievalService {
     private final VectorStore vectorStore;
     private final AiProperties aiProps;
     private final TopicExtractor topicExtractor;
+    private final StyleTagger styleTagger;
 
     /**
      * 检索与当前消息最相似的本人历史回复（RAG — Style RAG）
@@ -72,6 +73,9 @@ public class ChatHistoryRetrievalService {
         double lambda = 0.7; // 偏向相关性，兼顾多样性
         List<VectorSearchResult> selected = mmrRerank(candidates, queryVector, topK, lambda);
 
+        // 风格多样性平衡：限制特色表达（catchphrase/rare/humor）不超过 30%
+        selected = balanceStyleDiversity(selected, topK);
+
         int filtered = candidates.size() - selected.size();
         if (filtered > 0) {
             log.info("[RAG] MMR 重排：{}/{} 条通过 (过滤 {} 条, fetchK={}, topK={}, lambda={})",
@@ -79,14 +83,55 @@ public class ChatHistoryRetrievalService {
         }
 
         return selected.stream()
-                .map(r -> RetrievedRecord.builder()
-                        .id(r.getId())
-                        .score(r.getScore())
-                        .content(r.getMetadata() != null ? r.getMetadata().get("content") : null)
-                        .senderNick(r.getMetadata() != null ? r.getMetadata().get("sender_nick") : null)
-                        .createTime(r.getMetadata() != null ? r.getMetadata().get("create_time") : null)
-                        .build())
+                .map(r -> {
+                    Map<String, String> meta = r.getMetadata();
+                    return RetrievedRecord.builder()
+                            .id(r.getId())
+                            .score(r.getScore())
+                            .content(meta != null ? meta.get("content") : null)
+                            .senderNick(meta != null ? meta.get("sender_nick") : null)
+                            .createTime(meta != null ? meta.get("create_time") : null)
+                            .styleType(meta != null ? meta.getOrDefault("style_type", "common") : "common")
+                            .build();
+                })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 风格多样性平衡
+     * <p>
+     * 限制特色表达（catchphrase/rare/humor）不超过结果的 30%，
+     * 防止 RAG 检索偏差导致模型认为“这个人就是这样讲话的”。
+     * 超出部分替换为 common 类型候选。
+     * </p>
+     */
+    private List<VectorSearchResult> balanceStyleDiversity(List<VectorSearchResult> selected, int topK) {
+        int maxFeatured = Math.max(1, (int) (topK * 0.3)); // 最多 30% 特色表达
+        List<VectorSearchResult> featured = new ArrayList<>();
+        List<VectorSearchResult> common = new ArrayList<>();
+
+        for (VectorSearchResult r : selected) {
+            String styleType = r.getMetadata() != null ? r.getMetadata().getOrDefault("style_type", "common") : "common";
+            if ("common".equals(styleType)) {
+                common.add(r);
+            } else {
+                featured.add(r);
+            }
+        }
+
+        if (featured.size() <= maxFeatured) {
+            return selected; // 不需要平衡
+        }
+
+        // 保留前 maxFeatured 个特色表达 + 补充 common
+        List<VectorSearchResult> balanced = new ArrayList<>();
+        balanced.addAll(featured.subList(0, maxFeatured));
+        int need = topK - maxFeatured;
+        balanced.addAll(common.subList(0, Math.min(need, common.size())));
+
+        log.info("[RAG] 风格多样性平衡: featured {}/{} (max={}), common={}, total={}",
+                maxFeatured, featured.size(), maxFeatured, balanced.size() - maxFeatured, balanced.size());
+        return balanced;
     }
 
     /**
@@ -233,12 +278,16 @@ public class ChatHistoryRetrievalService {
                 log.debug("[RAG] 话题提取失败: {}", e.getMessage());
             }
 
+            // 风格标签（用于检索时多样性平衡）
+            String styleType = styleTagger.tag(record.getContent());
+
             Map<String, String> metadata = new LinkedHashMap<>();
             metadata.put("sender_wxid", record.getSenderWxid());
             metadata.put("sender_nick", record.getSenderNick());
             metadata.put("is_self", String.valueOf(record.getIsSelf()));
             metadata.put("content", record.getContent());
             metadata.put("room_id", record.getRoomId());
+            metadata.put("style_type", styleType);
             if (topic != null) {
                 metadata.put("topic", topic);
             }
@@ -276,5 +325,7 @@ public class ChatHistoryRetrievalService {
         private String content;
         private String senderNick;
         private String createTime;
+        /** 风格标签：common / catchphrase / humor / rare */
+        private String styleType;
     }
 }

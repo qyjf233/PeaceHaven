@@ -27,6 +27,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -60,6 +61,16 @@ public class AiReplyPipeline {
     private final ConversationStateManager conversationStateManager;
     private final TopicJudgeService topicJudgeService;
     private final AiReplyHistory aiReplyHistory;
+
+    /** 幽默场景检测正则 */
+    private static final Pattern HUMOR_PATTERN = Pattern.compile(
+            "哈{3,}|笑死|绷不住|666|6{4,}|离谱|绝了|神了|唐完"
+    );
+
+    /** 提问场景检测正则 */
+    private static final Pattern QUESTION_PATTERN = Pattern.compile(
+            "[?？]|怎么|为什么|如何|什么|是不是|能不能|可以吗"
+    );
 
     /**
      * 处理群消息（异步执行）
@@ -189,9 +200,14 @@ public class AiReplyPipeline {
                 messages.size(), aiProps.getPrompt().getPersonaName(),
                 com.potato.peacehaven.ai.prompt.PromptBuilder.PROMPT_VERSION, jsonMode);
 
-        // ===== 9. 调用 LLM =====
+        // ===== 9. 调用 LLM（动态 temperature）=====
         AiProperties.LlmConfig llmCfg = aiProps.getLlm();
-        String rawReply = llmClient.chat(messages, llmCfg.getTemperature(), llmCfg.getMaxTokens());
+        String scene = detectScene(content);
+        Double temperature = aiProps.resolveTemperature(scene);
+        String rawReply = llmClient.chat(messages, temperature, llmCfg.getMaxTokens());
+        if (scene != null) {
+            log.info("[Pipeline] 场景检测: scene={}, temperature={}", scene, temperature);
+        }
         if (rawReply == null || rawReply.isBlank()) {
             log.warn("[Pipeline] LLM 返回空，跳过发送");
             return;
@@ -267,5 +283,18 @@ public class AiReplyPipeline {
 
         long elapsed = System.currentTimeMillis() - startTime;
         log.info("[Pipeline] 完成 chatroom={}, topic={}, 耗时={}ms", chatroomId, currentTopic, elapsed);
+    }
+
+    /**
+     * 检测消息场景类型，用于动态调整 temperature
+     *
+     * @param content 当前消息内容
+     * @return 场景类型：humor / question / normal / null（无法判断）
+     */
+    private String detectScene(String content) {
+        if (content == null || content.isBlank()) return null;
+        if (HUMOR_PATTERN.matcher(content).find()) return "humor";
+        if (QUESTION_PATTERN.matcher(content).find()) return "question";
+        return "normal";
     }
 }

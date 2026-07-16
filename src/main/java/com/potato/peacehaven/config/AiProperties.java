@@ -5,6 +5,8 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 /**
  * AI 分身系统配置属性
  * <p>绑定 application.yaml 中 ai.* 配置</p>
@@ -38,6 +40,25 @@ public class AiProperties {
                 && llm != null
                 && llm.getApiKey() != null && !llm.getApiKey().isBlank()
                 && llm.getBaseUrl() != null && !llm.getBaseUrl().isBlank();
+    }
+
+    /**
+     * 获取当前场景的 temperature
+     * <p>
+     * 优先使用场景温度，否则回退到基础温度。
+     * </p>
+     *
+     * @param scene 场景类型（normal/humor/question），可为 null
+     * @return 适用的 temperature
+     */
+    public Double resolveTemperature(String scene) {
+        if (scene != null && prompt.getSceneTemperature() != null) {
+            Double sceneTemp = prompt.getSceneTemperature().get(scene);
+            if (sceneTemp != null) {
+                return sceneTemp;
+            }
+        }
+        return llm.getTemperature();
     }
 
     @Getter
@@ -151,5 +172,24 @@ public class AiProperties {
 
         /** 记忆条目最大数量（每人） */
         private int maxMemoryEntries = 50;
+
+        /** 人格维度配置（从 style-description 分离） */
+        private PersonalityConfig personality;
+
+        /** 场景 temperature 覆盖（如 humor=0.85, normal=0.7） */
+        private Map<String, Double> sceneTemperature;
+    }
+
+    @Getter
+    @Setter
+    public static class PersonalityConfig {
+        /** 幽默感等级：high / medium / low */
+        private String humorLevel;
+        /** 吐槽/调侃等级：high / medium / low */
+        private String sarcasmLevel;
+        /** 随意程度：high / medium / low */
+        private String casualLevel;
+        /** 温暖度：high / medium / low */
+        private String warmthLevel;
     }
 }
