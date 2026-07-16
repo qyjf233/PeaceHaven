@@ -1514,10 +1514,20 @@
                 + '<span class="wl-card-wxid">' + e.wxid + '</span>'
                 + '</div>'
                 + '<div class="wl-card-actions">'
+                + '<span class="wl-flag-group">'
+                + '<span class="wl-flag-label">训练</span>'
                 + '<label class="wl-toggle">'
-                + '<input type="checkbox" ' + (e.enabled ? 'checked' : '') + ' onchange="toggleWlEntry(' + e.id + ', this.checked)">'
+                + '<input type="checkbox" ' + (e.trainingEnabled ? 'checked' : '') + ' onchange="toggleWlFlag(' + e.id + ', \'trainingEnabled\', this.checked)">'
                 + '<span class="wl-toggle-slider"></span>'
                 + '</label>'
+                + '</span>'
+                + '<span class="wl-flag-group">'
+                + '<span class="wl-flag-label">回复</span>'
+                + '<label class="wl-toggle">'
+                + '<input type="checkbox" ' + (e.replyEnabled ? 'checked' : '') + ' onchange="toggleWlFlag(' + e.id + ', \'replyEnabled\', this.checked)">'
+                + '<span class="wl-toggle-slider"></span>'
+                + '</label>'
+                + '</span>'
                 + '<button class="btn-modal wl-del-btn" onclick="removeWlEntry(' + e.id + ')">删除</button>'
                 + '</div></div>';
         }).join('');
@@ -1538,8 +1548,10 @@
         }
     };
 
-    window.toggleWlEntry = async function (id, enabled) {
-        const result = await api('PATCH', API_WL + '/' + id, { enabled });
+    window.toggleWlFlag = async function (id, flag, value) {
+        const body = {};
+        body[flag] = value;
+        const result = await api('PATCH', API_WL + '/' + id, body);
         showToast(result.message || (result.success ? '已更新' : '更新失败'), result.success ? 'success' : 'error');
         if (!result.success) loadWhitelist();
     };

@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * AI 分身白名单服务
  * <p>
- * 维护内存缓存（groupIds / friendWxids），每次白名单变更时刷新，
+ * 维护两组内存缓存（训练 / 回复），每次白名单变更时刷新，
  * 避免每条消息都查 DB。
  * </p>
  */
@@ -26,57 +26,68 @@ public class AiWhitelistService {
 
     private final BotAiWhitelistRepository whitelistRepo;
 
-    /** 启用的群聊 ID 集合 */
-    private final Set<String> allowedGroupIds = new CopyOnWriteArraySet<>();
+    // ─── 训练缓存（记录聊天数据用于 RAG）───
+    private final Set<String> trainingGroupIds = new CopyOnWriteArraySet<>();
 
-    /** 启用的好友 wxid 集合 */
-    private final Set<String> allowedFriendWxids = new CopyOnWriteArraySet<>();
+    // ─── 回复缓存（AI 主动回复消息）───
+    private final Set<String> replyGroupIds = new CopyOnWriteArraySet<>();
+    private final Set<String> replyFriendWxids = new CopyOnWriteArraySet<>();
 
     /** 启动时加载缓存 */
     @PostConstruct
     public void init() {
         refreshCache();
-        log.info("[AiWhitelist] 初始化完成，群聊 {} 个，好友 {} 个",
-                allowedGroupIds.size(), allowedFriendWxids.size());
+        log.info("[AiWhitelist] 初始化完成，训练群 {} 个，回复群 {} 个，回复好友 {} 个",
+                trainingGroupIds.size(), replyGroupIds.size(), replyFriendWxids.size());
     }
 
     /** 从 DB 刷新内存缓存 */
     private void refreshCache() {
-        List<BotAiWhitelist> enabled = whitelistRepo.findAllByEnabledTrue();
-        Set<String> groups = enabled.stream()
-                .filter(e -> "group".equals(e.getType()))
-                .map(BotAiWhitelist::getWxid)
-                .collect(Collectors.toSet());
-        Set<String> friends = enabled.stream()
-                .filter(e -> "friend".equals(e.getType()))
+        List<BotAiWhitelist> all = whitelistRepo.findAll();
+
+        Set<String> tGroups = all.stream()
+                .filter(e -> "group".equals(e.getType()) && Boolean.TRUE.equals(e.getTrainingEnabled()))
                 .map(BotAiWhitelist::getWxid)
                 .collect(Collectors.toSet());
 
-        allowedGroupIds.clear();
-        allowedGroupIds.addAll(groups);
-        allowedFriendWxids.clear();
-        allowedFriendWxids.addAll(friends);
+        Set<String> rGroups = all.stream()
+                .filter(e -> "group".equals(e.getType()) && Boolean.TRUE.equals(e.getReplyEnabled()))
+                .map(BotAiWhitelist::getWxid)
+                .collect(Collectors.toSet());
+
+        Set<String> rFriends = all.stream()
+                .filter(e -> "friend".equals(e.getType()) && Boolean.TRUE.equals(e.getReplyEnabled()))
+                .map(BotAiWhitelist::getWxid)
+                .collect(Collectors.toSet());
+
+        trainingGroupIds.clear();
+        trainingGroupIds.addAll(tGroups);
+        replyGroupIds.clear();
+        replyGroupIds.addAll(rGroups);
+        replyFriendWxids.clear();
+        replyFriendWxids.addAll(rFriends);
     }
 
-    // ─── 查询 ───────────────────────────────────────────
+    // ─── 训练查询 ───────────────────────────────────────
 
-    /**
-     * 判断群消息是否允许触发 AI
-     *
-     * @param chatroomId 群聊 ID（xxx@chatroom）
-     */
-    public boolean isGroupAllowed(String chatroomId) {
-        return chatroomId != null && allowedGroupIds.contains(chatroomId);
+    /** 群消息是否启用训练（记录聊天数据） */
+    public boolean isGroupTrainingAllowed(String chatroomId) {
+        return chatroomId != null && trainingGroupIds.contains(chatroomId);
     }
 
-    /**
-     * 判断私聊消息是否允许触发 AI
-     *
-     * @param senderWxid 发送者 wxid
-     */
-    public boolean isFriendAllowed(String senderWxid) {
-        return senderWxid != null && allowedFriendWxids.contains(senderWxid);
+    // ─── 回复查询 ───────────────────────────────────────
+
+    /** 群消息是否启用 AI 回复 */
+    public boolean isGroupReplyAllowed(String chatroomId) {
+        return chatroomId != null && replyGroupIds.contains(chatroomId);
     }
+
+    /** 私聊消息是否启用 AI 回复 */
+    public boolean isFriendReplyAllowed(String senderWxid) {
+        return senderWxid != null && replyFriendWxids.contains(senderWxid);
+    }
+
+    // ─── 列表 ─────────────────────────────────────────
 
     /** 获取全部白名单 */
     public List<BotAiWhitelist> getWhitelist() {
@@ -94,25 +105,17 @@ public class AiWhitelistService {
      */
     @Transactional
     public BotAiWhitelist addEntry(String type, String wxid, String name) {
-        // 已存在则返回
+        // 已存在则直接返回
         Optional<BotAiWhitelist> existing = whitelistRepo.findByTypeAndWxid(type, wxid);
         if (existing.isPresent()) {
-            BotAiWhitelist e = existing.get();
-            if (!Boolean.TRUE.equals(e.getEnabled())) {
-                e.setEnabled(true);
-                e.setName(name);
-                e = whitelistRepo.save(e);
-                refreshCache();
-                log.info("[AiWhitelist] 重新启用 type={}, wxid={}, name={}", type, wxid, name);
-                return e;
-            }
-            return e;
+            return existing.get();
         }
         BotAiWhitelist entry = BotAiWhitelist.builder()
                 .type(type)
                 .wxid(wxid)
                 .name(name)
-                .enabled(true)
+                .trainingEnabled(true)
+                .replyEnabled(false)
                 .build();
         entry = whitelistRepo.save(entry);
         refreshCache();
@@ -130,14 +133,21 @@ public class AiWhitelistService {
         return true;
     }
 
-    /** 切换启用/停用 */
+    /**
+     * 更新训练/回复开关
+     *
+     * @param trainingEnabled 训练开关（null 表示不修改）
+     * @param replyEnabled    回复开关（null 表示不修改）
+     */
     @Transactional
-    public boolean toggleEntry(Long id, boolean enabled) {
+    public boolean updateFlags(Long id, Boolean trainingEnabled, Boolean replyEnabled) {
         return whitelistRepo.findById(id).map(entry -> {
-            entry.setEnabled(enabled);
+            if (trainingEnabled != null) entry.setTrainingEnabled(trainingEnabled);
+            if (replyEnabled != null) entry.setReplyEnabled(replyEnabled);
             whitelistRepo.save(entry);
             refreshCache();
-            log.info("[AiWhitelist] 切换 id={}, enabled={}", id, enabled);
+            log.info("[AiWhitelist] 更新 id={}, training={}, reply={}", id,
+                    entry.getTrainingEnabled(), entry.getReplyEnabled());
             return true;
         }).orElse(false);
     }

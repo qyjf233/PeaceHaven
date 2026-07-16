@@ -938,7 +938,8 @@ public class AdminBotController {
             m.put("type", e.getType());
             m.put("wxid", e.getWxid());
             m.put("name", e.getName());
-            m.put("enabled", e.getEnabled());
+            m.put("trainingEnabled", e.getTrainingEnabled());
+            m.put("replyEnabled", e.getReplyEnabled());
             m.put("createdAt", e.getCreatedAt() != null ? e.getCreatedAt().toString() : null);
             return m;
         }).collect(Collectors.toList());
@@ -978,15 +979,19 @@ public class AdminBotController {
     @ResponseBody
     @PatchMapping("/api/bot/ai/whitelist/{id}")
     @Transactional
-    public Map<String, Object> toggleAiWhitelist(@PathVariable Long id, @RequestBody Map<String, Boolean> body, HttpServletRequest request) {
-        Boolean enabled = body.get("enabled");
-        if (enabled == null) {
-            return Map.of("success", false, "message", "enabled 参数缺失");
+    public Map<String, Object> updateAiWhitelist(@PathVariable Long id, @RequestBody Map<String, Boolean> body, HttpServletRequest request) {
+        Boolean trainingEnabled = body.get("trainingEnabled");
+        Boolean replyEnabled = body.get("replyEnabled");
+        if (trainingEnabled == null && replyEnabled == null) {
+            return Map.of("success", false, "message", "trainingEnabled 或 replyEnabled 参数缺失");
         }
-        boolean updated = aiWhitelistService.toggleEntry(id, enabled);
+        boolean updated = aiWhitelistService.updateFlags(id, trainingEnabled, replyEnabled);
         if (updated) {
-            logService.record("机器人配置", "修改", "AI白名单 " + (enabled ? "启用" : "停用") + " id=" + id, request);
-            return Map.of("success", true, "message", enabled ? "已启用" : "已停用");
+            String detail = "AI白名单 id=" + id;
+            if (trainingEnabled != null) detail += " 训练=" + (trainingEnabled ? "开" : "关");
+            if (replyEnabled != null) detail += " 回复=" + (replyEnabled ? "开" : "关");
+            logService.record("机器人配置", "修改", detail, request);
+            return Map.of("success", true, "message", "已更新");
         }
         return Map.of("success", false, "message", "条目不存在");
     }

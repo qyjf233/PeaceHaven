@@ -16,9 +16,9 @@ public interface BotAiWhitelistRepository extends JpaRepository<BotAiWhitelist, 
     /** 按类型列出所有条目 */
     List<BotAiWhitelist> findByType(String type);
 
-    /** 获取所有启用的条目 */
-    List<BotAiWhitelist> findAllByEnabledTrue();
+    /** 获取所有启用的训练群（备用） */
+    List<BotAiWhitelist> findAllByTrainingEnabledTrue();
 
-    /** 快速判断是否在白名单中（启用状态） */
-    boolean existsByTypeAndWxidAndEnabledTrue(String type, String wxid);
+    /** 获取所有启用的回复群（备用） */
+    List<BotAiWhitelist> findAllByReplyEnabledTrue();
 }

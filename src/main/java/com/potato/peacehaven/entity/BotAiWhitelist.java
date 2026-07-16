@@ -46,11 +46,17 @@ public class BotAiWhitelist {
     @Comment("显示名称")
     private String name;
 
-    /** 是否启用 */
-    @Column(nullable = false)
+    /** 是否启用训练（记录聊天数据用于 RAG） */
+    @Column(name = "training_enabled", nullable = false)
     @Builder.Default
-    @Comment("是否启用")
-    private Boolean enabled = true;
+    @Comment("是否启用训练")
+    private Boolean trainingEnabled = true;
+
+    /** 是否启用回复（AI 主动回复消息） */
+    @Column(name = "reply_enabled", nullable = false)
+    @Builder.Default
+    @Comment("是否启用回复")
+    private Boolean replyEnabled = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

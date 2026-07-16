@@ -15,7 +15,7 @@ spring:
     jdbc:
       initialize-schema: always  # 自动建表 SPRING_SESSION / SPRING_SESSION_ATTRIBUTES
   datasource:
-    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db_pre
+    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db
     username: peacehaven_server
     password: XHJdashuaige2508@
     driver-class-name: com.mysql.cj.jdbc.Driver

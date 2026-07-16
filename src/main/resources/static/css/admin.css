@@ -1872,8 +1872,20 @@ body {
 .wl-card-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
     flex-shrink: 0;
+}
+
+.wl-flag-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wl-flag-label {
+    font-size: 12px;
+    color: var(--admin-text-muted);
+    font-weight: 500;
 }
 
 .wl-toggle {
