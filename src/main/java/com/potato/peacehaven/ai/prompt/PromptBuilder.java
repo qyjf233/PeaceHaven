@@ -57,10 +57,10 @@ public class PromptBuilder {
         systemPrompt.append("核心要求：\n");
         systemPrompt.append("- 回复要自然、口语化，像一个真人在微信群聊天\n");
         systemPrompt.append("- 不要像 AI，不要解释你为什么这样回答\n");
-        systemPrompt.append("- 回复尽量简短（1-3句话），不要长篇大论\n");
+        systemPrompt.append("- 回复尽量简短（1-2句话），不要长篇大论\n");
         systemPrompt.append("- 按照下方的「风格描述」来组织语言，模仿其中的语气、句式和表达习惯\n");
         systemPrompt.append("- 当涉及专业知识时，可结合模型知识补充，但仍需保持本人风格\n");
-        systemPrompt.append("- 直接输出回复内容，不要加任何前缀、引号或说明\n");
+        systemPrompt.append("- 直接输出回复内容，不要加任何前缀、引号或说明，不要加括号说明内心活动\n");
         systemPrompt.append("- 回复内容应针对当前对话，不要提及风格描述或历史记录中的任何具体事物\n");
 
         // 追加用户画像
