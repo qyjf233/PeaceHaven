@@ -31,7 +31,7 @@ public class UserMemoryExtractor {
     private final LlmClient llmClient;
     private final AiProperties aiProps;
     private final UserMemoryService userMemoryService;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 从对话中提取用户画像并更新记忆
