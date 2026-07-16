@@ -52,24 +52,32 @@ public class ReplyDecisionService {
      */
     public ReplyDecision decide(String chatroomId, String senderWxid, String content, boolean isMentioned) {
         if (!aiProps.isReady()) {
+            log.info("[Decision] AI 系统未就绪 chatroom={}", chatroomId);
             return ReplyDecision.skip("AI 系统未就绪");
         }
 
         AiProperties.ReplyConfig cfg = aiProps.getReply();
         resetDailyIfNeeded();
 
+        log.info("[Decision] 开始决策 chatroom={}, sender={}, mentioned={}, dailyCount={}/{}, cooldown={}s, randomRate={}, onlyAt={}",
+                chatroomId, senderWxid, isMentioned,
+                dailyCount.get(), cfg.getMaxPerDay(), cfg.getCooldownSeconds(), cfg.getRandomRate(), cfg.isOnlyAt());
+
         // 1. 被 @提及 -> 必须回复
         if (isMentioned) {
+            log.info("[Decision] ✅ 回复：被@提及 chatroom={}", chatroomId);
             return ReplyDecision.reply("被@提及");
         }
 
         // 2. only-at 模式 -> 仅@时才回复
         if (cfg.isOnlyAt()) {
+            log.info("[Decision] ❌ 跳过：only-at 模式，未被@ chatroom={}", chatroomId);
             return ReplyDecision.skip("only-at 模式，未被@不回复");
         }
 
         // 3. 每日上限检查
         if (dailyCount.get() >= cfg.getMaxPerDay()) {
+            log.info("[Decision] ❌ 跳过：已达每日上限 {}/{} chatroom={}", dailyCount.get(), cfg.getMaxPerDay(), chatroomId);
             return ReplyDecision.skip("已达每日上限 " + cfg.getMaxPerDay());
         }
 
@@ -78,23 +86,31 @@ public class ReplyDecisionService {
         long now = System.currentTimeMillis();
         long cooldownMs = cfg.getCooldownSeconds() * 1000L;
         if (lastTime != null && (now - lastTime) < cooldownMs) {
+            long remainSec = (cooldownMs - (now - lastTime)) / 1000;
+            log.info("[Decision] ❌ 跳过：冷却中，距上次 {}s，剩余 {}s chatroom={}", (now - lastTime) / 1000, remainSec, chatroomId);
             return ReplyDecision.skip("冷却中（距上次 " + (now - lastTime) / 1000 + "s）");
         }
 
         // 5. 提问检测 -> 高概率回复（70%）
         boolean isQuestion = content != null && QUESTION_PATTERN.matcher(content).find();
         if (isQuestion) {
-            if (ThreadLocalRandom.current().nextDouble() < 0.7) {
+            double roll = ThreadLocalRandom.current().nextDouble();
+            if (roll < 0.7) {
+                log.info("[Decision] ✅ 回复：检测到提问 (roll={:.2f}<0.7) chatroom={}", roll, chatroomId);
                 return ReplyDecision.reply("检测到提问");
             }
+            log.info("[Decision] ❌ 跳过：检测到提问但概率未命中 (roll={:.2f}>=0.7) chatroom={}", roll, chatroomId);
             return ReplyDecision.skip("检测到提问但概率未命中");
         }
 
         // 6. 随机概率
-        if (ThreadLocalRandom.current().nextDouble() < cfg.getRandomRate()) {
+        double roll = ThreadLocalRandom.current().nextDouble();
+        if (roll < cfg.getRandomRate()) {
+            log.info("[Decision] ✅ 回复：随机触发 (roll={:.2f}<{}) chatroom={}", roll, cfg.getRandomRate(), chatroomId);
             return ReplyDecision.reply("随机触发");
         }
 
+        log.info("[Decision] ❌ 跳过：无触发条件 (roll={:.2f}>={}) chatroom={}", roll, cfg.getRandomRate(), chatroomId);
         return ReplyDecision.skip("无触发条件");
     }
 

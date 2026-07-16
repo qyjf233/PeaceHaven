@@ -339,10 +339,40 @@ public class WechatApiWebhookService {
     // ========================================================================
 
     /**
-     * 持久化消息日志
+     * 持久化消息日志（仅白名单 + 训练开启时才落库 bot_message_log）
      */
     private void persistLog(WechatApiCallbackEvent event) {
         try {
+            // ── 白名单训练过滤 ──
+            boolean shouldLog = false;
+            String filterReason = "";
+
+            if (event.isGroupMessage()) {
+                String chatroomId = event.getChatroomId();
+                if (chatroomId != null && aiWhitelistService.isGroupTrainingAllowed(chatroomId)) {
+                    shouldLog = true;
+                    filterReason = "群训练白名单命中: " + chatroomId;
+                } else {
+                    filterReason = "群不在训练白名单: " + chatroomId;
+                }
+            } else {
+                String senderWxid = event.getFromWxid();
+                // 私聊：目前无私聊训练概念，仅回复白名单好友消息才记录
+                if (senderWxid != null && aiWhitelistService.isFriendReplyAllowed(senderWxid)) {
+                    shouldLog = true;
+                    filterReason = "好友回复白名单命中: " + senderWxid;
+                } else {
+                    filterReason = "好友不在回复白名单: " + senderWxid;
+                }
+            }
+
+            if (!shouldLog) {
+                log.debug("[Webhook] persistLog 跳过: {}", filterReason);
+                return;
+            }
+
+            log.info("[Webhook] persistLog 落库: {}, msgType={}", filterReason, event.getMsgType());
+
             String content = event.getContentString();
             if (content != null && content.length() > 2000) {
                 content = content.substring(0, 2000);

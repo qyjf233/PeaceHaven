@@ -13,7 +13,6 @@ import com.potato.peacehaven.ai.retrieval.ContextRetrievalService.ContextMessage
 import com.potato.peacehaven.ai.review.ReplyReviewService;
 import com.potato.peacehaven.ai.review.ReviewResult;
 import com.potato.peacehaven.config.AiProperties;
-import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.service.WechatApiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +38,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class AiReplyPipeline {
 
     private final AiProperties aiProps;
-    private final WechatApiProperties wechatApiProps;
     private final ReplyDecisionService decisionService;
     private final ContextRetrievalService contextRetrievalService;
     private final ChatHistoryRetrievalService chatHistoryRetrievalService;
@@ -63,7 +61,7 @@ public class AiReplyPipeline {
                                      String senderNick, String content,
                                      boolean isMentioned) {
         if (!aiProps.isReady()) {
-            log.debug("[Pipeline] AI 系统未就绪，跳过");
+            log.info("[Pipeline] ❗ AI 系统未就绪（isReady=false），跳过处理");
             return;
         }
 
@@ -98,13 +96,13 @@ public class AiReplyPipeline {
         // 2a. 最近上下文
         List<ContextMessage> contextMessages = contextRetrievalService.getRecentContext(
                 chatroomId, replyCfg.getContextSize());
-        log.debug("[Pipeline] 拉取上下文 {} 条", contextMessages.size());
+        log.info("[Pipeline] 拉取上下文 {} 条 (contextSize={})", contextMessages.size(), replyCfg.getContextSize());
 
         // 2b. RAG 检索本人历史回复
         List<RetrievedRecord> ragRecords = Collections.emptyList();
         try {
             ragRecords = chatHistoryRetrievalService.retrieve(content, replyCfg.getRagTopK());
-            log.debug("[Pipeline] RAG 检索 {} 条", ragRecords.size());
+            log.info("[Pipeline] RAG 检索 {} 条 (ragTopK={})", ragRecords.size(), replyCfg.getRagTopK());
         } catch (Exception e) {
             log.warn("[Pipeline] RAG 检索失败，继续无 RAG: {}", e.getMessage());
         }
@@ -115,7 +113,9 @@ public class AiReplyPipeline {
             var memoryOpt = userMemoryService.getUserMemory(senderWxid);
             if (memoryOpt.isPresent()) {
                 userMemoryText = userMemoryService.formatMemoryForPrompt(memoryOpt.get());
-                log.debug("[Pipeline] 加载用户画像: {}", senderNick);
+                log.info("[Pipeline] 加载用户画像: {}", senderNick);
+            } else {
+                log.info("[Pipeline] 无用户画像: {}", senderNick);
             }
         } catch (Exception e) {
             log.warn("[Pipeline] 用户记忆加载失败: {}", e.getMessage());
@@ -124,7 +124,7 @@ public class AiReplyPipeline {
         // ===== 3. 构建 Prompt =====
         List<LlmMessage> messages = promptBuilder.buildMessages(
                 senderNick, content, userMemoryText, ragRecords, contextMessages);
-        log.debug("[Pipeline] Prompt 构建完成，messages 数量={}", messages.size());
+        log.info("[Pipeline] Prompt 构建完成，messages 数量={}, personaName={}", messages.size(), aiProps.getPrompt().getPersonaName());
 
         // ===== 4. 调用 LLM =====
         AiProperties.LlmConfig llmCfg = aiProps.getLlm();
@@ -145,23 +145,24 @@ public class AiReplyPipeline {
 
         // ===== 6. 模拟人类延迟（1-3s 随机） =====
         long delayMs = ThreadLocalRandom.current().nextLong(1000, 3001);
-        log.debug("[Pipeline] 模拟延迟 {}ms", delayMs);
+        log.info("[Pipeline] 模拟人类延迟 {}ms", delayMs);
         Thread.sleep(delayMs);
 
         // ===== 7. 发送消息 =====
-        String targetGroup = wechatApiProps.getGroupId();
-        if (targetGroup == null || targetGroup.isBlank()) {
-            targetGroup = chatroomId;
-        }
+        // 群消息发到 chatroomId，私聊发到 senderWxid
+        String sendTarget = (chatroomId != null && !chatroomId.isBlank()) ? chatroomId : senderWxid;
+        boolean isGroupChat = chatroomId != null && !chatroomId.isBlank();
+        log.info("[Pipeline] 准备发送 target={}, isGroup={}, reply={}",
+                sendTarget, isGroupChat, finalReply.length() > 80 ? finalReply.substring(0, 80) + "..." : finalReply);
 
-        var resp = wechatApiService.sendText(targetGroup, finalReply);
+        var resp = wechatApiService.sendText(sendTarget, finalReply);
         if (resp.isSuccess()) {
-            log.info("[Pipeline] 发送成功 chatroom={}, reply={}", chatroomId,
+            log.info("[Pipeline] ✅ 发送成功 target={}, reply={}", sendTarget,
                     finalReply.length() > 50 ? finalReply.substring(0, 50) + "..." : finalReply);
             // 更新决策统计
-            decisionService.recordReply(chatroomId);
+            decisionService.recordReply(chatroomId != null ? chatroomId : senderWxid);
         } else {
-            log.warn("[Pipeline] 发送失败: {}", resp.getMsg());
+            log.warn("[Pipeline] ❌ 发送失败: target={}, msg={}", sendTarget, resp.getMsg());
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
