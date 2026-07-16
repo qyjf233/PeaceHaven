@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class PromptBuilder {
 
     private final AiProperties aiProps;
+    private final SpeakingStyleExtractor styleExtractor;
 
     /**
      * 构建完整的 LLM messages
@@ -57,13 +58,10 @@ public class PromptBuilder {
         systemPrompt.append("- 回复要自然、口语化，像一个真人在微信群聊天\n");
         systemPrompt.append("- 不要像 AI，不要解释你为什么这样回答\n");
         systemPrompt.append("- 回复尽量简短（1-3句话），不要长篇大论\n");
-        systemPrompt.append("- 优先模仿本人的语气、措辞、口头禅和聊天习惯\n");
-        systemPrompt.append("- 参考提供的历史聊天记录学习本人的说话方式\n");
+        systemPrompt.append("- 按照下方的「风格描述」来组织语言，模仿其中的语气、句式和表达习惯\n");
         systemPrompt.append("- 当涉及专业知识时，可结合模型知识补充，但仍需保持本人风格\n");
         systemPrompt.append("- 直接输出回复内容，不要加任何前缀、引号或说明\n");
-        systemPrompt.append("- 【重要】历史记录仅用于学习语气和句式，绝对不要照搬其中的具体名词、话题或内容\n");
-        systemPrompt.append("- 【重要】禁止在回复中提及历史记录里出现过的特定词汇（人名、食物、地点、游戏等），除非对方在当前消息中明确提到了该话题\n");
-        systemPrompt.append("- 【重要】每次回复应该是全新的内容，不要重复之前说过的话或提到的事物\n");
+        systemPrompt.append("- 回复内容应针对当前对话，不要提及风格描述或历史记录中的任何具体事物\n");
 
         // 追加用户画像
         if (userMemoryText != null && !userMemoryText.isBlank()) {
@@ -78,11 +76,11 @@ public class PromptBuilder {
 
         messages.add(LlmMessage.system(systemPrompt.toString()));
 
-        // ===== System Message 2: RAG 历史风格示例 =====
-        String ragText = formatRagRecords(ragRecords);
-        if (ragText != null && !ragText.isBlank()) {
+        // ===== System Message 2: 风格描述（从 RAG 记录提炼，不含具体名词） =====
+        String styleDesc = styleExtractor.getStyleDescription(ragRecords);
+        if (styleDesc != null && !styleDesc.isBlank()) {
             messages.add(LlmMessage.system(
-                    "以下是本人过去的真实聊天记录。请从中学习语气、句式、口头禅等表达风格，但不要照搬其中的具体话题或词汇：\n" + ragText));
+                    "以下是根据本人历史聊天提炼的风格描述，请按此风格回复：\n" + styleDesc));
         }
 
         // ===== System Message 3: 最近上下文 =====
@@ -97,21 +95,6 @@ public class PromptBuilder {
         messages.add(LlmMessage.user(nick + ": " + currentMessage));
 
         return messages;
-    }
-
-    /**
-     * 格式化 RAG 历史回复
-     */
-    private String formatRagRecords(List<RetrievedRecord> records) {
-        if (records == null || records.isEmpty()) return "";
-
-        return records.stream()
-                .filter(r -> r.getContent() != null && !r.getContent().isBlank())
-                .map(r -> {
-                    String nick = r.getSenderNick() != null ? r.getSenderNick() : "我";
-                    return nick + ": " + r.getContent();
-                })
-                .collect(Collectors.joining("\n"));
     }
 
     /**
