@@ -35,6 +35,9 @@
                 <li class="bot-nav-item" data-panel="group-manage">
                     <span class="bot-nav-icon">💬</span><span class="bot-nav-label">群聊管理</span>
                 </li>
+                <li class="bot-nav-item" data-panel="avatar-config">
+                    <span class="bot-nav-icon">🤖</span><span class="bot-nav-label">分身配置</span>
+                </li>
             </ul>
         </nav>
 
@@ -280,7 +283,35 @@
                 </div>
             </div>
             <div class="bot-panel" id="panel-group-manage">
-                <div class="bot-panel-placeholder"><p>群聊管理功能区域（待实现）</p></div>
+                <div class="gm-manage-header">
+                    <h3 class="push-title">群聊管理</h3>
+                    <div class="gm-manage-actions">
+                        <button class="btn-modal btn-modal-save" onclick="loadGroupDetail()">刷新群信息</button>
+                        <button class="btn-modal gm-sync-btn" onclick="syncGroupMembers()">同步群成员</button>
+                    </div>
+                </div>
+
+                <!-- 群聊概览 -->
+                <div class="cfg-section grp-overview" id="grpOverview">
+                    <div class="grp-overview-content" id="grpOverviewContent">
+                        <div class="gm-loading">点击左侧「群聊管理」加载数据</div>
+                    </div>
+                </div>
+
+                <!-- 管理员配置 -->
+                <div class="cfg-section grp-action-section">
+                    <h3 class="cfg-title">管理员配置</h3>
+                    <div class="grp-admin-list" id="grpAdminList">
+                        <p class="cfg-hint">加载中...</p>
+                    </div>
+                    <div class="grp-admin-add-row">
+                        <input type="text" class="m-input grp-admin-add-input" id="grpAdminAddInput" placeholder="输入成员 wxid">
+                        <button class="btn-modal btn-modal-save grp-admin-add-btn" id="grpAdminAddBtn">添加管理员</button>
+                    </div>
+                </div>
+            </div>
+            <div class="bot-panel" id="panel-avatar-config">
+                <div class="bot-panel-placeholder"><p>分身配置功能区域（待实现）</p></div>
             </div>
         </main>
     </div>
@@ -361,6 +392,10 @@
             // 懒加载：切换到群聊成员时自动加载
             if (item.dataset.panel === 'group-members' && !gmLoaded) {
                 loadGroupMembers(false);
+            }
+            // 懒加载：切换到群聊管理时自动加载
+            if (item.dataset.panel === 'group-manage' && !gmManageLoaded) {
+                loadGroupDetail();
             }
         });
     });
@@ -1224,8 +1259,177 @@
         }
     }
 
+    /* ====== 群聊管理 ====== */
+    const API_GD = '/admin/api/bot/group/detail';
+    const API_CN = '/admin/api/bot/group/change-name';
+    const API_CK = '/admin/api/bot/group/change-nickname';
+    const API_AO = '/admin/api/bot/group/admin-operate';
+    let gmManageLoaded = false;
+    let grpData = null;
+
+    window.loadGroupDetail = async function () {
+        const overviewEl = document.getElementById('grpOverviewContent');
+        overviewEl.innerHTML = '<div class="gm-loading">加载群信息中...</div>';
+
+        const result = await api('GET', API_GD);
+        if (!result.success) {
+            overviewEl.innerHTML = '<div class="gm-empty">' + (result.message || '获取失败') + '</div>';
+            return;
+        }
+
+        gmManageLoaded = true;
+        grpData = result.data;
+        const d = grpData;
+
+        // 渲染概览（群名称 + 编辑按钮）
+        let html = '<div class="grp-info-row">'
+            + '<span class="grp-info-label">群名称</span>'
+            + '<span class="grp-info-value grp-group-name">' + escHtml(d.groupName || d.groupId) + '</span>'
+            + '<button class="grp-inline-edit-btn" data-field="groupName">编辑群名称</button></div>';
+
+        html += '<div class="grp-info-row"><span class="grp-info-label">群 ID</span>'
+            + '<span class="grp-info-value" style="font-family:monospace;font-size:12px;">' + escHtml(d.groupId) + '</span></div>';
+
+        // 群主行（显示昵称 + 编辑按钮）
+        if (d.owner) {
+            const ownerDisplay = d.ownerNick ? escHtml(d.ownerNick) + ' <span style="color:#999;font-size:11px;">(' + escHtml(d.owner) + ')</span>' : escHtml(d.owner);
+            html += '<div class="grp-info-row"><span class="grp-info-label">群主（我）</span>'
+                + '<span class="grp-info-value">' + ownerDisplay + '</span>'
+                + '<button class="grp-inline-edit-btn" data-field="ownerNick">编辑昵称</button></div>';
+        }
+
+        if (d.memberCount) {
+            html += '<div class="grp-info-row"><span class="grp-info-label">成员数</span>'
+                + '<span class="grp-info-value">' + d.memberCount + ' 人</span></div>';
+        }
+        if (d.apiError) {
+            html += '<div style="font-size:12px;color:#e74c3c;margin-top:8px;">ℹ ' + escHtml(d.apiError) + '</div>';
+        }
+        if (d.announcement) {
+            html += '<div class="grp-announcement"><div class="grp-announcement-label">群公告</div>'
+                + escHtml(d.announcement) + '</div>';
+        }
+        overviewEl.innerHTML = html;
+
+        // 绑定内联编辑按钮事件（使用 data-attributes 避免转义问题）
+        overviewEl.querySelectorAll('.grp-inline-edit-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() { handleInlineEdit(btn.dataset.field); });
+        });
+
+        // 渲染管理员配置列表
+        renderAdminList();
+    };
+
+    /** 内联编辑处理（群名称 / 群主昵称） */
+    function handleInlineEdit(field) {
+        if (field === 'groupName') {
+            const current = grpData ? (grpData.groupName || '') : '';
+            PHDialog.prompt({
+                title: '编辑群名称',
+                placeholder: '输入新群名称',
+                value: current,
+                maxLength: 32,
+                confirmText: '确认修改',
+                cancelText: '取消',
+                onConfirm: async function (val) {
+                    const name = (val || '').trim();
+                    if (!name) { showToast('群名称不能为空', 'error'); return; }
+                    if (name.length > 32) { showToast('群名称不能超过 32 个字符', 'error'); return; }
+                    showToast('正在修改...', '');
+                    const result = await api('POST', API_CN, { groupName: name });
+                    showToast(result.message || (result.success ? '修改成功' : '修改失败'), result.success ? 'success' : 'error');
+                    if (result.success) loadGroupDetail();
+                }
+            });
+        } else if (field === 'ownerNick') {
+            const current = grpData ? (grpData.ownerNick || grpData.owner || '') : '';
+            PHDialog.prompt({
+                title: '编辑昵称',
+                message: '修改机器人账号的昵称',
+                placeholder: '输入新昵称',
+                value: current,
+                confirmText: '确认修改',
+                cancelText: '取消',
+                onConfirm: async function (val) {
+                    const nick = (val || '').trim();
+                    if (!nick) { showToast('昵称不能为空', 'error'); return; }
+                    showToast('正在修改...', '');
+                    const result = await api('POST', API_CK, { nickName: nick });
+                    showToast(result.message || (result.success ? '修改成功' : '修改失败'), result.success ? 'success' : 'error');
+                    if (result.success) loadGroupDetail();
+                }
+            });
+        }
+    }
+
+    /** 渲染管理员配置列表 */
+    function renderAdminList() {
+        const listEl = document.getElementById('grpAdminList');
+        if (!grpData) { listEl.innerHTML = '<p class="cfg-hint">请先加载群信息</p>'; return; }
+
+        const adminList = grpData.adminList || [];
+        if (adminList.length === 0) {
+            listEl.innerHTML = '<p class="cfg-hint">当前无管理员</p>';
+            return;
+        }
+
+        let html = '';
+        for (const admin of adminList) {
+            const wxid = admin.wxid || '';
+            const nick = admin.nick || wxid;
+            html += '<div class="grp-admin-item">'
+                + '<div class="grp-admin-info">'
+                + '<span class="grp-admin-nick">' + escHtml(nick) + '</span>'
+                + '<span class="grp-admin-wxid">' + escHtml(wxid) + '</span>'
+                + '</div>'
+                + '<button class="btn-modal grp-admin-btn grp-admin-demote" data-wxid="' + escHtml(wxid) + '" data-action="demote">取消管理员</button>'
+                + '</div>';
+        }
+        listEl.innerHTML = html;
+
+        // 绑定取消管理员按钮事件
+        listEl.querySelectorAll('[data-action="demote"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                adminOperate(btn.dataset.wxid, false, btn.closest('.grp-admin-item').querySelector('.grp-admin-nick').textContent);
+            });
+        });
+    }
+
+    // 添加管理员按钮事件
+    document.getElementById('grpAdminAddBtn').addEventListener('click', async function() {
+        const input = document.getElementById('grpAdminAddInput');
+        const wxid = input.value.trim();
+        if (!wxid) { showToast('请输入 wxid', 'error'); return; }
+        adminOperate(wxid, true, wxid);
+    });
+
+    /** 设置/取消管理员（带确认弹窗） */
+    window.adminOperate = function (wxid, promote, displayName) {
+        const action = promote ? '设为管理员' : '取消管理员';
+        const display = displayName || wxid;
+        PHDialog.confirm({
+            title: action,
+            message: '确认将 <b>' + escHtml(display) + '</b> ' + action + '？',
+            icon: '',
+            confirmText: '确认',
+            cancelText: '取消',
+            confirmStyle: promote ? 'primary' : 'danger',
+            onConfirm: function () { doAdminOperate(wxid, promote); }
+        });
+    };
+
+    async function doAdminOperate(wxid, promote) {
+        showToast('正在操作...', '');
+        const result = await api('POST', API_AO, { wxid: wxid, promote: promote });
+        showToast(result.message || (result.success ? '操作成功' : '操作失败'), result.success ? 'success' : 'error');
+        if (result.success) {
+            document.getElementById('grpAdminAddInput').value = '';
+            loadGroupDetail();
+        }
+    }
+
 })();
 </script>
-<script th:src="@{/js/ph-dialog.js}"></script>
+<script th:src="@{/js/ph-dialog.js(v=2)}"></script>
 </body>
 </html>

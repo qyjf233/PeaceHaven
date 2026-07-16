@@ -337,12 +337,24 @@ public class WechatApiService {
 
     /** 获取群详情（群名、群公告、群主等） */
     public WechatApiResponse getChatroomDetail(String chatroomId) {
-        return post("/group/getChatroomDetailInfo", bodyWith("chatroomId", chatroomId));
+        return post("/group/getChatroomInfo", bodyWith("chatroomId", chatroomId));
     }
 
     /** 修改群名称（需群主权限） */
     public WechatApiResponse setChatroomName(String chatroomId, String name) {
-        return post("/group/setChatroomName", bodyWith("chatroomId", chatroomId, "name", name));
+        return post("/group/modifyChatroomName", bodyWith("chatroomId", chatroomId, "chatroomName", name));
+    }
+
+    /** 修改自己在群内的昵称（群名片） */
+    public WechatApiResponse modifyChatroomNickName(String chatroomId, String nickName) {
+        return post("/group/modifyChatroomNickNameForSelf",
+                bodyWith("chatroomId", chatroomId, "nickName", nickName));
+    }
+
+    /** 管理员操作：设置/取消管理员（需群主权限，val=1 设为管理员，val=0 取消管理员） */
+    public WechatApiResponse adminOperate(String chatroomId, String wxid, int val) {
+        return post("/group/adminOperate",
+                bodyWith("chatroomId", chatroomId, "wxid", wxid, "val", val));
     }
 
     /** 退出群聊 */
@@ -351,7 +363,21 @@ public class WechatApiService {
     }
 
     // ========================================================================
-    //  5. 朋友圈
+    //  5. 个人账号
+    // ========================================================================
+
+    /** 获取当前登录账号资料 */
+    public WechatApiResponse getProfile() {
+        return post("/personal/getProfile", bodyWith());
+    }
+
+    /** 修改机器人账号昵称（个人资料） */
+    public WechatApiResponse updateBotProfile(String nickName) {
+        return post("/personal/updateProfile", bodyWith("nickName", nickName));
+    }
+
+    // ========================================================================
+    //  6. 朋友圈
     // ========================================================================
 
     /** 发布纯文字朋友圈 */

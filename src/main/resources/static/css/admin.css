@@ -1629,3 +1629,169 @@ body {
     background: #fce4ec;
     color: #c62828;
 }
+
+/* ====== 群聊管理面板 ====== */
+.gm-manage-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--admin-border);
+}
+.gm-manage-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* 群聊概览 */
+.grp-overview { margin-bottom: 16px; }
+.grp-info-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--admin-border);
+}
+.grp-info-row:last-child { border-bottom: none; }
+.grp-info-label {
+    font-size: 13px;
+    color: var(--admin-text-muted);
+    min-width: 90px;
+    flex-shrink: 0;
+}
+.grp-info-value {
+    font-size: 13px;
+    color: var(--admin-text);
+    word-break: break-all;
+    flex: 1;
+}
+.grp-info-value.grp-group-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--admin-header);
+}
+.grp-announcement {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #fff8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #5d4037;
+    line-height: 1.6;
+    border-left: 3px solid var(--admin-primary);
+}
+.grp-announcement-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--admin-primary);
+    font-size: 12px;
+}
+
+/* 管理员操作区 */
+.grp-action-section {
+    margin-bottom: 20px;
+    padding: 18px 20px;
+    background: var(--admin-surface);
+    border-radius: 10px;
+    border: 1px solid var(--admin-border);
+}
+.grp-action-section .cfg-title {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--admin-header);
+}
+
+/* 内联编辑按钮 */
+.grp-inline-edit-btn {
+    background: var(--admin-primary, #E8833A);
+    border: none;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    margin-left: auto;
+    white-space: nowrap;
+}
+.grp-inline-edit-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(232, 131, 58, 0.3);
+}
+.grp-inline-edit-btn:active {
+    transform: scale(0.96);
+}
+
+/* 管理员列表 */
+.grp-admin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.grp-admin-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--admin-bg);
+    border-radius: 8px;
+    border: 1px solid var(--admin-border);
+}
+.grp-admin-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.grp-admin-nick {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--admin-text);
+}
+.grp-admin-wxid {
+    font-size: 11px;
+    color: var(--admin-text-muted);
+    font-family: monospace;
+}
+.grp-admin-btn {
+    padding: 4px 14px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+.grp-admin-demote {
+    background: #f8d7da !important;
+    color: #721c24 !important;
+    border: 1px solid #f5c6cb !important;
+}
+.grp-admin-demote:hover {
+    background: #f1b0b7 !important;
+}
+
+/* 添加管理员 */
+.grp-admin-add-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.grp-admin-add-input {
+    flex: 1;
+    max-width: 320px;
+}
+.grp-admin-add-btn {
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .grp-admin-add-row { flex-direction: column; align-items: stretch; }
+    .grp-admin-add-input { max-width: 100%; }
+}

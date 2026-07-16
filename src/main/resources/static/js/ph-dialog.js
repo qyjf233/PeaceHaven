@@ -12,6 +12,9 @@
  * PHDialog.confirm({ title, message, icon?, confirmText, cancelText, confirmStyle?, onConfirm, onCancel? })
  *   - 双按钮确认框
  *
+ * PHDialog.prompt({ title, message?, placeholder?, value?, maxLength?, confirmText, cancelText, confirmStyle?, onConfirm, onCancel? })
+ *   - 带输入框的弹窗，onConfirm 回调参数为用户输入值
+ *
  * confirmStyle: 'primary'（默认）| 'danger'
  */
 var PHDialog = (function () {
@@ -126,5 +129,72 @@ var PHDialog = (function () {
         });
     }
 
-    return { show: show, confirm: confirm };
+    /**
+     * 带输入框的弹窗
+     */
+    function prompt(opts) {
+        if (activeOverlay) close(activeOverlay);
+
+        var overlay = createOverlay();
+        activeOverlay = overlay;
+
+        var iconHtml = opts.icon ? '<div class="ph-dialog-icon">' + opts.icon + '</div>' : '';
+        var msgHtml = opts.message ? '<div class="ph-dialog-message">' + opts.message + '</div>' : '';
+        var btnClass = opts.confirmStyle === 'danger' ? 'ph-dialog-btn-danger' : 'ph-dialog-btn-primary';
+        var maxAttr = opts.maxLength ? ' maxlength="' + opts.maxLength + '"' : '';
+
+        overlay.innerHTML =
+            '<div class="ph-dialog">' +
+                iconHtml +
+                '<div class="ph-dialog-title">' + (opts.title || '') + '</div>' +
+                msgHtml +
+                '<input class="ph-dialog-input" type="text" placeholder="' + (opts.placeholder || '') + '" value="' + (opts.value || '').replace(/"/g, '&quot;') + '"' + maxAttr + '>' +
+                '<div class="ph-dialog-actions">' +
+                    '<button class="ph-dialog-btn ph-dialog-btn-secondary">' + (opts.cancelText || '取消') + '</button>' +
+                    '<button class="ph-dialog-btn ' + btnClass + '">' + (opts.confirmText || '确定') + '</button>' +
+                '</div>' +
+            '</div>';
+
+        var inputEl = overlay.querySelector('.ph-dialog-input');
+        var buttons = overlay.querySelectorAll('.ph-dialog-btn');
+        var cancelBtn = buttons[0];
+        var confirmBtn = buttons[1];
+
+        // 自动聚焦
+        setTimeout(function () { inputEl.focus(); inputEl.select(); }, 250);
+
+        cancelBtn.addEventListener('click', function () {
+            close(overlay);
+            if (typeof opts.onCancel === 'function') opts.onCancel();
+        });
+
+        confirmBtn.addEventListener('click', function () {
+            var val = inputEl.value;
+            close(overlay);
+            if (typeof opts.onConfirm === 'function') opts.onConfirm(val);
+        });
+
+        // 回车确认
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                var val = inputEl.value;
+                close(overlay);
+                if (typeof opts.onConfirm === 'function') opts.onConfirm(val);
+            }
+        });
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) {
+                close(overlay);
+                if (typeof opts.onCancel === 'function') opts.onCancel();
+            }
+        });
+
+        requestAnimationFrame(function () {
+            overlay.classList.add('ph-visible');
+        });
+    }
+
+    return { show: show, confirm: confirm, prompt: prompt };
 })();

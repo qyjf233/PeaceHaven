@@ -714,6 +714,179 @@ public class AdminBotController {
         return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "踢出失败");
     }
 
+    // ===== API: 群聊详情 =====
+
+    @ResponseBody
+    @GetMapping("/api/bot/group/detail")
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getGroupDetail() {
+        if (!wechatApiProps.isConfigured()) {
+            return Map.of("success", false, "message", "API 未配置");
+        }
+        if (!wechatApiProps.isDeviceBound()) {
+            return Map.of("success", false, "message", "设备未绑定");
+        }
+        String groupId = wechatApiProps.getGroupId();
+        if (groupId == null || groupId.isBlank()) {
+            return Map.of("success", false, "message", "群聊 ID 未配置");
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("groupId", groupId);
+        String ownerWxid = null;
+
+        // 获取群详情
+        WechatApiResponse resp = wechatApiService.getChatroomDetail(groupId);
+        if (resp.isSuccess() && resp.getData() != null) {
+            Map<String, Object> rd = resp.getDataAsMap();
+            if (rd != null) {
+                data.put("groupName", rd.get("nickName") != null ? rd.get("nickName").toString() : groupId);
+                data.put("announcement", rd.get("announcement"));
+                Object ownerObj = rd.get("chatroomOwner");
+                ownerWxid = ownerObj != null ? ownerObj.toString() : null;
+                data.put("owner", ownerWxid);
+                Object countObj = rd.get("memberCount");
+                if (countObj instanceof Number) {
+                    data.put("memberCount", ((Number) countObj).intValue());
+                }
+            }
+        } else {
+            data.put("groupName", groupId);
+            data.put("apiError", resp.getMsg());
+        }
+
+        // 获取机器人自身 wxid
+        WechatApiResponse profileResp = wechatApiService.getProfile();
+        if (profileResp.isSuccess() && profileResp.getData() != null) {
+            Map<String, Object> pd = profileResp.getDataAsMap();
+            if (pd != null && pd.get("wxid") != null) {
+                data.put("selfWxid", pd.get("wxid").toString());
+            }
+        }
+
+        // 获取成员列表：解析群主昵称 + 管理员列表（含昵称）
+        WechatApiResponse memberResp = wechatApiService.getConfiguredGroupMembers();
+        if (memberResp.isSuccess() && memberResp.getData() != null) {
+            Map<String, Object> md = memberResp.getDataAsMap();
+            if (md != null) {
+                Object memberListObj = md.get("memberList");
+                Map<String, String> wxidNickMap = new HashMap<>();
+                if (memberListObj instanceof List) {
+                    for (Object m : (List<Object>) memberListObj) {
+                        if (m instanceof Map) {
+                            Map<String, Object> member = (Map<String, Object>) m;
+                            String wxid = member.get("wxid") != null ? member.get("wxid").toString() : null;
+                            String nick = member.get("displayName") != null ? member.get("displayName").toString()
+                                    : (member.get("nickName") != null ? member.get("nickName").toString() : null);
+                            if (wxid != null && nick != null) {
+                                wxidNickMap.put(wxid, nick);
+                            }
+                            // 群主昵称
+                            if (wxid != null && wxid.equals(ownerWxid)) {
+                                data.put("ownerNick", nick);
+                            }
+                        }
+                    }
+                }
+
+                // 管理员列表（含昵称）
+                Object adminObj = md.get("adminWxid");
+                List<Map<String, String>> adminList = new ArrayList<>();
+                if (adminObj instanceof List) {
+                    for (Object a : (List<Object>) adminObj) {
+                        String wxid = a != null ? a.toString() : null;
+                        if (wxid != null && !wxid.isBlank()) {
+                            Map<String, String> admin = new HashMap<>();
+                            admin.put("wxid", wxid);
+                            admin.put("nick", wxidNickMap.getOrDefault(wxid, wxid));
+                            adminList.add(admin);
+                        }
+                    }
+                }
+                data.put("adminList", adminList);
+            }
+        }
+
+        return Map.of("success", true, "data", data);
+    }
+
+    // ===== API: 修改群名称 =====
+
+    @ResponseBody
+    @PostMapping("/api/bot/group/change-name")
+    public Map<String, Object> changeGroupName(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        if (!wechatApiProps.isConfigured() || !wechatApiProps.isDeviceBound()) {
+            return Map.of("success", false, "message", "设备未就绪");
+        }
+        String groupId = wechatApiProps.getGroupId();
+        if (groupId == null || groupId.isBlank()) {
+            return Map.of("success", false, "message", "群聊 ID 未配置");
+        }
+        String name = body.get("groupName");
+        if (name == null || name.isBlank()) {
+            return Map.of("success", false, "message", "群名称不能为空");
+        }
+        if (name.length() > 32) {
+            return Map.of("success", false, "message", "群名称不能超过 32 个字符");
+        }
+        WechatApiResponse resp = wechatApiService.setChatroomName(groupId, name.trim());
+        if (resp.isSuccess()) {
+            logService.record("机器人配置", "修改", "修改群名称为：" + name.trim(), request);
+            return Map.of("success", true, "message", "群名称已修改");
+        }
+        return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "修改失败");
+    }
+
+    // ===== API: 修改机器人账号昵称 =====
+
+    @ResponseBody
+    @PostMapping("/api/bot/group/change-nickname")
+    public Map<String, Object> changeOwnerNickname(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        if (!wechatApiProps.isConfigured() || !wechatApiProps.isDeviceBound()) {
+            return Map.of("success", false, "message", "设备未就绪");
+        }
+        String nickName = body.get("nickName");
+        if (nickName == null || nickName.isBlank()) {
+            return Map.of("success", false, "message", "昵称不能为空");
+        }
+        WechatApiResponse resp = wechatApiService.updateBotProfile(nickName.trim());
+        if (resp.isSuccess()) {
+            logService.record("机器人配置", "修改", "修改账号昵称为：" + nickName.trim(), request);
+            return Map.of("success", true, "message", "昵称已修改");
+        }
+        return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "修改失败");
+    }
+
+    // ===== API: 设置/取消管理员 =====
+
+    @ResponseBody
+    @PostMapping("/api/bot/group/admin-operate")
+    public Map<String, Object> adminOperate(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        if (!wechatApiProps.isConfigured() || !wechatApiProps.isDeviceBound()) {
+            return Map.of("success", false, "message", "设备未就绪");
+        }
+        String groupId = wechatApiProps.getGroupId();
+        if (groupId == null || groupId.isBlank()) {
+            return Map.of("success", false, "message", "群聊 ID 未配置");
+        }
+        String wxid = body.get("wxid") != null ? body.get("wxid").toString() : null;
+        Boolean promote = body.get("promote") instanceof Boolean ? (Boolean) body.get("promote") : null;
+        if (wxid == null || wxid.isBlank()) {
+            return Map.of("success", false, "message", "缺少 wxid");
+        }
+        if (promote == null) {
+            return Map.of("success", false, "message", "缺少 promote 参数");
+        }
+        int val = promote ? 1 : 0;
+        WechatApiResponse resp = wechatApiService.adminOperate(groupId, wxid, val);
+        if (resp.isSuccess()) {
+            logService.record("机器人配置", "修改",
+                    (promote ? "设置管理员：" : "取消管理员：") + wxid, request);
+            return Map.of("success", true, "message", promote ? "已设为管理员" : "已取消管理员");
+        }
+        return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "操作失败");
+    }
+
     // ===== Helper =====
 
     /**

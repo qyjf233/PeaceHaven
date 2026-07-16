@@ -65,6 +65,27 @@
     margin-bottom: 24px;
 }
 
+/* === 输入框 === */
+.ph-dialog-input {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color, #ddd);
+    font-size: 0.9rem;
+    color: var(--text-primary, #333);
+    background: var(--bg-secondary, #f8f8f8);
+    margin-bottom: 20px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.ph-dialog-input:focus {
+    border-color: var(--accent-primary, #E8833A);
+}
+.ph-dialog-input::placeholder {
+    color: #bbb;
+}
+
 /* === 按钮组 === */
 .ph-dialog-actions {
     display: flex;
