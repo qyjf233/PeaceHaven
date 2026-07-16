@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.potato</groupId>
 	<artifactId>peacehaven</artifactId>
-	<version>2.2.0</version> <!-- 项目架构版本 x 数据库版本 x 业务逻辑版本 -->
+	<version>2.2.1</version> <!-- 项目架构版本 x 数据库版本 x 业务逻辑版本 -->
 	<name/>
 	<description/>
 	<url/>
@@ -41,6 +41,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<!-- Jackson JSON 处理（用户记忆提取需解析 LLM 返回的 JSON） -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
 		</dependency>
 		<!-- Session 持久化到数据库，支持重启服务器不丢失登录态 -->
 		<dependency>

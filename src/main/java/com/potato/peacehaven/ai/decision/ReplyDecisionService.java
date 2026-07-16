@@ -57,61 +57,70 @@ public class ReplyDecisionService {
         }
 
         AiProperties.ReplyConfig cfg = aiProps.getReply();
+        boolean isPrivate = (chatroomId == null);
+        AiProperties.PrivateConfig privateCfg = cfg.getPrivateChat();
+
+        // 根据场景选择参数
+        double randomRate = isPrivate ? privateCfg.getRandomRate() : cfg.getRandomRate();
+        double questionRate = isPrivate ? privateCfg.getQuestionRate() : 0.7; // 群聊提问概率固定 0.7
+        int cooldownSec = isPrivate ? privateCfg.getCooldownSeconds() : cfg.getCooldownSeconds();
+        String scene = isPrivate ? "私聊" : "群聊";
+
         resetDailyIfNeeded();
 
-        log.info("[Decision] 开始决策 chatroom={}, sender={}, mentioned={}, dailyCount={}/{}, cooldown={}s, randomRate={}, onlyAt={}",
-                chatroomId, senderWxid, isMentioned,
-                dailyCount.get(), cfg.getMaxPerDay(), cfg.getCooldownSeconds(), cfg.getRandomRate(), cfg.isOnlyAt());
+        log.info("[Decision] 开始决策 scene={}, chatroom={}, sender={}, mentioned={}, dailyCount={}/{}, cooldown={}s, randomRate={}, questionRate={}",
+                scene, chatroomId, senderWxid, isMentioned,
+                dailyCount.get(), cfg.getMaxPerDay(), cooldownSec, randomRate, questionRate);
 
-        // 1. 被 @提及 -> 必须回复
-        if (isMentioned) {
+        // 1. 被 @提及 -> 必须回复（仅群聊有效）
+        if (isMentioned && !isPrivate) {
             log.info("[Decision] ✅ 回复：被@提及 chatroom={}", chatroomId);
             return ReplyDecision.reply("被@提及");
         }
 
-        // 2. only-at 模式 -> 仅@时才回复
-        if (cfg.isOnlyAt()) {
+        // 2. only-at 模式 -> 仅@时才回复（仅群聊）
+        if (cfg.isOnlyAt() && !isPrivate) {
             log.info("[Decision] ❌ 跳过：only-at 模式，未被@ chatroom={}", chatroomId);
             return ReplyDecision.skip("only-at 模式，未被@不回复");
         }
 
         // 3. 每日上限检查
         if (dailyCount.get() >= cfg.getMaxPerDay()) {
-            log.info("[Decision] ❌ 跳过：已达每日上限 {}/{} chatroom={}", dailyCount.get(), cfg.getMaxPerDay(), chatroomId);
+            log.info("[Decision] ❌ 跳过：已达每日上限 {}/{} scene={}", dailyCount.get(), cfg.getMaxPerDay(), scene);
             return ReplyDecision.skip("已达每日上限 " + cfg.getMaxPerDay());
         }
 
-        // 4. cooldown 检查（私聊时 chatroomId 为 null，用 senderWxid 作为冷却 key）
+        // 4. cooldown 检查
         String cooldownKey = (chatroomId != null) ? chatroomId : senderWxid;
         Long lastTime = (cooldownKey != null) ? lastReplyTime.get(cooldownKey) : null;
         long now = System.currentTimeMillis();
-        long cooldownMs = cfg.getCooldownSeconds() * 1000L;
+        long cooldownMs = cooldownSec * 1000L;
         if (lastTime != null && (now - lastTime) < cooldownMs) {
             long remainSec = (cooldownMs - (now - lastTime)) / 1000;
-            log.info("[Decision] ❌ 跳过：冷却中，距上次 {}s，剩余 {}s key={}", (now - lastTime) / 1000, remainSec, cooldownKey);
+            log.info("[Decision] ❌ 跳过：冷却中，距上次 {}s，剩余 {}s scene={}", (now - lastTime) / 1000, remainSec, scene);
             return ReplyDecision.skip("冷却中（距上次 " + (now - lastTime) / 1000 + "s）");
         }
 
-        // 5. 提问检测 -> 高概率回复（70%）
+        // 5. 提问检测 -> 高概率回复
         boolean isQuestion = content != null && QUESTION_PATTERN.matcher(content).find();
         if (isQuestion) {
             double roll = ThreadLocalRandom.current().nextDouble();
-            if (roll < 0.7) {
-                log.info("[Decision] ✅ 回复：检测到提问 (roll={:.2f}<0.7) chatroom={}", roll, chatroomId);
+            if (roll < questionRate) {
+                log.info("[Decision] ✅ 回复：检测到提问 (roll={:.2f}<{}, scene={})", roll, questionRate, scene);
                 return ReplyDecision.reply("检测到提问");
             }
-            log.info("[Decision] ❌ 跳过：检测到提问但概率未命中 (roll={:.2f}>=0.7) chatroom={}", roll, chatroomId);
+            log.info("[Decision] ❌ 跳过：检测到提问但概率未命中 (roll={:.2f}>={}, scene={})", roll, questionRate, scene);
             return ReplyDecision.skip("检测到提问但概率未命中");
         }
 
         // 6. 随机概率
         double roll = ThreadLocalRandom.current().nextDouble();
-        if (roll < cfg.getRandomRate()) {
-            log.info("[Decision] ✅ 回复：随机触发 (roll={:.2f}<{}) chatroom={}", roll, cfg.getRandomRate(), chatroomId);
+        if (roll < randomRate) {
+            log.info("[Decision] ✅ 回复：随机触发 (roll={:.2f}<{}, scene={})", roll, randomRate, scene);
             return ReplyDecision.reply("随机触发");
         }
 
-        log.info("[Decision] ❌ 跳过：无触发条件 (roll={:.2f}>={}) chatroom={}", roll, cfg.getRandomRate(), chatroomId);
+        log.info("[Decision] ❌ 跳过：无触发条件 (roll={:.2f}>={}, scene={})", roll, randomRate, scene);
         return ReplyDecision.skip("无触发条件");
     }
 

@@ -38,7 +38,10 @@ public class ChatHistoryRetrievalService {
 
     /**
      * 检索与当前消息最相似的本人历史回复（RAG）
-     * <p>采用多样性过滤：过量检索后按内容相似度去重，避免返回内容高度重复的记录</p>
+     * <p>采用多层多样性过滤：
+     * 1. bigram Jaccard 去重（整体文本相似）
+     * 2. 关键词频率限制（同一关键词最多出现 N 次，防止话题集中）
+     * </p>
      *
      * @param currentMessage 当前收到的消息
      * @param topK           返回条数
@@ -57,19 +60,22 @@ public class ChatHistoryRetrievalService {
         }
 
         // 过量检索，为多样性过滤留余量
-        int fetchK = topK * 3;
+        int fetchK = topK * 4;
         Map<String, String> filters = Map.of("is_self", "true");
         List<VectorSearchResult> results = vectorStore.search(queryVector, fetchK, filters);
 
-        // 多样性过滤：基于字符 bigram Jaccard 相似度，去除内容高度重复的记录
-        double diversityThreshold = 0.5;
+        // 多样性过滤参数
+        double diversityThreshold = 0.4;
+        int maxKeywordRepeat = 2; // 同一关键词最多出现在 N 条记录中
         List<RetrievedRecord> diverse = new ArrayList<>();
         List<Set<String>> selectedBigrams = new ArrayList<>();
+        Map<String, Integer> keywordFreq = new HashMap<>(); // 关键词出现次数
 
         for (VectorSearchResult r : results) {
             String content = (r.getMetadata() != null) ? r.getMetadata().get("content") : null;
             if (content == null || content.isBlank()) continue;
 
+            // 1. Bigram 相似度检查
             Set<String> bigrams = charBigrams(content);
             boolean tooSimilar = false;
             for (Set<String> existing : selectedBigrams) {
@@ -80,6 +86,19 @@ public class ChatHistoryRetrievalService {
             }
             if (tooSimilar) continue;
 
+            // 2. 关键词频率检查
+            Set<String> keywords = extractKeywords(content);
+            boolean keywordOverused = false;
+            for (String kw : keywords) {
+                Integer count = keywordFreq.get(kw);
+                if (count != null && count >= maxKeywordRepeat) {
+                    keywordOverused = true;
+                    break;
+                }
+            }
+            if (keywordOverused) continue;
+
+            // 通过过滤，加入结果集
             diverse.add(RetrievedRecord.builder()
                     .id(r.getId())
                     .score(r.getScore())
@@ -88,11 +107,16 @@ public class ChatHistoryRetrievalService {
                     .createTime(r.getMetadata() != null ? r.getMetadata().get("create_time") : null)
                     .build());
             selectedBigrams.add(bigrams);
+            // 更新关键词频率
+            for (String kw : keywords) {
+                keywordFreq.merge(kw, 1, Integer::sum);
+            }
 
             if (diverse.size() >= topK) break;
         }
 
-        if (diverse.size() < results.size()) {
+        int filtered = results.size() - diverse.size();
+        if (filtered > 0) {
             log.info("[RAG] 多样性过滤：{}/{} 条通过 (fetchK={}, topK={})", diverse.size(), results.size(), fetchK, topK);
         }
         return diverse;
@@ -108,6 +132,30 @@ public class ChatHistoryRetrievalService {
             bigrams.add(normalized.substring(i, i + 2));
         }
         return bigrams;
+    }
+
+    /**
+     * 提取文本中的关键词（2-4字中文词组 + 非停用词）
+     * <p>简单的中文关键词提取，无需依赖分词库</p>
+     */
+    private static final Set<String> STOP_WORDS = Set.of(
+            "的是", "不是", "可以", "就是", "还是", "或者", "这个", "那个", "什么",
+            "怎么", "没有", "一个", "我们", "你们", "他们", "自己", "现在",
+            "然后", "因为", "所以", "如果", "但是", "而且", "已经", "知道",
+            "觉得", "真的", "其实", "应该", "不要", "好的", "哈哈哈", "哈哈哈"
+    );
+
+    private Set<String> extractKeywords(String text) {
+        Set<String> keywords = new LinkedHashSet<>();
+        String clean = text.replaceAll("[\\s\\p{Punct}，。！？、：；“”‘’（）…—·@#\\$%&\\*\\+=/\\\\<>\\[\\]{}|~`^]+", " ");
+        String[] words = clean.split("\\s+");
+        for (String w : words) {
+            w = w.trim();
+            if (w.length() >= 2 && w.length() <= 4 && !STOP_WORDS.contains(w)) {
+                keywords.add(w);
+            }
+        }
+        return keywords;
     }
 
     /**

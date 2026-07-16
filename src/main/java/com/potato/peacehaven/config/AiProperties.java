@@ -76,8 +76,8 @@ public class AiProperties {
         /** 每日回复上限 */
         private int maxPerDay = 50;
         /** 同群最短回复间隔（秒） */
-        private int cooldownSeconds = 30;
-        /** 无触发条件时随机回复概率（0-1） */
+        private int cooldownSeconds = 1;
+        /** 无触发条件时随机回复概率（0-1，群聊） */
         private double randomRate = 0.15;
         /** true=仅被@时才回复 */
         private boolean onlyAt = false;
@@ -85,6 +85,22 @@ public class AiProperties {
         private int contextSize = 15;
         /** RAG 检索条数 */
         private int ragTopK = 8;
+
+        /** 私聊专属配置 */
+        private PrivateConfig privateChat = new PrivateConfig();
+    }
+
+    @Getter
+    @Setter
+    public static class PrivateConfig {
+        /** 私聊随机回复概率（0-1，通常高于群聊） */
+        private double randomRate = 1;
+        /** 私聊最短回复间隔（秒，通常短于群聊） */
+        private int cooldownSeconds = 1;
+        /** 消息聚合等待时间（秒，等待对方发完再回复） */
+        private int bufferSeconds = 5;
+        /** 私聊提问回复概率（0-1，通常高于群聊） */
+        private double questionRate = 1;
     }
 
     @Getter

@@ -61,8 +61,9 @@ public class PromptBuilder {
         systemPrompt.append("- 参考提供的历史聊天记录学习本人的说话方式\n");
         systemPrompt.append("- 当涉及专业知识时，可结合模型知识补充，但仍需保持本人风格\n");
         systemPrompt.append("- 直接输出回复内容，不要加任何前缀、引号或说明\n");
-        systemPrompt.append("- 历史记录仅用于学习语气和表达习惯，不要照搬其中的具体话题、名词或内容\n");
-        systemPrompt.append("- 禁止在回复中反复提及历史记录里出现过的特定词汇（如人名、食物、地点等），除非当前对话本身在讨论该话题\n");
+        systemPrompt.append("- 【重要】历史记录仅用于学习语气和句式，绝对不要照搬其中的具体名词、话题或内容\n");
+        systemPrompt.append("- 【重要】禁止在回复中提及历史记录里出现过的特定词汇（人名、食物、地点、游戏等），除非对方在当前消息中明确提到了该话题\n");
+        systemPrompt.append("- 【重要】每次回复应该是全新的内容，不要重复之前说过的话或提到的事物\n");
 
         // 追加用户画像
         if (userMemoryText != null && !userMemoryText.isBlank()) {

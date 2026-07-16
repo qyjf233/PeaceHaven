@@ -2,6 +2,7 @@ package com.potato.peacehaven.service;
 
 import com.potato.peacehaven.ai.pipeline.AiReplyPipeline;
 import com.potato.peacehaven.ai.pipeline.AiReplyTracker;
+import com.potato.peacehaven.ai.pipeline.PrivateMessageBuffer;
 import com.potato.peacehaven.config.AiProperties;
 import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.dto.WechatApiCallbackEvent;
@@ -39,6 +40,7 @@ public class WechatApiWebhookService {
     private final AiReplyPipeline aiReplyPipeline;
     private final AiWhitelistService aiWhitelistService;
     private final AiReplyTracker aiReplyTracker;
+    private final PrivateMessageBuffer privateMessageBuffer;
 
     /** 群名本地缓存（1 小时 TTL，避免每条消息都查 DB） */
     private final RoomNameCache roomNameCache = new RoomNameCache();
@@ -177,9 +179,8 @@ public class WechatApiWebhookService {
             log.info("[Webhook] 私聊白名单诊断 from={}, friendReply={}, aiReady={}",
                     senderWxid, friendReplyAllowed, aiReady);
             if (aiReady && friendReplyAllowed) {
-                aiReplyPipeline.processGroupMessage(
-                        null, senderWxid, "",
-                        pureContent, false);
+                // 通过消息聚合器处理（等待对方发完再回复，避免抢话）
+                privateMessageBuffer.accept(senderWxid, "", pureContent);
             }
         }
     }
