@@ -1,6 +1,7 @@
 package com.potato.peacehaven.ai.retrieval;
 
 import com.potato.peacehaven.ai.embedding.EmbeddingService;
+import com.potato.peacehaven.ai.topic.TopicExtractor;
 import com.potato.peacehaven.ai.vectorstore.VectorDocument;
 import com.potato.peacehaven.ai.vectorstore.VectorSearchResult;
 import com.potato.peacehaven.ai.vectorstore.VectorStore;
@@ -35,17 +36,18 @@ public class ChatHistoryRetrievalService {
     private final EmbeddingService embeddingService;
     private final VectorStore vectorStore;
     private final AiProperties aiProps;
+    private final TopicExtractor topicExtractor;
 
     /**
-     * 检索与当前消息最相似的本人历史回复（RAG）
-     * <p>采用多层多样性过滤：
-     * 1. bigram Jaccard 去重（整体文本相似）
-     * 2. 关键词频率限制（同一关键词最多出现 N 次，防止话题集中）
+     * 检索与当前消息最相似的本人历史回复（RAG — Style RAG）
+     * <p>采用 MMR (Max Marginal Relevance) 重排算法：
+     * MMR(d) = lambda * Sim(d, Q) - (1-lambda) * max Sim(d, d')
+     * 在相关性和多样性之间取得平衡，避免同一话题的历史记录霸占结果。
      * </p>
      *
      * @param currentMessage 当前收到的消息
      * @param topK           返回条数
-     * @return 相似历史回复列表（按相似度降序），每条包含 content 和 metadata
+     * @return 相似历史回复列表（按 MMR 分数排序）
      */
     public List<RetrievedRecord> retrieve(String currentMessage, int topK) {
         if (currentMessage == null || currentMessage.isBlank()) {
@@ -59,67 +61,102 @@ public class ChatHistoryRetrievalService {
             return Collections.emptyList();
         }
 
-        // 过量检索，为多样性过滤留余量
+        // 过量检索，为 MMR 重排留余量
         int fetchK = topK * 4;
         Map<String, String> filters = Map.of("is_self", "true");
-        List<VectorSearchResult> results = vectorStore.search(queryVector, fetchK, filters);
+        List<VectorSearchResult> candidates = vectorStore.search(queryVector, fetchK, filters);
 
-        // 多样性过滤参数
-        double diversityThreshold = 0.4;
-        int maxKeywordRepeat = 2; // 同一关键词最多出现在 N 条记录中
-        List<RetrievedRecord> diverse = new ArrayList<>();
-        List<Set<String>> selectedBigrams = new ArrayList<>();
-        Map<String, Integer> keywordFreq = new HashMap<>(); // 关键词出现次数
+        if (candidates.isEmpty()) return Collections.emptyList();
 
-        for (VectorSearchResult r : results) {
-            String content = (r.getMetadata() != null) ? r.getMetadata().get("content") : null;
-            if (content == null || content.isBlank()) continue;
+        // MMR 重排
+        double lambda = 0.7; // 偏向相关性，兼顾多样性
+        List<VectorSearchResult> selected = mmrRerank(candidates, queryVector, topK, lambda);
 
-            // 1. Bigram 相似度检查
-            Set<String> bigrams = charBigrams(content);
-            boolean tooSimilar = false;
-            for (Set<String> existing : selectedBigrams) {
-                if (jaccardSimilarity(bigrams, existing) > diversityThreshold) {
-                    tooSimilar = true;
-                    break;
-                }
-            }
-            if (tooSimilar) continue;
-
-            // 2. 关键词频率检查
-            Set<String> keywords = extractKeywords(content);
-            boolean keywordOverused = false;
-            for (String kw : keywords) {
-                Integer count = keywordFreq.get(kw);
-                if (count != null && count >= maxKeywordRepeat) {
-                    keywordOverused = true;
-                    break;
-                }
-            }
-            if (keywordOverused) continue;
-
-            // 通过过滤，加入结果集
-            diverse.add(RetrievedRecord.builder()
-                    .id(r.getId())
-                    .score(r.getScore())
-                    .content(content)
-                    .senderNick(r.getMetadata() != null ? r.getMetadata().get("sender_nick") : null)
-                    .createTime(r.getMetadata() != null ? r.getMetadata().get("create_time") : null)
-                    .build());
-            selectedBigrams.add(bigrams);
-            // 更新关键词频率
-            for (String kw : keywords) {
-                keywordFreq.merge(kw, 1, Integer::sum);
-            }
-
-            if (diverse.size() >= topK) break;
-        }
-
-        int filtered = results.size() - diverse.size();
+        int filtered = candidates.size() - selected.size();
         if (filtered > 0) {
-            log.info("[RAG] 多样性过滤：{}/{} 条通过 (fetchK={}, topK={})", diverse.size(), results.size(), fetchK, topK);
+            log.info("[RAG] MMR 重排：{}/{} 条通过 (过滤 {} 条, fetchK={}, topK={}, lambda={})",
+                    selected.size(), candidates.size(), filtered, fetchK, topK, lambda);
         }
-        return diverse;
+
+        return selected.stream()
+                .map(r -> RetrievedRecord.builder()
+                        .id(r.getId())
+                        .score(r.getScore())
+                        .content(r.getMetadata() != null ? r.getMetadata().get("content") : null)
+                        .senderNick(r.getMetadata() != null ? r.getMetadata().get("sender_nick") : null)
+                        .createTime(r.getMetadata() != null ? r.getMetadata().get("create_time") : null)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * MMR (Max Marginal Relevance) 重排算法
+     * <p>
+     * 迭代选取使得 [lambda * Sim(d,Q) - (1-lambda) * max Sim(d,d')] 最大的候选文档，
+     * 确保结果既相关又多样。
+     * </p>
+     */
+    private List<VectorSearchResult> mmrRerank(List<VectorSearchResult> candidates,
+                                                 float[] queryVector, int topK, double lambda) {
+        List<VectorSearchResult> selected = new ArrayList<>();
+        Set<String> selectedIds = new HashSet<>();
+
+        // 预计算每个候选的查询向量（metadata 中没有存向量，需要重新计算 content 的向量开销太大）
+        // 改用：直接使用余弦相似度得分（已在 search 中计算）作为 Sim(d,Q)
+        // 候选间的相似度用 bigram Jaccard 近似（避免二次向量化）
+
+        for (int round = 0; round < topK && round < candidates.size(); round++) {
+            double bestMmr = Double.NEGATIVE_INFINITY;
+            VectorSearchResult bestCandidate = null;
+
+            for (VectorSearchResult candidate : candidates) {
+                if (selectedIds.contains(candidate.getId())) continue;
+
+                String content = candidate.getMetadata() != null ? candidate.getMetadata().get("content") : null;
+                if (content == null || content.isBlank()) continue;
+
+                // Sim(d, Q) = 已计算的余弦相似度分数
+                double simQuery = candidate.getScore();
+
+                // max Sim(d, d') = 与已选文档的最大相似度
+                double maxSimSelected = 0.0;
+                for (VectorSearchResult sel : selected) {
+                    String selContent = sel.getMetadata() != null ? sel.getMetadata().get("content") : null;
+                    if (selContent == null) continue;
+                    double sim = bigramJaccard(content, selContent);
+                    if (sim > maxSimSelected) maxSimSelected = sim;
+                }
+
+                // MMR = lambda * Sim(d,Q) - (1-lambda) * maxSim(d,d')
+                double mmr = lambda * simQuery - (1 - lambda) * maxSimSelected;
+                if (mmr > bestMmr) {
+                    bestMmr = mmr;
+                    bestCandidate = candidate;
+                }
+            }
+
+            if (bestCandidate != null) {
+                selected.add(bestCandidate);
+                selectedIds.add(bestCandidate.getId());
+            } else {
+                break; // 没有更多有效候选
+            }
+        }
+
+        return selected;
+    }
+
+    /**
+     * 字符 bigram Jaccard 相似度（快速文本相似度，无需向量化）
+     */
+    private double bigramJaccard(String a, String b) {
+        Set<String> bigramsA = charBigrams(a);
+        Set<String> bigramsB = charBigrams(b);
+        if (bigramsA.isEmpty() && bigramsB.isEmpty()) return 1.0;
+        if (bigramsA.isEmpty() || bigramsB.isEmpty()) return 0.0;
+        long intersection = bigramsA.stream().filter(bigramsB::contains).count();
+        long union = bigramsA.size() + bigramsB.size() - intersection;
+        return (double) intersection / union;
     }
 
     /**
@@ -132,41 +169,6 @@ public class ChatHistoryRetrievalService {
             bigrams.add(normalized.substring(i, i + 2));
         }
         return bigrams;
-    }
-
-    /**
-     * 提取文本中的关键词（2-4字中文词组 + 非停用词）
-     * <p>简单的中文关键词提取，无需依赖分词库</p>
-     */
-    private static final Set<String> STOP_WORDS = Set.of(
-            "的是", "不是", "可以", "就是", "还是", "或者", "这个", "那个", "什么",
-            "怎么", "没有", "一个", "我们", "你们", "他们", "自己", "现在",
-            "然后", "因为", "所以", "如果", "但是", "而且", "已经", "知道",
-            "觉得", "真的", "其实", "应该", "不要", "好的", "哈哈哈", "呵呵"
-    );
-
-    private Set<String> extractKeywords(String text) {
-        Set<String> keywords = new LinkedHashSet<>();
-        String clean = text.replaceAll("[\\s\\p{Punct}，。！？、：；“”‘’（）…—·@#\\$%&\\*\\+=/\\\\<>\\[\\]{}|~`^]+", " ");
-        String[] words = clean.split("\\s+");
-        for (String w : words) {
-            w = w.trim();
-            if (w.length() >= 2 && w.length() <= 4 && !STOP_WORDS.contains(w)) {
-                keywords.add(w);
-            }
-        }
-        return keywords;
-    }
-
-    /**
-     * 计算两个集合的 Jaccard 相似度
-     */
-    private double jaccardSimilarity(Set<String> a, Set<String> b) {
-        if (a.isEmpty() && b.isEmpty()) return 1.0;
-        if (a.isEmpty() || b.isEmpty()) return 0.0;
-        long intersection = a.stream().filter(b::contains).count();
-        long union = a.size() + b.size() - intersection;
-        return (double) intersection / union;
     }
 
     /**
@@ -223,12 +225,23 @@ public class ChatHistoryRetrievalService {
             BotChatRecord record = toIndex.get(i);
             if (vectors[i] == null || vectors[i].length == 0) continue;
 
+            // 提取话题并存入 metadata（用于后续按话题过滤 RAG 结果）
+            String topic = null;
+            try {
+                topic = topicExtractor.extract(record.getContent());
+            } catch (Exception e) {
+                log.debug("[RAG] 话题提取失败: {}", e.getMessage());
+            }
+
             Map<String, String> metadata = new LinkedHashMap<>();
             metadata.put("sender_wxid", record.getSenderWxid());
             metadata.put("sender_nick", record.getSenderNick());
             metadata.put("is_self", String.valueOf(record.getIsSelf()));
             metadata.put("content", record.getContent());
             metadata.put("room_id", record.getRoomId());
+            if (topic != null) {
+                metadata.put("topic", topic);
+            }
             if (record.getCreateTime() != null) {
                 metadata.put("create_time", String.valueOf(record.getCreateTime()));
             }

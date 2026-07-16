@@ -86,6 +86,18 @@ public class AiProperties {
         /** RAG 检索条数 */
         private int ragTopK = 8;
 
+        /** 话题感知总开关 */
+        private boolean topicAware = true;
+
+        /** 话题持续次数阈值（超过则判定为过热） */
+        private int topicStaleThreshold = 3;
+
+        /** 是否启用对话摘要替代原始上下文 */
+        private boolean useConversationSummary = true;
+
+        /** 摘要缓存时间（秒），同一群聊在此时间内复用摘要 */
+        private int summaryCacheSeconds = 300;
+
         /** 私聊专属配置 */
         private PrivateConfig privateChat = new PrivateConfig();
     }
@@ -119,5 +131,25 @@ public class AiProperties {
          * </p>
          */
         private String styleDescription = "";
+
+        /**
+         * 反锚定提示（话题过热时注入到 Prompt 中）
+         */
+        private String antiAnchoringHint = "当前话题已经讨论较多。如果最新消息是新主题，请自然跟随新主题，不要主动回到旧话题。";
+
+        /**
+         * LLM 输出格式开关
+         * <p>
+         * true = 要求 LLM 输出结构化 JSON（含 reply/confidence/memory_used），用于调试和评估。
+         * false = 纯文本输出（默认，生产模式）。
+         * </p>
+         */
+        private boolean jsonReplyFormat = false;
+
+        /** 记忆提取重要性阈值（低于此值丢弃） */
+        private double memoryImportanceThreshold = 0.3;
+
+        /** 记忆条目最大数量（每人） */
+        private int maxMemoryEntries = 50;
     }
 }

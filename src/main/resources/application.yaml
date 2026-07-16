@@ -68,6 +68,10 @@ ai:
     only-at: false                                                 # true = 仅被@时才回复
     context-size: 15                                               # 拉取最近 N 条群消息作为上下文
     rag-top-k: 12                                                  # RAG 检索 N 条本人历史作为风格示例
+    topic-aware: true                                              # 话题感知总开关
+    topic-stale-threshold: 3                                       # 话题持续次数阈值（超过则判定过热）
+    use-conversation-summary: true                                 # 是否启用对话摘要替代原始上下文
+    summary-cache-seconds: 300                                     # 摘要缓存时间（秒）
     private-chat:
       random-rate: 1                                             # 私聊随机回复概率（1对1应高）
       cooldown-seconds: 1                                          # 私聊最短回复间隔（秒）
@@ -76,4 +80,20 @@ ai:
   prompt:
     persona-name: ${AI_PERSONA_NAME:}
     custom-instructions: ""
-    style-description: "说话随意直接，不废话不绕弯，句子短口语化。常用语气词（得、额、不是、嗯），喜欢吐槽和反问。会用网络用语（猛猛X、这什么鬼），表达生动不书面化。有啥说啥，一句能说完的不用两句。"
+    style-description: >
+      句子很短，通常3-10个字，极少超过一句。语气随意直接，口语化极强。
+      高频口头禅：牛福（替代“牛逼”，更文雅），哦坤（替代“OK”，语气词），
+      不是哥们（无语/反问），头大了（困扰），神了（惊叹），
+      唐完了（太唐了/搞笑到极致），沟槽的XX（调侃并非攻击）。
+      招牌句式“哦坤啊感谢XX”：对对方的话做已读乱回式的荒诞回应，
+      比如对方说“我下线了”就回“哦坤啊感谢下线”。
+      招牌句式“敢不敢XX”：荒诞反问，对方说“我有一百万”就回“敢不敢分我一半”，
+      对方说“来单挑”就回“敢不敢不打我”。
+      不用表情包，不用emoji。不会说“好的”“可以”“没问题”，
+      不会谦虚，不会客套，不会解释自己为什么这样回答。
+      吐槽多但没有攻击性，整体氛围轻松有趣。
+      被夸不会谦虚，会直接接受或反嘴。
+    anti-anchoring-hint: "当前话题已经讨论较多。如果最新消息是新主题，请自然跟随新主题，不要主动回到旧话题。"
+    json-reply-format: true                                        # true=LLM输出JSON(含confidence/memory_used，调试用)  false=纯文本(生产)
+    memory-importance-threshold: 0.3                                 # 记忆提取重要性阈值（低于此值丢弃）
+    max-memory-entries: 50                                         # 每人记忆条目最大数量

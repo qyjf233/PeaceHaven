@@ -59,6 +59,25 @@ public class UserMemoryService {
     }
 
     /**
+     * 保存结构化记忆 + 关系字段
+     */
+    public BotUserMemory saveStructured(String wxid, String nickname,
+                                         List<MemoryEntry> structuredMemories,
+                                         String summary) {
+        BotUserMemory memory = memoryRepo.findByWxid(wxid)
+                .orElse(BotUserMemory.builder().wxid(wxid).build());
+
+        if (nickname != null) memory.setNickname(nickname);
+        if (structuredMemories != null) memory.setStructuredMemories(structuredMemories);
+        if (summary != null) memory.setSummary(summary);
+
+        memoryRepo.save(memory);
+        log.debug("[UserMemory] 保存结构化记忆 wxid={}, entries={}",
+                wxid, structuredMemories != null ? structuredMemories.size() : 0);
+        return memory;
+    }
+
+    /**
      * 将用户画像格式化为 prompt 片段
      * <p>
      * 输出示例：
