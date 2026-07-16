@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户管理 - PeaceHaven Admin</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
 </head>
 <body>
 <div class="admin-container">
@@ -51,21 +52,19 @@
             <td th:text="${u.lastLoginAt != null ? #temporals.format(u.lastLoginAt, 'yyyy-MM-dd HH:mm') : '-'}"></td>
             <td class="actions">
                 <!-- 修改角色 -->
-                <form th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post" style="display:inline">
+                <form th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post" style="display:inline" class="confirm-form" data-confirm-msg="确定修改角色吗？">
                     <input type="hidden" name="_csrf" th:value="${_csrf}">
                     <input type="hidden" name="role" th:value="${u.role.name() == 'ADMIN' ? 'USER' : 'ADMIN'}">
                     <button type="submit" class="btn btn-sm btn-info"
-                            th:text="${u.role.name() == 'ADMIN' ? '降级为USER' : '提升为ADMIN'}"
-                            onclick="return confirm('确定修改角色吗？')"></button>
+                            th:text="${u.role.name() == 'ADMIN' ? '降级为USER' : '提升为ADMIN'}"></button>
                 </form>
                 <!-- 修改状态 -->
-                <form th:action="@{/admin/users/{id}/status(id=${u.id})}" method="post" style="display:inline">
+                <form th:action="@{/admin/users/{id}/status(id=${u.id})}" method="post" style="display:inline" class="confirm-form" data-confirm-msg="确定操作吗？">
                     <input type="hidden" name="_csrf" th:value="${_csrf}">
                     <input type="hidden" name="status" th:value="${u.status.name() == 'ACTIVE' ? 'BANNED' : 'ACTIVE'}">
                     <button type="submit" class="btn btn-sm"
                             th:classappend="${u.status.name() == 'ACTIVE' ? 'btn-danger' : 'btn-warning'}"
-                            th:text="${u.status.name() == 'ACTIVE' ? '封禁' : '解封'}"
-                            onclick="return confirm('确定操作吗？')"></button>
+                            th:text="${u.status.name() == 'ACTIVE' ? '封禁' : '解封'}"></button>
                 </form>
             </td>
         </tr>
@@ -83,5 +82,23 @@
         <a th:if="${currentPage < userPage.totalPages - 1}" th:href="@{/admin/users(page=${currentPage + 1})}" class="btn btn-sm btn-secondary">下一页</a>
     </div>
 </div>
+<script th:src="@{/js/ph-dialog.js}"></script>
+<script>
+document.querySelectorAll('.confirm-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var theForm = this;
+        var msg = this.getAttribute('data-confirm-msg') || '确定操作吗？';
+        PHDialog.confirm({
+            title: '确认操作',
+            message: msg,
+            icon: '⚠️',
+            confirmText: '确认',
+            cancelText: '取消',
+            onConfirm: function() { theForm.submit(); }
+        });
+    });
+});
+</script>
 </body>
 </html>

@@ -727,15 +727,23 @@
         document.getElementById('qrOverlay').classList.remove('show');
     };
 
-    window.cfgTestMessage = async function () {
-        if (!confirm('向配置的群聊发送一条测试消息？')) return;
-        showToast('正在发送...', '');
-        const result = await api('POST', API_CFG + '/testMessage');
-        if (result.success) {
-            showToast('测试消息发送成功', 'success');
-        } else {
-            showToast(result.message || '发送失败', 'error');
-        }
+    window.cfgTestMessage = function () {
+        PHDialog.confirm({
+            title: '发送测试消息',
+            message: '向配置的群聊发送一条测试消息？',
+            icon: '📤',
+            confirmText: '确认发送',
+            cancelText: '取消',
+            onConfirm: async function () {
+                showToast('正在发送...', '');
+                const result = await api('POST', API_CFG + '/testMessage');
+                if (result.success) {
+                    showToast('测试消息发送成功', 'success');
+                } else {
+                    showToast(result.message || '发送失败', 'error');
+                }
+            }
+        });
     };
 
     // 页面加载时加载配置状态 + 自动检测在线
@@ -1008,17 +1016,26 @@
         }
     };
 
-    window.deleteMsg = async function (id) {
-        if (!confirm('删除该定时消息？')) return;
-        const result = await api('DELETE', API_M + '/' + id);
-        if (result.success) {
-            showToast('已删除', 'success');
-            cachedMessages = cachedMessages.filter(m => m.id !== id);
-            renderMessages(cachedMessages);
-            loadTemplates(currentType); // 刷新模板列表
-        } else {
-            showToast(result.message || '删除失败', 'error');
-        }
+    window.deleteMsg = function (id) {
+        PHDialog.confirm({
+            title: '删除确认',
+            message: '删除该定时消息？',
+            icon: '🗑️',
+            confirmText: '确认删除',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: async function () {
+                const result = await api('DELETE', API_M + '/' + id);
+                if (result.success) {
+                    showToast('已删除', 'success');
+                    cachedMessages = cachedMessages.filter(m => m.id !== id);
+                    renderMessages(cachedMessages);
+                    loadTemplates(currentType); // 刷新模板列表
+                } else {
+                    showToast(result.message || '删除失败', 'error');
+                }
+            }
+        });
     };
 
     /* ====== 消息模板 ====== */
@@ -1148,15 +1165,24 @@
         }
     };
 
-    window.deleteTpl = async function (id) {
-        if (!confirm('删除该消息模板？')) return;
-        const result = await api('DELETE', API_T + '/' + id);
-        if (result.success) {
-            showToast('已删除', 'success');
-            loadTemplates(currentType);
-        } else {
-            showToast(result.message || '删除失败', 'error');
-        }
+    window.deleteTpl = function (id) {
+        PHDialog.confirm({
+            title: '删除确认',
+            message: '删除该消息模板？',
+            icon: '🗑️',
+            confirmText: '确认删除',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: async function () {
+                const result = await api('DELETE', API_T + '/' + id);
+                if (result.success) {
+                    showToast('已删除', 'success');
+                    loadTemplates(currentType);
+                } else {
+                    showToast(result.message || '删除失败', 'error');
+                }
+            }
+        });
     };
 
     /* ====== 群聊成员 ====== */
@@ -1556,11 +1582,20 @@
         if (!result.success) loadWhitelist();
     };
 
-    window.removeWlEntry = async function (id) {
-        if (!confirm('删除该白名单条目？')) return;
-        const result = await api('DELETE', API_WL + '/' + id);
-        showToast(result.message || (result.success ? '已删除' : '删除失败'), result.success ? 'success' : 'error');
-        if (result.success) loadWhitelist();
+    window.removeWlEntry = function (id) {
+        PHDialog.confirm({
+            title: '删除确认',
+            message: '删除该白名单条目？',
+            icon: '🗑️',
+            confirmText: '确认删除',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: async function () {
+                const result = await api('DELETE', API_WL + '/' + id);
+                showToast(result.message || (result.success ? '已删除' : '删除失败'), result.success ? 'success' : 'error');
+                if (result.success) loadWhitelist();
+            }
+        });
     };
 
 })();

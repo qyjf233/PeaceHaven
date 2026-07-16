@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>流量监控 - PeaceHaven Admin</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
         .traffic-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -112,7 +113,7 @@
                 renderIpChart(data.topIps || []);
                 renderRefChart(data.topReferers || []);
             })
-            .catch(function() { alert('加载数据失败'); });
+            .catch(function() { PHDialog.show({ icon: '⚠️', title: '加载失败', message: '数据加载失败，请稍后重试', confirmText: '知道了' }); });
     }
 
     function renderStats(data) {
@@ -270,5 +271,6 @@
     // 初始加载
     loadData();
 </script>
+<script th:src="@{/js/ph-dialog.js}"></script>
 </body>
 </html>

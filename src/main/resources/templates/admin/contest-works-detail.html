@@ -6,6 +6,7 @@
     <meta name="_csrf" th:content="${_csrf}">
     <title th:text="${activity.title} + ' - 作品审核 - PeaceHaven Admin'">作品审核</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
     <style>
         .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
         .filter-tab { padding: 8px 20px; border: 1px solid var(--admin-border); border-radius: 20px; background: #fff; cursor: pointer; font-size: 0.88rem; transition: all 0.2s; }
@@ -184,8 +185,18 @@
 
     // === 审核操作 ===
     window.reviewWork = function(workId, action) {
-        if (!confirm(action === 'approve' ? '确认通过该作品？' : '确认拒绝该作品？')) return;
+        PHDialog.confirm({
+            title: action === 'approve' ? '确认通过' : '确认拒绝',
+            message: action === 'approve' ? '确认通过该作品？' : '确认拒绝该作品？',
+            icon: action === 'approve' ? '✅' : '❌',
+            confirmText: '确认',
+            cancelText: '取消',
+            confirmStyle: action === 'approve' ? 'primary' : 'danger',
+            onConfirm: function() { doReview(workId, action); }
+        });
+    };
 
+    function doReview(workId, action) {
         fetch('/admin/api/contest/works/' + workId + '/review', {
             method: 'POST',
             headers: {
@@ -199,11 +210,11 @@
             if (data.success) {
                 resetAndLoad();
             } else {
-                alert(data.message);
+                PHDialog.show({ icon: '⚠️', title: '操作失败', message: data.message, confirmText: '知道了' });
             }
         })
-        .catch(function() { alert('操作失败，请重试'); });
-    };
+        .catch(function() { PHDialog.show({ icon: '⚠️', title: '操作失败', message: '操作失败，请重试', confirmText: '知道了' }); });
+    }
 
     // === 图片预览 ===
     window.showPreview = showPreview;
@@ -220,5 +231,6 @@
     loadWorks();
 })();
 </script>
+<script th:src="@{/js/ph-dialog.js}"></script>
 </body>
 </html>

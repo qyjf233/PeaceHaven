@@ -239,8 +239,18 @@
         var uncheckedCount = allIds.length - checkedIds.length;
         var msg = '将添加 ' + checkedIds.length + ' 人到成员表';
         if (uncheckedCount > 0) msg += '，并将 ' + uncheckedCount + ' 人移出长安';
-        if (!confirm(msg + '，确认执行？')) return;
 
+        PHDialog.confirm({
+            title: '确认处理',
+            message: msg + '，确认执行？',
+            icon: '📥',
+            confirmText: '确认执行',
+            cancelText: '取消',
+            onConfirm: function() { doSubmitScan(checkedIds, allIds); }
+        });
+    }
+
+    function doSubmitScan(checkedIds, allIds) {
         var btn = document.getElementById('scanSubmitBtn');
         btn.disabled = true;
         btn.textContent = '处理中...';
@@ -256,16 +266,15 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
-                alert('完成！添加了 ' + data.addedCount + ' 人，移出了 ' + data.removedCount + ' 人');
-                location.reload();
+                PHDialog.show({ icon: '✅', title: '处理完成', message: '添加了 ' + data.addedCount + ' 人，移出了 ' + data.removedCount + ' 人', confirmText: '好的', onConfirm: function() { location.reload(); } });
             } else {
-                alert('处理失败：' + (data.message || '未知错误'));
+                PHDialog.show({ icon: '⚠️', title: '处理失败', message: data.message || '未知错误', confirmText: '知道了' });
                 btn.disabled = false;
                 btn.textContent = '确认处理';
             }
         })
         .catch(function() {
-            alert('网络错误，请重试');
+            PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
             btn.disabled = false;
             btn.textContent = '确认处理';
         });
@@ -398,10 +407,10 @@
                     onSuccess();
                     setTimeout(function() { location.reload(); }, 1500);
                 } else {
-                    alert('删除失败');
+                    PHDialog.show({ icon: '⚠️', title: '删除失败', message: '操作失败，请稍后重试', confirmText: '知道了' });
                 }
             }).catch(function() {
-                alert('网络错误');
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '网络异常，请稍后重试', confirmText: '知道了' });
             });
         } else {
             document.body.appendChild(form);

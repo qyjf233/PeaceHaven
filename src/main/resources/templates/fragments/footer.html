@@ -57,5 +57,7 @@
      ============================================ -->
 <th:block th:fragment="scripts(auth)">
     <script th:src="@{/js/main.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+    <script th:src="@{/js/ph-dialog.js}"></script>
     <script th:if="${auth}" th:src="@{/js/auth.js(v=3)}"></script>
 </th:block>

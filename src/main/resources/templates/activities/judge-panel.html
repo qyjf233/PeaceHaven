@@ -2,6 +2,7 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{fragments/head :: common(title='裁判评分 - 长安建筑大赛')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
     <meta name="_csrf" th:content="${_csrf}">
     <style>
         .judge-page { min-height: 100vh; padding-top: 64px; background: var(--bg-primary); }
@@ -306,6 +307,7 @@
 </div>
 
 <th:block th:replace="~{fragments/footer :: scripts(auth=true)}"></th:block>
+<script th:src="@{/js/ph-dialog.js}"></script>
 <script>
 (function() {
     var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
@@ -381,7 +383,7 @@
                 var input = document.getElementById('scoreInput_' + workId);
                 var val = parseFloat(input.value);
                 if (isNaN(val) || val < 0 || val > 10) {
-                    alert('请输入 0 ~ 10 之间的分数');
+                    PHDialog.show({ icon: '⚠️', title: '分数无效', message: '请输入 0 ~ 10 之间的分数', confirmText: '知道了' });
                     return;
                 }
                 submitScore(workId, val, btn);
@@ -455,13 +457,13 @@
                 // 重新加载整个面板以更新进度
                 loadJudgeWorks();
             } else {
-                alert(data.message || '评分失败');
+                PHDialog.show({ icon: '⚠️', title: '评分失败', message: data.message || '评分失败', confirmText: '知道了' });
                 btn.disabled = false;
                 btn.textContent = '提交评分';
             }
         })
         .catch(function(e) {
-            alert('网络错误，请重试');
+            PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
             btn.disabled = false;
             btn.textContent = '提交评分';
         });

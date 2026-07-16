@@ -6,6 +6,15 @@
     // === 状态 ===
     let currentUser = null;
 
+    // === PHDialog 兼容封装（未加载时回退 alert） ===
+    function showDialog(icon, title, message) {
+        if (typeof PHDialog !== 'undefined') {
+            PHDialog.show({ icon: icon, title: title, message: message, confirmText: '知道了' });
+        } else {
+            alert(message);
+        }
+    }
+
     // === 初始化 ===
     document.addEventListener('DOMContentLoaded', function() {
         checkLoginStatus();
@@ -139,7 +148,7 @@
 
             // 校验文件大小 (5MB)
             if (file.size > 5 * 1024 * 1024) {
-                alert('图片大小不能超过5MB');
+                showDialog('⚠️', '提示', '图片大小不能超过5MB');
                 return;
             }
 
@@ -160,12 +169,12 @@
                     currentUser.avatar = data.avatar;
                     updateNavbar();
                 } else {
-                    alert(data.message || '头像上传失败');
+                    showDialog('⚠️', '上传失败', data.message || '头像上传失败');
                     avatarImgs.forEach(function(img) { img.style.opacity = '1'; });
                 }
             })
             .catch(function() {
-                alert('网络错误，请重试');
+                showDialog('⚠️', '网络错误', '操作失败，请稍后重试');
                 avatarImgs.forEach(function(img) { img.style.opacity = '1'; });
             });
 

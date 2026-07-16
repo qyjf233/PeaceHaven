@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>活动管理 - PeaceHaven Admin</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
 </head>
 <body>
 <div class="admin-container">
@@ -56,9 +57,9 @@
             <td th:text="${activity.endDate != null ? #temporals.format(activity.endDate, 'yyyy-MM-dd HH:mm') : '-'}"></td>
             <td class="actions">
                 <a th:href="@{/admin/activities/{id}/edit(id=${activity.id})}" class="btn btn-sm btn-info">编辑</a>
-                <form th:action="@{/admin/activities/{id}/delete(id=${activity.id})}" method="post" style="display:inline">
+                <form th:action="@{/admin/activities/{id}/delete(id=${activity.id})}" method="post" style="display:inline" class="confirm-form" data-confirm-msg="确定要删除此活动吗？此操作不可恢复！">
                     <input type="hidden" name="_csrf" th:value="${_csrf}">
-                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('确定要删除此活动吗？此操作不可恢复！')">删除</button>
+                    <button type="submit" class="btn btn-sm btn-danger">删除</button>
                 </form>
             </td>
         </tr>
@@ -68,5 +69,24 @@
         </tbody>
     </table>
 </div>
+<script th:src="@{/js/ph-dialog.js}"></script>
+<script>
+document.querySelectorAll('.confirm-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var theForm = this;
+        var msg = this.getAttribute('data-confirm-msg') || '确定操作吗？';
+        PHDialog.confirm({
+            title: '确认操作',
+            message: msg,
+            icon: '⚠️',
+            confirmText: '确认删除',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: function() { theForm.submit(); }
+        });
+    });
+});
+</script>
 </body>
 </html>

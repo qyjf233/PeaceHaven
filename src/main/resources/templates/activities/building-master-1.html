@@ -2,6 +2,7 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{fragments/head :: common(title='长安建筑大赛 - PeaceHaven · 长安')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
     <meta name="_csrf" th:content="${_csrf}">
     <!-- 微信/社交平台分享卡片 -->
     <meta property="og:type" content="article">
@@ -1530,13 +1531,13 @@
                     // 刷新作品列表以更新票数
                     loadWorks();
                 } else {
-                    if (!handleAuthError(data)) alert(data.message);
+                    if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '投票失败', message: data.message, confirmText: '知道了' });
                     btn.disabled = false;
                     btn.textContent = '🗳 投票';
                 }
             })
             .catch(function() {
-                alert('网络错误，请重试');
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
                 btn.disabled = false;
                 btn.textContent = '🗳 投票';
             });
@@ -1544,7 +1545,18 @@
 
     // === 撤回投票 ===
     function handleUnvote(workId, btn) {
-        if (!confirm('确定要撤回对这个作品的投票吗？')) return;
+        PHDialog.confirm({
+            title: '撤回投票',
+            message: '确定要撤回对这个作品的投票吗？',
+            icon: '🤔',
+            confirmText: '确认撤回',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: function() { doUnvote(workId, btn); }
+        });
+    }
+
+    function doUnvote(workId, btn) {
         btn.disabled = true;
         btn.textContent = '撤回中...';
         var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
@@ -1565,13 +1577,13 @@
                     // 刷新作品列表以更新票数
                     loadWorks();
                 } else {
-                    if (!handleAuthError(data)) alert(data.message);
+                    if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '撤回失败', message: data.message, confirmText: '知道了' });
                     btn.disabled = false;
                     btn.textContent = '🗳 已投票';
                 }
             })
             .catch(function() {
-                alert('网络错误，请重试');
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
                 btn.disabled = false;
                 btn.textContent = '🗳 已投票';
             });
@@ -1600,13 +1612,13 @@
                     // 刷新作品列表以更新抽象票数
                     loadWorks();
                 } else {
-                    if (!handleAuthError(data)) alert(data.message);
+                    if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '抽象失败', message: data.message, confirmText: '知道了' });
                     btn.disabled = false;
                     btn.textContent = '🤡 抽象';
                 }
             })
             .catch(function() {
-                alert('网络错误，请重试');
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
                 btn.disabled = false;
                 btn.textContent = '🤡 抽象';
             });
@@ -1614,7 +1626,18 @@
 
     // === 撤回抽象票 ===
     function handleAbstractUnvote(workId, btn) {
-        if (!confirm('确定要撤回对这个作品的抽象票吗？')) return;
+        PHDialog.confirm({
+            title: '撤回抽象票',
+            message: '确定要撤回对这个作品的抽象票吗？',
+            icon: '🤔',
+            confirmText: '确认撤回',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: function() { doAbstractUnvote(workId, btn); }
+        });
+    }
+
+    function doAbstractUnvote(workId, btn) {
         btn.disabled = true;
         btn.textContent = '撤回中...';
         var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
@@ -1630,13 +1653,13 @@
                     // 刷新作品列表以更新抽象票数
                     loadWorks();
                 } else {
-                    if (!handleAuthError(data)) alert(data.message);
+                    if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '撤回失败', message: data.message, confirmText: '知道了' });
                     btn.disabled = false;
                     btn.textContent = '已抽象 ✓';
                 }
             })
             .catch(function() {
-                alert('网络错误，请重试');
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
                 btn.disabled = false;
                 btn.textContent = '已抽象 ✓';
             });
@@ -1705,29 +1728,38 @@
             var msg = status === 'APPROVED'
                 ? '确定要删除这个作品吗？\n\n⚠️ 该作品已审核通过，删除后所有投票记录也会一并清除，且不可恢复！'
                 : '确定要删除这个作品吗？此操作不可恢复。';
-            if (!confirm(msg)) return;
-    
-            var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
-            fetch('/api/contest/delete-work?slug=building-master-1', {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': csrfToken }
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.success) {
-                    myWorkStatus = null;
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '投稿我的作品';
-                    submitStatus.textContent = data.message;
-                    submitBtn.onclick = openSubmitModal;
-                    // 刷新作品列表
-                    loadWorks();
-                } else {
-                    if (!handleAuthError(data)) alert(data.message);
-                }
-            })
-            .catch(function() { alert('网络错误，请重试'); });
+            PHDialog.confirm({
+                title: '删除作品',
+                message: msg,
+                icon: '⚠️',
+                confirmText: '确认删除',
+                cancelText: '取消',
+                confirmStyle: 'danger',
+                onConfirm: function() { doDeleteWork(); }
+            });
         });
+    }
+
+    function doDeleteWork() {
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/delete-work?slug=building-master-1', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                myWorkStatus = null;
+                submitBtn.disabled = false;
+                submitBtn.textContent = '投稿我的作品';
+                submitStatus.textContent = data.message;
+                submitBtn.onclick = openSubmitModal;
+                loadWorks();
+            } else {
+                if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '删除失败', message: data.message, confirmText: '知道了' });
+            }
+        })
+        .catch(function() { PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' }); });
     }
 
     // === 投稿弹窗 ===
@@ -1898,5 +1930,6 @@
     loadWorks();
 })();
 </script>
+<script th:src="@{/js/ph-dialog.js}"></script>
 </body>
 </html>

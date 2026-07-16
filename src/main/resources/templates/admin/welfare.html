@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>福利系统 - PeaceHaven Admin</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
     <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
     <style>
         .form-row { margin-bottom: 12px; }
@@ -86,7 +87,7 @@
             <h3 th:text="${entry.key}"></h3>
             <span class="count" th:text="'共 ' + ${#lists.size(entry.value)} + ' 人'"></span>
             <form th:action="@{/admin/welfare/{date}/delete(date=${entry.key})}" method="post" style="margin-left:auto;"
-                  onsubmit="return confirm('确定删除该日期的所有福利记录？')">
+                  class="delete-date-form">
                 <input type="hidden" name="_csrf" th:value="${_csrf}">
                 <button type="submit" class="btn btn-sm btn-danger">删除该日</button>
             </form>
@@ -209,7 +210,7 @@
     // === 月度幸运儿抽奖 ===
     function doLottery() {
         var date = document.getElementById('f_date').value;
-        if (!date) { alert('请先选择日期'); return; }
+        if (!date) { PHDialog.show({ icon: '⚠️', title: '提示', message: '请先选择日期', confirmText: '知道了' }); return; }
 
         var btn = document.getElementById('lotteryBtn');
         btn.disabled = true;
@@ -232,13 +233,13 @@
                 el.innerHTML = data.message + '<div class="winners">' + data.winners.join(' 🎉 ') + '</div>';
                 setTimeout(function() { closeAddModal(); location.reload(); }, 3000);
             } else {
-                alert(data.message || '抽奖失败');
+                PHDialog.show({ icon: '⚠️', title: '抽奖失败', message: data.message || '抽奖失败', confirmText: '知道了' });
                 btn.disabled = false;
                 btn.textContent = '🎲 开始抽奖';
             }
         })
         .catch(function() {
-            alert('网络错误，请重试');
+            PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
             btn.disabled = false;
             btn.textContent = '🎲 开始抽奖';
         });
@@ -264,7 +265,7 @@
 
     function submitContribution() {
         var date = document.getElementById('f_date').value;
-        if (!date) { alert('请先选择日期'); return; }
+        if (!date) { PHDialog.show({ icon: '⚠️', title: '提示', message: '请先选择日期', confirmText: '知道了' }); return; }
 
         var members = [];
         document.querySelectorAll('#memberList input[type=checkbox]:checked').forEach(function(cb) {
@@ -275,7 +276,7 @@
             });
         });
 
-        if (members.length !== 3) { alert('请选择恰好3名成员'); return; }
+        if (members.length !== 3) { PHDialog.show({ icon: '⚠️', title: '提示', message: '请选择恰好3名成员', confirmText: '知道了' }); return; }
 
         var btn = document.getElementById('submitBtn');
         btn.disabled = true;
@@ -292,17 +293,16 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
-                alert(data.message);
-                location.reload();
+                PHDialog.show({ icon: '✅', title: '提交成功', message: data.message, confirmText: '好的', onConfirm: function() { location.reload(); } });
             } else {
-                alert(data.message || '提交失败');
+                PHDialog.show({ icon: '⚠️', title: '提交失败', message: data.message || '提交失败', confirmText: '知道了' });
                 btn.disabled = false;
                 btn.textContent = '确认提交';
                 updateMemberCount();
             }
         })
         .catch(function() {
-            alert('网络错误，请重试');
+            PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
             btn.disabled = false;
             btn.textContent = '确认提交';
             updateMemberCount();
@@ -345,6 +345,24 @@
     function resetFilter() {
         window.location.href = '/admin/welfare';
     }
+
+    // === 删除日期确认拦截 ===
+    document.querySelectorAll('.delete-date-form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var theForm = this;
+            PHDialog.confirm({
+                title: '删除确认',
+                message: '确定删除该日期的所有福利记录？',
+                icon: '⚠️',
+                confirmText: '确认删除',
+                cancelText: '取消',
+                confirmStyle: 'danger',
+                onConfirm: function() { theForm.submit(); }
+            });
+        });
+    });
 </script>
+<script th:src="@{/js/ph-dialog.js}"></script>
 </body>
 </html>
