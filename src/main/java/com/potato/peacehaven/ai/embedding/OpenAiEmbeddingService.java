@@ -35,10 +35,52 @@ public class OpenAiEmbeddingService implements EmbeddingService {
         return result != null && result.length > 0 ? result[0] : null;
     }
 
+    /** API 单次最大批量数（通义千问等供应商限制为 10） */
+    private static final int MAX_BATCH_SIZE = 10;
+
     @Override
     @SuppressWarnings("unchecked")
     public float[][] embedBatch(List<String> texts) {
         if (texts == null || texts.isEmpty()) return new float[0][];
+
+        // 分批调用：API 限制单次最多 10 条
+        if (texts.size() > MAX_BATCH_SIZE) {
+            return embedBatchChunked(texts);
+        }
+
+        return doEmbed(texts);
+    }
+
+    /**
+     * 分批嵌入并合并结果
+     */
+    private float[][] embedBatchChunked(List<String> texts) {
+        List<float[]> allVectors = new ArrayList<>();
+        for (int i = 0; i < texts.size(); i += MAX_BATCH_SIZE) {
+            int end = Math.min(i + MAX_BATCH_SIZE, texts.size());
+            List<String> chunk = texts.subList(i, end);
+            float[][] chunkResult = doEmbed(chunk);
+            if (chunkResult == null) {
+                log.error("[Embedding] 分批嵌入失败 chunk={}-{}/{}", i, end, texts.size());
+                return null;
+            }
+            for (float[] v : chunkResult) {
+                allVectors.add(v);
+            }
+        }
+        float[][] result = new float[allVectors.size()][];
+        for (int i = 0; i < allVectors.size(); i++) {
+            result[i] = allVectors.get(i);
+        }
+        log.info("[Embedding] 分批嵌入完成 {}/{} 条", result.length, texts.size());
+        return result;
+    }
+
+    /**
+     * 执行单次 Embedding API 调用
+     */
+    @SuppressWarnings("unchecked")
+    private float[][] doEmbed(List<String> texts) {
 
         AiProperties.EmbeddingConfig cfg = aiProps.getEmbedding();
         String apiKey = cfg.getApiKey();
