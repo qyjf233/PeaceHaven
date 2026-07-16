@@ -15,11 +15,11 @@ AI 分身系统的核心目标是**模仿你本人的语言风格**在群聊中�
 用于生成回复文本，**每次回复都会消耗 Token**。
 
 | 推荐模型 | 供应商 | 特点 | 参考价格 |
-|---------|--------|------|---------|
-| **deepseek-chat**（默认） | [DeepSeek](https://platform.deepseek.com/) | 性价比最高，中文能力强 | ¥1/百万 input Token |
+|---------|--------|------|--------|
+| **qwen-plus**（默认） | [通义千问](https://bailian.console.aliyun.com/) | 中文优秀，性价比最优 | ¥0.8/百万 input Token |
+| deepseek-chat | [DeepSeek](https://platform.deepseek.com/) | 性价比最高，中文能力强 | ¥1/百万 input Token |
 | gpt-4o-mini | [OpenAI](https://platform.openai.com/) | 稳定，多语言 | $0.15/百万 input Token |
 | moonshot-v1-8k | [Moonshot](https://platform.moonshot.cn/) | 国产，长上下文 | ¥12/百万 Token |
-| qwen-turbo | [通义千问](https://dashscope.console.aliyun.com/) | 阿里系，便宜 | ¥0.3/百万 Token |
 
 > **只要是 OpenAI 兼容接口（`/v1/chat/completions`）的模型都可以用。** 大部分国内厂商（DeepSeek、Moonshot、通义、智谱等）都支持。
 
@@ -30,18 +30,18 @@ AI 分身系统的核心目标是**模仿你本人的语言风格**在群聊中�
 用于将聊天记录转化为向量，支持 RAG 相似语义检索。
 
 | 推荐模型 | 供应商 | 特点 | 参考价格 |
-|---------|--------|------|---------|
-| **text-embedding-3-small**（默认） | [OpenAI](https://platform.openai.com/) | 效果好，维度 1536 | $0.02/百万 Token |
+|---------|--------|------|--------|
+| **text-embedding-v4**（默认） | [通义千问](https://bailian.console.aliyun.com/) | 最新一代，维度可选 | ¥0.5/百万 Token |
 | bge-large-zh-v1.5 | [Silicon Flow](https://siliconflow.cn/) | 国产免费，中文优秀 | 免费 |
-| text-embedding-v3 | [通义千问](https://dashscope.console.aliyun.com/) | 阿里系 | ¥0.7/百万 Token |
+| text-embedding-3-small | [OpenAI](https://platform.openai.com/) | 效果好，维度 1536 | $0.02/百万 Token |
 
 > Embedding 消耗量较小。索引 1000 条聊天记录大约消耗 5~10 万 Token，约 ¥0.01。
 
 ### 3. 省钱方案
 
-- **LLM + Embedding 用同一家**：如都用通义千问或都用 DeepSeek（DeepSeek 暂无 Embedding，可搭配 Silicon Flow 的免费 bge 模型）
-- **最便宜组合**：DeepSeek LLM + Silicon Flow 免费 Embedding
-- **最好效果组合**：DeepSeek/GPT-4o-mini LLM + OpenAI text-embedding-3-small
+- **LLM + Embedding 用同一家**：如都用通义千问，一个 API Key 搞定
+- **最便宜组合**：qwen-plus LLM + text-embedding-v4（全栈通义，一个 Key）
+- **最好效果组合**：qwen-plus LLM + text-embedding-v4（通义全家桶）
 
 ---
 
@@ -52,17 +52,11 @@ AI 分身系统的核心目标是**模仿你本人的语言风格**在群聊中�
 在服务器上设置环境变量，避免密钥硬编码或提交到代码仓库：
 
 ```bash
-# 必须配置
-export AI_LLM_API_KEY="sk-xxxxxxxxxxxx"           # LLM 的 API Key
-export AI_LLM_BASE_URL="https://api.deepseek.com/v1"  # LLM API 基础地址
-
-# Embedding（如和 LLM 同一家可不配，会自动复用 LLM 的 Key 和 URL）
-export AI_EMBED_API_KEY="sk-xxxxxxxxxxxx"          # Embedding API Key
-export AI_EMBED_BASE_URL="https://api.openai.com/v1"  # Embedding API 基础地址
-export AI_EMBED_MODEL="text-embedding-3-small"     # Embedding 模型名
+# 必须配置（只需这一个 Key，LLM 和 Embedding 共用）
+export AI_LLM_API_KEY="sk-xxxxxxxxxxxx"           # 通义千问百炼平台 API Key
 
 # 可选配置
-export AI_LLM_MODEL="deepseek-chat"                # LLM 模型名
+export AI_LLM_MODEL="qwen-plus"                    # LLM 模型名
 export AI_PERSONA_NAME="你的名字"                    # AI 扮演的用户名
 ```
 
@@ -72,17 +66,16 @@ export AI_PERSONA_NAME="你的名字"                    # AI 扮演的用户名
 ai:
   enabled: true                          # ← 改为 true 启用
   llm:
-    provider: openai                     # 标识（仅日志用）
-    api-key: ${AI_LLM_API_KEY:}         # LLM API Key
-    base-url: ${AI_LLM_BASE_URL:}       # 如 https://api.deepseek.com/v1
-    model: ${AI_LLM_MODEL:deepseek-chat}
+    provider: qwen                       # 通义千问
+    api-key: ${AI_LLM_API_KEY:}         # 只需配这一个 Key，Embedding 自动复用
+    base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    model: qwen-plus                     # 性价比最优
     temperature: 0.85                    # 0~2，越高越有创造力
     max-tokens: 200                      # 单次回复最大 Token（建议 100~300）
   embedding:
-    api-key: ${AI_EMBED_API_KEY:}       # 可复用 LLM 的 Key
-    base-url: ${AI_EMBED_BASE_URL:}     # 可复用 LLM 的 URL
-    model: ${AI_EMBED_MODEL:text-embedding-3-small}
-    dimensions: 1536                     # 向量维度（需与模型匹配）
+    # api-key / base-url 留空，自动复用 llm 的配置
+    model: text-embedding-v4             # 最新 Embedding 模型
+    dimensions: 1024                     # v4 支持 1024/1536/2048，1024 性价比最优
   reply:
     max-per-day: 50                      # 每日回复上限（防刷屏/烧钱）
     cooldown-seconds: 30                 # 同群最短回复间隔
@@ -99,10 +92,10 @@ ai:
 
 | 供应商 | base-url |
 |--------|----------|
+| **通义千问**（默认） | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | DeepSeek | `https://api.deepseek.com/v1` |
 | OpenAI | `https://api.openai.com/v1` |
 | Moonshot | `https://api.moonshot.cn/v1` |
-| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | 智谱 AI | `https://open.bigmodel.cn/api/paas/v4` |
 | Silicon Flow | `https://api.siliconflow.cn/v1` |
 
@@ -272,12 +265,8 @@ SELECT COUNT(*) FROM bot_chat_record WHERE is_self = true;
 ## 七、快速启用步骤
 
 ```bash
-# 1. 设置环境变量
-export AI_LLM_API_KEY="sk-your-llm-key"
-export AI_LLM_BASE_URL="https://api.deepseek.com/v1"
-export AI_EMBED_API_KEY="sk-your-embed-key"
-export AI_EMBED_BASE_URL="https://api.openai.com/v1"
-export AI_PERSONA_NAME="你的群昵称"
+# 1. 设置环境变量（只需这一个 Key）
+export AI_LLM_API_KEY="sk-your-dashscope-api-key"
 
 # 2. 修改 application.yaml
 #    ai.enabled: false  →  ai.enabled: true

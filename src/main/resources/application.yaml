@@ -15,7 +15,7 @@ spring:
     jdbc:
       initialize-schema: always  # 自动建表 SPRING_SESSION / SPRING_SESSION_ATTRIBUTES
   datasource:
-    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db
+    url: jdbc:mysql://rm-bp1544sem4omv4v3ylo.mysql.rds.aliyuncs.com:3306/peacehaven_db_pre
     username: peacehaven_server
     password: XHJdashuaige2508@
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -47,28 +47,27 @@ aliyun:
     project: ${ALIYUN_SLS_PROJECT:}
     log-store: ${ALIYUN_SLS_LOGSTORE:}
 
-# AI 分身系统配置
+# AI 分身系统配置（全栈通义千问）
 ai:
-  enabled: false
+  enabled: true
   llm:
-    provider: openai
-    api-key: ${AI_LLM_API_KEY:}
-    base-url: ${AI_LLM_BASE_URL:}
-    model: ${AI_LLM_MODEL:deepseek-chat}
+    provider: qwen
+    api-key: ${AI_LLM_API_KEY:}                                    # 只需配这一个 Key，Embedding 自动复用
+    base-url: https://ws-nvivbrq9wdb6pam1.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+    model: ${AI_LLM_MODEL:qwen-plus}                               # 性价比最优（¥0.8/M input）
     temperature: 0.85
     max-tokens: 200
   embedding:
-    api-key: ${AI_EMBED_API_KEY:}
-    base-url: ${AI_EMBED_BASE_URL:}
-    model: ${AI_EMBED_MODEL:text-embedding-3-small}
-    dimensions: 1536
+    # api-key / base-url 留空，自动复用 llm 的配置
+    model: text-embedding-v4                                       # 最新 Embedding 模型
+    dimensions: 1024                                               # v4 支持 1024/1536/2048，1024 性价比最优
   reply:
-    max-per-day: 50
-    cooldown-seconds: 30
-    random-rate: 0.15
-    only-at: false
-    context-size: 15
-    rag-top-k: 8
+    max-per-day: 10000                                             # 每日回复上限（前期放开多聊）
+    cooldown-seconds: 1                                            # 同群最短回复间隔（秒）
+    random-rate: 0.2                                               # 无触发条件时随机回复概率（前期提高参与度）
+    only-at: false                                                 # true = 仅被@时才回复
+    context-size: 15                                               # 拉取最近 N 条群消息作为上下文
+    rag-top-k: 8                                                   # RAG 检索 N 条本人历史作为风格示例
   prompt:
     persona-name: ${AI_PERSONA_NAME:}
     custom-instructions: ""
