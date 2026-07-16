@@ -32,6 +32,9 @@ public class AiProperties {
     /** Prompt 配置 */
     private PromptConfig prompt = new PromptConfig();
 
+    /** Persona Engine 学习配置 */
+    private LearningConfig learning = new LearningConfig();
+
     /**
      * 判断 AI 系统是否可用（总开关 + LLM 配置完整）
      */
@@ -191,5 +194,36 @@ public class AiProperties {
         private String casualLevel;
         /** 温暖度：high / medium / low */
         private String warmthLevel;
+    }
+
+    /**
+     * Persona Engine 学习配置
+     */
+    @Getter
+    @Setter
+    public static class LearningConfig {
+        /** 是否启用定时学习 */
+        private boolean enabled = false;
+        /** 学习间隔（小时） */
+        private int intervalHours = 6;
+        /** 最低本人消息数才触发学习 */
+        private int minSamples = 50;
+        /** 学习窗口内最大消息数 */
+        private int maxSamples = 200;
+        /** Bootstrap 配置（冷启动保护） */
+        private BootstrapConfig bootstrap = new BootstrapConfig();
+    }
+
+    /**
+     * Bootstrap 冷启动保护配置
+     * <p>前 N 条消息只采集不更新 persona，防止早期污染</p>
+     */
+    @Getter
+    @Setter
+    public static class BootstrapConfig {
+        /** 是否启用 bootstrap */
+        private boolean enabled = true;
+        /** bootstrap 期间采集的消息数阈值 */
+        private int samples = 500;
     }
 }

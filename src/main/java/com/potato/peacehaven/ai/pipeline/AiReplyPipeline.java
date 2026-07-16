@@ -1,5 +1,7 @@
 package com.potato.peacehaven.ai.pipeline;
 
+import com.potato.peacehaven.ai.learning.ConfidenceTracker;
+import com.potato.peacehaven.ai.persona.PersonaProfileService;
 import com.potato.peacehaven.ai.decision.ReplyDecision;
 import com.potato.peacehaven.ai.decision.ReplyDecisionService;
 import com.potato.peacehaven.ai.llm.LlmClient;
@@ -7,12 +9,15 @@ import com.potato.peacehaven.ai.llm.LlmMessage;
 import com.potato.peacehaven.ai.llm.LlmReply;
 import com.potato.peacehaven.ai.memory.UserMemoryExtractor;
 import com.potato.peacehaven.ai.memory.UserMemoryService;
+import com.potato.peacehaven.ai.persona.EffectivePersonaProfile;
 import com.potato.peacehaven.ai.prompt.PromptBuilder;
 import com.potato.peacehaven.ai.retrieval.ChatHistoryRetrievalService;
 import com.potato.peacehaven.ai.retrieval.ChatHistoryRetrievalService.RetrievedRecord;
 import com.potato.peacehaven.ai.retrieval.ContextRetrievalService;
 import com.potato.peacehaven.ai.retrieval.ContextRetrievalService.ContextMessage;
 import com.potato.peacehaven.ai.retrieval.MemoryRagService;
+import com.potato.peacehaven.ai.retrieval.StyleFeature;
+import com.potato.peacehaven.ai.retrieval.StyleTagger;
 import com.potato.peacehaven.ai.review.ReplyReviewService;
 import com.potato.peacehaven.ai.review.ReviewResult;
 import com.potato.peacehaven.ai.summary.ConversationSummaryService;
@@ -61,6 +66,9 @@ public class AiReplyPipeline {
     private final ConversationStateManager conversationStateManager;
     private final TopicJudgeService topicJudgeService;
     private final AiReplyHistory aiReplyHistory;
+    private final ConfidenceTracker confidenceTracker;
+    private final PersonaProfileService personaProfileService;
+    private final StyleTagger styleTagger;
 
     /** 幽默场景检测正则 */
     private static final Pattern HUMOR_PATTERN = Pattern.compile(
@@ -244,6 +252,23 @@ public class AiReplyPipeline {
         }
         String finalReply = review.getReply();
 
+        // ===== 10b. Persona Match 评分 + Expression Fatigue 追踪 =====
+        try {
+            EffectivePersonaProfile personaProfile = personaProfileService.resolve(senderNick, chatroomId);
+            StyleFeature replyFeature = styleTagger.analyze(finalReply);
+            double llmConfidence = jsonMode && rawReply != null ? parseConfidence(rawReply) : 0.5;
+            double personaMatch = confidenceTracker.computePersonaMatch(
+                    finalReply, replyFeature,
+                    personaProfile.getHumorScore(), personaProfile.getSarcasmScore(),
+                    personaProfile.getWarmthScore(), personaProfile.getFormalScore(),
+                    llmConfidence);
+            confidenceTracker.recordReply(llmConfidence, personaMatch);
+            log.info("[Pipeline] personaMatch={}, llmConf={}",
+                    String.format("%.2f", personaMatch), String.format("%.2f", llmConfidence));
+        } catch (Exception e) {
+            log.warn("[Pipeline] personaMatch 计算失败: {}", e.getMessage());
+        }
+
         // ===== 11. 模拟人类延迟（1-3s 随机） =====
         long delayMs = ThreadLocalRandom.current().nextLong(1000, 3001);
         log.info("[Pipeline] 模拟人类延迟 {}ms", delayMs);
@@ -266,6 +291,12 @@ public class AiReplyPipeline {
             // 记录 AI 回复历史（含话题标签）
             if (topicAware) {
                 aiReplyHistory.record(finalReply, currentTopic);
+            }
+            // 追踪 expression fatigue
+            try {
+                confidenceTracker.trackExpressionUsage(finalReply);
+            } catch (Exception e) {
+                log.warn("[Pipeline] expression fatigue 追踪失败: {}", e.getMessage());
             }
             // 异步提取用户记忆
             try {
@@ -296,5 +327,16 @@ public class AiReplyPipeline {
         if (HUMOR_PATTERN.matcher(content).find()) return "humor";
         if (QUESTION_PATTERN.matcher(content).find()) return "question";
         return "normal";
+    }
+
+    /**
+     * 从 LLM 原始回复中解析 confidence 值（JSON 模式）
+     */
+    private double parseConfidence(String rawReply) {
+        try {
+            LlmReply parsed = LlmReply.parse(rawReply);
+            if (parsed != null) return parsed.getConfidence();
+        } catch (Exception ignored) {}
+        return 0.5;
     }
 }

@@ -29,4 +29,13 @@ public interface BotChatRecordRepository extends JpaRepository<BotChatRecord, Lo
 
     /** 按 roomId 统计记录数 */
     long countByRoomId(String roomId);
+
+    /** 查询最近的本人真实消息（学习用，排除 AI 回复） */
+    List<BotChatRecord> findByIsSelfTrueAndIsBotReplyFalseOrderByCreatedAtDesc(Pageable pageable);
+
+    /** 统计本人真实消息总数（Bootstrap 检查用） */
+    long countByIsSelfTrueAndIsBotReplyFalse();
+
+    /** 按 roomId 分组统计本人消息数 */
+    long countByIsSelfTrueAndIsBotReplyFalseAndRoomId(String roomId);
 }

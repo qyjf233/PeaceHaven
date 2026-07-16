@@ -111,3 +111,12 @@ ai:
       normal: 0.7                                                  # 普通聊天
       humor: 0.85                                                  # 幽默/玩笑场景
       question: 0.65                                               # 提问场景（稍低，更稳定）
+  # Persona Engine 学习配置（Phase 4 启用）
+  learning:
+    enabled: false                                                  # 定时学习总开关
+    interval-hours: 6                                               # 学习间隔（小时）
+    min-samples: 50                                                 # 最低本人消息数才触发
+    max-samples: 200                                                # 学习窗口最大消息数
+    bootstrap:
+      enabled: true                                                 # 冷启动保护
+      samples: 500                                                  # 前 500 条只采集不改 persona
