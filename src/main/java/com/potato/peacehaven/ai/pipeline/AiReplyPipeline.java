@@ -4,6 +4,7 @@ import com.potato.peacehaven.ai.decision.ReplyDecision;
 import com.potato.peacehaven.ai.decision.ReplyDecisionService;
 import com.potato.peacehaven.ai.llm.LlmClient;
 import com.potato.peacehaven.ai.llm.LlmMessage;
+import com.potato.peacehaven.ai.memory.UserMemoryExtractor;
 import com.potato.peacehaven.ai.memory.UserMemoryService;
 import com.potato.peacehaven.ai.prompt.PromptBuilder;
 import com.potato.peacehaven.ai.retrieval.ChatHistoryRetrievalService;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  * AI 回复流水线编排器
@@ -42,6 +44,7 @@ public class AiReplyPipeline {
     private final ContextRetrievalService contextRetrievalService;
     private final ChatHistoryRetrievalService chatHistoryRetrievalService;
     private final UserMemoryService userMemoryService;
+    private final UserMemoryExtractor userMemoryExtractor;
     private final PromptBuilder promptBuilder;
     private final LlmClient llmClient;
     private final ReplyReviewService reviewService;
@@ -164,6 +167,16 @@ public class AiReplyPipeline {
             aiReplyTracker.register(finalReply);
             // 更新决策统计
             decisionService.recordReply(chatroomId != null ? chatroomId : senderWxid);
+            // 异步提取用户记忆（不阻塞当前流程）
+            try {
+                List<String> contextTexts = contextMessages.stream()
+                        .map(m -> (m.isSelf() ? "我" : m.getSenderNick()) + ": " + m.getContent())
+                        .limit(5)
+                        .collect(Collectors.toList());
+                userMemoryExtractor.extractAndUpdate(senderWxid, senderNick, content, finalReply, contextTexts);
+            } catch (Exception e) {
+                log.warn("[Pipeline] 记忆提取失败: {}", e.getMessage());
+            }
         } else {
             log.warn("[Pipeline] ❌ 发送失败: target={}, msg={}", sendTarget, resp.getMsg());
         }
