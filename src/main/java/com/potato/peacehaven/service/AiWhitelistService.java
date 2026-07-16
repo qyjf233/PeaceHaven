@@ -1,5 +1,6 @@
 package com.potato.peacehaven.service;
 
+import com.potato.peacehaven.config.AiProperties;
 import com.potato.peacehaven.entity.BotAiWhitelist;
 import com.potato.peacehaven.repository.BotAiWhitelistRepository;
 import jakarta.annotation.PostConstruct;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 public class AiWhitelistService {
 
     private final BotAiWhitelistRepository whitelistRepo;
+    private final AiProperties aiProperties;
 
     // ─── 训练缓存（记录聊天数据用于 RAG）───
     private final Set<String> trainingGroupIds = new CopyOnWriteArraySet<>();
@@ -33,12 +35,20 @@ public class AiWhitelistService {
     private final Set<String> replyGroupIds = new CopyOnWriteArraySet<>();
     private final Set<String> replyFriendWxids = new CopyOnWriteArraySet<>();
 
-    /** 启动时加载缓存 */
+    /** 启动时加载缓存并输出 AI 系统诊断信息 */
     @PostConstruct
     public void init() {
         refreshCache();
         log.info("[AiWhitelist] 初始化完成，训练群 {} 个，回复群 {} 个，回复好友 {} 个",
                 trainingGroupIds.size(), replyGroupIds.size(), replyFriendWxids.size());
+        log.info("[AiWhitelist] 训练群ID: {}", trainingGroupIds);
+        log.info("[AiWhitelist] 回复群ID: {}", replyGroupIds);
+        log.info("[AiWhitelist] 回复好友wxid: {}", replyFriendWxids);
+        log.info("[AiSystem] AI分身就绪状态: enabled={}, apiKey={}, baseUrl={}, isReady={}",
+                aiProperties.isEnabled(),
+                aiProperties.getLlm().getApiKey() != null && !aiProperties.getLlm().getApiKey().isBlank(),
+                aiProperties.getLlm().getBaseUrl(),
+                aiProperties.isReady());
     }
 
     /** 从 DB 刷新内存缓存 */

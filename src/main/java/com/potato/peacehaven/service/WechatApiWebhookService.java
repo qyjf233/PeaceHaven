@@ -54,7 +54,7 @@ public class WechatApiWebhookService {
         log.info("[Webhook] 收到事件 typeName={}, appId={}, wxid={}",
                 typeName, event.getAppId(), event.getWxid());
 
-        // 1. 持久化日志（所有事件类型均记录）
+        // 1. 持久化日志（所有事件类型均记录到 bot_message_log）
         persistLog(event);
 
         // 2. 去重检查（仅 AddMsg 有 NewMsgId，其他类型不重复）
@@ -139,15 +139,22 @@ public class WechatApiWebhookService {
 
             // TODO: @机器人自动响应 / 关键词触发 / 定时推送拦截
 
+            // 白名单训练检查
+            boolean trainingAllowed = aiWhitelistService.isGroupTrainingAllowed(chatroomId);
+            boolean replyAllowed = aiWhitelistService.isGroupReplyAllowed(chatroomId);
+            boolean aiReady = aiProps.isReady();
+            log.info("[Webhook] 群消息白名单诊断 chatroom={}, training={}, reply={}, aiReady={}",
+                    chatroomId, trainingAllowed, replyAllowed, aiReady);
+
             // 目标群聊文本消息 → 持久化到聊天记录表（用于 RAG 向量化，需训练白名单命中）
-            if (aiWhitelistService.isGroupTrainingAllowed(chatroomId)) {
+            if (trainingAllowed) {
                 saveChatRecord(event, pureContent);
             }
 
             // AI 分身回复流水线（异步执行，不阻塞 webhook，需回复白名单命中）
-            if (aiProps.isReady()
+            if (aiReady
                     && !event.isGroupSelfSent()
-                    && aiWhitelistService.isGroupReplyAllowed(chatroomId)) {
+                    && replyAllowed) {
                 String senderWxid = event.getGroupSenderWxid();
                 if (senderWxid == null) senderWxid = event.getFromWxid();
                 String senderNick = resolveSenderNick(senderWxid);
@@ -163,7 +170,11 @@ public class WechatApiWebhookService {
                             ? pureContent.substring(0, 100) + "..." : pureContent);
 
             // AI 分身回复私聊（好友回复白名单命中时触发）
-            if (aiProps.isReady() && aiWhitelistService.isFriendReplyAllowed(senderWxid)) {
+            boolean friendReplyAllowed = aiWhitelistService.isFriendReplyAllowed(senderWxid);
+            boolean aiReady = aiProps.isReady();
+            log.info("[Webhook] 私聊白名单诊断 from={}, friendReply={}, aiReady={}",
+                    senderWxid, friendReplyAllowed, aiReady);
+            if (aiReady && friendReplyAllowed) {
                 aiReplyPipeline.processGroupMessage(
                         null, senderWxid, "",
                         pureContent, false);
@@ -393,18 +404,11 @@ public class WechatApiWebhookService {
     // ========================================================================
 
     /**
-     * 将目标群聊的文本消息持久化到聊天记录表，用于后续 RAG 向量化训练
-     * <p>过滤条件：必须是配置的 groupId 群聊 + AddMsg 文本消息
+     * 将白名单群聊的文本消息持久化到聊天记录表，用于后续 RAG 向量化训练
+     * <p>前置条件：已通过 isGroupTrainingAllowed 白名单检查
      */
     private void saveChatRecord(WechatApiCallbackEvent event, String pureContent) {
-        String targetGroup = props.getGroupId();
         String chatroomId = event.getChatroomId();
-
-        // 只保存目标群聊的消息
-        if (targetGroup == null || targetGroup.isBlank()
-                || !targetGroup.equals(chatroomId)) {
-            return;
-        }
 
         Long newMsgId = event.getNewMsgId();
         String appId = event.getAppId();
