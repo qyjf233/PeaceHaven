@@ -49,6 +49,7 @@ public class ContextRetrievalService {
 
         return records.stream()
                 .filter(r -> r.getContent() != null && !r.getContent().isBlank())
+                .filter(r -> !Boolean.TRUE.equals(r.getIsBotReply())) // 排除 AI 回复，防止风格回流
                 .map(r -> ContextMessage.builder()
                         .senderNick(r.getSenderNick() != null ? r.getSenderNick() : r.getSenderWxid())
                         .senderWxid(r.getSenderWxid())

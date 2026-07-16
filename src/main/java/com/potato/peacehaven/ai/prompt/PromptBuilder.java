@@ -76,11 +76,16 @@ public class PromptBuilder {
 
         messages.add(LlmMessage.system(systemPrompt.toString()));
 
-        // ===== System Message 2: 风格描述（从 RAG 记录提炼，不含具体名词） =====
-        String styleDesc = styleExtractor.getStyleDescription(ragRecords);
+        // ===== System Message 2: 风格描述 =====
+        // 优先用手动配置的风格描述，未配置则自动提炼
+        String styleDesc = aiProps.getPrompt().getStyleDescription();
+        if (styleDesc == null || styleDesc.isBlank()) {
+            // 未配置手动风格，从 RAG 记录自动提炼
+            styleDesc = styleExtractor.getStyleDescription(ragRecords);
+        }
         if (styleDesc != null && !styleDesc.isBlank()) {
             messages.add(LlmMessage.system(
-                    "以下是根据本人历史聊天提炼的风格描述，请按此风格回复：\n" + styleDesc));
+                    "以下是本人的说话风格描述，请严格按照此风格回复：\n" + styleDesc));
         }
 
         // ===== System Message 3: 最近上下文 =====

@@ -110,5 +110,14 @@ public class AiProperties {
         private String personaName;
         /** 额外提示词（追加到 system prompt 末尾） */
         private String customInstructions = "";
+        /**
+         * 说话风格描述（手动配置）
+         * <p>
+         * 配了之后直接使用这段描述指导 AI 回复风格，
+         * 不再从 RAG 记录自动提炼（避免具体名词泄露）。
+         * 不配则自动提炼。
+         * </p>
+         */
+        private String styleDescription = "";
     }
 }

@@ -76,3 +76,4 @@ ai:
   prompt:
     persona-name: ${AI_PERSONA_NAME:}
     custom-instructions: ""
+    style-description: "说话随意直接，不废话不绕弯，句子短口语化。常用语气词（得、额、不是、嗯），喜欢吐槽和反问。会用网络用语（猛猛X、这什么鬼），表达生动不书面化。有啥说啥，一句能说完的不用两句。"

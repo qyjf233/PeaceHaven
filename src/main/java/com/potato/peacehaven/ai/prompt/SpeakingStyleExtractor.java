@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +43,19 @@ public class SpeakingStyleExtractor {
     private static final long CACHE_TTL_MS = 30 * 60 * 1000L;
 
     /**
+     * 敏感词黑名单：容易在 RAG 中被照搬的具体名词
+     * <p>这些词会先被脱敏再进入风格提炼或兜底流程</p>
+     */
+    private static final Set<String> BLACKLIST = Set.of(
+            "黄瓜", "番茄酱", "番茄", "可乐", "雪碧", "奶茶", "咖啡"
+    );
+    private static final Pattern BLACKLIST_PATTERN;
+    static {
+        String joined = String.join("|", BLACKLIST);
+        BLACKLIST_PATTERN = Pattern.compile(joined);
+    }
+
+    /**
      * 获取风格描述（优先用缓存，过期则重新提炼）
      *
      * @param ragRecords RAG 检索的本人历史记录
@@ -70,11 +85,12 @@ public class SpeakingStyleExtractor {
                 return style;
             }
         } catch (Exception e) {
-            log.warn("[StyleExtractor] 风格提炼失败，使用原文兜底: {}", e.getMessage());
+            log.warn("[StyleExtractor] 风格提炼失败: {}", e.getMessage());
         }
 
-        // 兜底：返回原始文本（至少 RAG 还能工作）
-        return rawText;
+        // 兜底：返回空字符串（宁可不用风格描述，也不能把原文喂给 LLM）
+        log.warn("[StyleExtractor] 无可用风格描述，跳过 RAG 风格注入");
+        return "";
     }
 
     /**
@@ -97,16 +113,24 @@ public class SpeakingStyleExtractor {
     }
 
     /**
-     * 格式化 RAG 记录为文本
+     * 格式化 RAG 记录为文本，并对敏感词脱敏
      */
     private String formatRecords(List<RetrievedRecord> records) {
-        return records.stream()
+        String raw = records.stream()
                 .filter(r -> r.getContent() != null && !r.getContent().isBlank())
                 .map(r -> {
                     String nick = r.getSenderNick() != null ? r.getSenderNick() : "我";
                     return nick + ": " + r.getContent();
                 })
                 .collect(Collectors.joining("\n"));
+        return sanitize(raw);
+    }
+
+    /**
+     * 将黑名单中的具体名词替换为「某东西」，防止模型照搬
+     */
+    private String sanitize(String text) {
+        return BLACKLIST_PATTERN.matcher(text).replaceAll("某东西");
     }
 
     /**
