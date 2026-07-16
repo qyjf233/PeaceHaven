@@ -4,6 +4,7 @@ import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.entity.*;
 import com.potato.peacehaven.repository.*;
 import com.potato.peacehaven.service.AdminOperationLogService;
+import com.potato.peacehaven.service.AiWhitelistService;
 import com.potato.peacehaven.service.WechatApiConfigService;
 import com.potato.peacehaven.service.WechatApiService;
 import com.potato.peacehaven.service.WechatApiResponse;
@@ -35,6 +36,7 @@ public class AdminBotController {
     private final WechatApiService wechatApiService;
     private final WechatApiConfigService wechatApiConfigService;
     private final AdminOperationLogService logService;
+    private final AiWhitelistService aiWhitelistService;
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
     @GetMapping("/bot")
@@ -922,5 +924,70 @@ public class AdminBotController {
         m.put("eventDate", cfg.getEventDate() != null ? cfg.getEventDate().toString() : null);
         m.put("eventDatetime", cfg.getEventDatetime() != null ? cfg.getEventDatetime().toString() : null);
         return m;
+    }
+
+    // ===== API: AI 分身白名单 =====
+
+    @ResponseBody
+    @GetMapping("/api/bot/ai/whitelist")
+    public Map<String, Object> getAiWhitelist() {
+        List<BotAiWhitelist> list = aiWhitelistService.getWhitelist();
+        List<Map<String, Object>> items = list.stream().map(e -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", e.getId());
+            m.put("type", e.getType());
+            m.put("wxid", e.getWxid());
+            m.put("name", e.getName());
+            m.put("enabled", e.getEnabled());
+            m.put("createdAt", e.getCreatedAt() != null ? e.getCreatedAt().toString() : null);
+            return m;
+        }).collect(Collectors.toList());
+        return Map.of("success", true, "data", items);
+    }
+
+    @ResponseBody
+    @PostMapping("/api/bot/ai/whitelist")
+    @Transactional
+    public Map<String, Object> addAiWhitelist(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        String type = body.get("type");
+        String wxid = body.get("wxid");
+        String name = body.get("name");
+        if (type == null || type.isBlank() || wxid == null || wxid.isBlank()) {
+            return Map.of("success", false, "message", "type 和 wxid 不能为空");
+        }
+        if (!"group".equals(type) && !"friend".equals(type)) {
+            return Map.of("success", false, "message", "type 必须为 group 或 friend");
+        }
+        BotAiWhitelist entry = aiWhitelistService.addEntry(type, wxid, name);
+        logService.record("机器人配置", "新增", "AI白名单 type=" + type + ", wxid=" + wxid, request);
+        return Map.of("success", true, "message", "已添加", "data", entry.getId());
+    }
+
+    @ResponseBody
+    @DeleteMapping("/api/bot/ai/whitelist/{id}")
+    @Transactional
+    public Map<String, Object> removeAiWhitelist(@PathVariable Long id, HttpServletRequest request) {
+        boolean removed = aiWhitelistService.removeEntry(id);
+        if (removed) {
+            logService.record("机器人配置", "删除", "AI白名单 id=" + id, request);
+            return Map.of("success", true, "message", "已删除");
+        }
+        return Map.of("success", false, "message", "条目不存在");
+    }
+
+    @ResponseBody
+    @PatchMapping("/api/bot/ai/whitelist/{id}")
+    @Transactional
+    public Map<String, Object> toggleAiWhitelist(@PathVariable Long id, @RequestBody Map<String, Boolean> body, HttpServletRequest request) {
+        Boolean enabled = body.get("enabled");
+        if (enabled == null) {
+            return Map.of("success", false, "message", "enabled 参数缺失");
+        }
+        boolean updated = aiWhitelistService.toggleEntry(id, enabled);
+        if (updated) {
+            logService.record("机器人配置", "修改", "AI白名单 " + (enabled ? "启用" : "停用") + " id=" + id, request);
+            return Map.of("success", true, "message", enabled ? "已启用" : "已停用");
+        }
+        return Map.of("success", false, "message", "条目不存在");
     }
 }

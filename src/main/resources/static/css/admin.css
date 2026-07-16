@@ -1795,3 +1795,148 @@ body {
     .grp-admin-add-row { flex-direction: column; align-items: stretch; }
     .grp-admin-add-input { max-width: 100%; }
 }
+
+/* ====== AI 分身白名单 ====== */
+.wl-add-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.wl-section {
+    margin-top: 20px;
+}
+
+.wl-subtitle {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 10px;
+    color: var(--admin-text);
+}
+
+.wl-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    gap: 12px;
+}
+
+.wl-card-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.wl-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.wl-badge-group {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.wl-badge-friend {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.wl-card-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wl-card-wxid {
+    font-size: 12px;
+    color: var(--admin-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wl-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.wl-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.wl-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.wl-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.wl-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.wl-toggle input:checked + .wl-toggle-slider {
+    background-color: #2196f3;
+}
+
+.wl-toggle input:checked + .wl-toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.wl-del-btn {
+    background: transparent !important;
+    border: 1px solid #e57373 !important;
+    color: #e57373 !important;
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.wl-del-btn:hover {
+    background: #ffebee !important;
+}
+
+@media (max-width: 768px) {
+    .wl-add-row { flex-direction: column; align-items: stretch; }
+    .wl-card { flex-direction: column; align-items: stretch; gap: 8px; }
+    .wl-card-actions { justify-content: flex-end; }
+}

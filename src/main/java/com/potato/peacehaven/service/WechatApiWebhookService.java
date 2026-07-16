@@ -36,6 +36,7 @@ public class WechatApiWebhookService {
     private final WechatApiProperties props;
     private final AiProperties aiProps;
     private final AiReplyPipeline aiReplyPipeline;
+    private final AiWhitelistService aiWhitelistService;
 
     /** 群名本地缓存（1 小时 TTL，避免每条消息都查 DB） */
     private final RoomNameCache roomNameCache = new RoomNameCache();
@@ -142,10 +143,9 @@ public class WechatApiWebhookService {
             saveChatRecord(event, pureContent);
 
             // AI 分身回复流水线（异步执行，不阻塞 webhook）
-            String targetGroup = props.getGroupId();
             if (aiProps.isReady()
                     && !event.isGroupSelfSent()
-                    && targetGroup != null && targetGroup.equals(chatroomId)) {
+                    && aiWhitelistService.isGroupAllowed(chatroomId)) {
                 String senderWxid = event.getGroupSenderWxid();
                 if (senderWxid == null) senderWxid = event.getFromWxid();
                 String senderNick = resolveSenderNick(senderWxid);
@@ -154,12 +154,18 @@ public class WechatApiWebhookService {
                         pureContent, mentioned);
             }
         } else {
+            String senderWxid = event.getFromWxid();
             log.info("[Webhook] 私聊文本消息 from={}, content={}",
-                    event.getFromWxid(),
+                    senderWxid,
                     pureContent != null && pureContent.length() > 100
                             ? pureContent.substring(0, 100) + "..." : pureContent);
 
-            // TODO: 私聊自动回复
+            // AI 分身回复私聊（好友白名单命中时触发）
+            if (aiProps.isReady() && aiWhitelistService.isFriendAllowed(senderWxid)) {
+                aiReplyPipeline.processGroupMessage(
+                        null, senderWxid, "",
+                        pureContent, false);
+            }
         }
     }
 
