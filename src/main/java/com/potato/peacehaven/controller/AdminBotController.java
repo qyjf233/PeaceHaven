@@ -3,9 +3,11 @@ package com.potato.peacehaven.controller;
 import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.entity.*;
 import com.potato.peacehaven.repository.*;
+import com.potato.peacehaven.service.AdminOperationLogService;
 import com.potato.peacehaven.service.WechatApiConfigService;
 import com.potato.peacehaven.service.WechatApiService;
 import com.potato.peacehaven.service.WechatApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,7 @@ public class AdminBotController {
     private final WechatApiProperties wechatApiProps;
     private final WechatApiService wechatApiService;
     private final WechatApiConfigService wechatApiConfigService;
+    private final AdminOperationLogService logService;
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
     @GetMapping("/bot")
@@ -70,12 +73,13 @@ public class AdminBotController {
 
     @ResponseBody
     @PostMapping("/api/bot/config/push-toggle")
-    public Map<String, Object> setPushEnabled(@RequestBody Map<String, Boolean> body) {
+    public Map<String, Object> setPushEnabled(@RequestBody Map<String, Boolean> body, HttpServletRequest request) {
         Boolean enabled = body.get("enabled");
         if (enabled == null) {
             return Map.of("success", false, "message", "缺少 enabled 参数");
         }
         wechatApiConfigService.setPushEnabled(enabled);
+        logService.record("机器人配置", "修改", (enabled ? "开启" : "关闭") + "定时推送", request);
         return Map.of("success", true, "message", Boolean.TRUE.equals(enabled) ? "已开启定时推送" : "已关闭定时推送");
     }
 
@@ -142,7 +146,7 @@ public class AdminBotController {
 
     @ResponseBody
     @PostMapping("/api/bot/config/logout")
-    public Map<String, Object> logoutDevice() {
+    public Map<String, Object> logoutDevice(HttpServletRequest request) {
         if (!wechatApiProps.isConfigured()) {
             return Map.of("success", false, "message", "API 未配置");
         }
@@ -151,6 +155,7 @@ public class AdminBotController {
         }
         WechatApiResponse resp = wechatApiService.logout();
         if (resp.isSuccess()) {
+            logService.record("机器人配置", "退出登录", "退出微信设备登录", request);
             return Map.of("success", true, "message", "已退出登录");
         }
         return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "退出失败");
@@ -184,7 +189,7 @@ public class AdminBotController {
      */
     @ResponseBody
     @PostMapping("/api/bot/config/checkLogin")
-    public Map<String, Object> checkLogin(@RequestBody Map<String, String> body) {
+    public Map<String, Object> checkLogin(@RequestBody Map<String, String> body, HttpServletRequest request) {
         String appId = body.get("appId");
         String uuid = body.get("uuid");
         if (appId == null || uuid == null) {
@@ -225,6 +230,7 @@ public class AdminBotController {
 
         // status == 2 → 登录成功
         wechatApiConfigService.updateAppId(appId);
+        logService.record("机器人配置", "登录", "扫码登录成功 appId=" + appId, request);
 
         Object loginInfo = respData != null ? respData.get("loginInfo") : null;
         if (loginInfo instanceof Map) {
@@ -262,7 +268,7 @@ public class AdminBotController {
 
     @ResponseBody
     @PostMapping("/api/bot/config/testMessage")
-    public Map<String, Object> testMessage() {
+    public Map<String, Object> testMessage(HttpServletRequest request) {
         if (!wechatApiProps.isConfigured()) {
             return Map.of("success", false, "message", "API 未配置");
         }
@@ -271,6 +277,9 @@ public class AdminBotController {
             return Map.of("success", false, "message", "群聊 ID 未配置");
         }
         WechatApiResponse resp = wechatApiService.sendText(groupId, "✅ PeaceHaven 机器人测试消息，连接正常！");
+        if (resp.isSuccess()) {
+            logService.record("机器人配置", "测试", "发送测试消息到群聊", request);
+        }
         return Map.of("success", resp.isSuccess(), "message", resp.isSuccess() ? "发送成功" : resp.getMsg());
     }
 
@@ -291,7 +300,8 @@ public class AdminBotController {
     @PutMapping("/api/bot/schedules/{id}")
     public Map<String, Object> updateFixed(
             @PathVariable Long id,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
         BotScheduleConfig cfg = scheduleRepo.findById(id).orElse(null);
         if (cfg == null) {
             return Map.of("success", false, "message", "记录不存在");
@@ -305,6 +315,7 @@ public class AdminBotController {
             cfg.setDayOfWeek(Integer.parseInt(dow));
         }
         scheduleRepo.save(cfg);
+        logService.record("机器人配置", "修改", "更新日程 " + cfg.getEventType() + " 时间：" + (time != null ? time : "-") + " 周几：" + (dow != null ? dow : "-"), request);
         return Map.of("success", true);
     }
 
@@ -312,7 +323,7 @@ public class AdminBotController {
 
     @ResponseBody
     @PostMapping("/api/bot/schedules")
-    public Map<String, Object> addOnce(@RequestBody Map<String, String> body) {
+    public Map<String, Object> addOnce(@RequestBody Map<String, String> body, HttpServletRequest request) {
         String type = body.get("eventType");
         String dateStr = body.get("eventDate");
         String timeStr = body.get("eventTime");
@@ -347,6 +358,7 @@ public class AdminBotController {
                 .dayOfWeek(dayOfWeek)
                 .build();
         scheduleRepo.save(cfg);
+        logService.record("机器人配置", "新增", "新增日程 " + type + " 日期：" + dateStr + " 时间：" + timeStr, request);
         return Map.of("success", true, "id", cfg.getId());
     }
 
@@ -354,8 +366,10 @@ public class AdminBotController {
 
     @ResponseBody
     @DeleteMapping("/api/bot/schedules/{id}")
-    public Map<String, Object> deleteSchedule(@PathVariable Long id) {
+    public Map<String, Object> deleteSchedule(@PathVariable Long id, HttpServletRequest request) {
+        BotScheduleConfig cfg = scheduleRepo.findById(id).orElse(null);
         scheduleRepo.deleteById(id);
+        logService.record("机器人配置", "删除", "删除日程 " + (cfg != null ? cfg.getEventType() : id), request);
         return Map.of("success", true);
     }
 
@@ -372,7 +386,7 @@ public class AdminBotController {
 
     @ResponseBody
     @PostMapping("/api/bot/messages")
-    public Map<String, Object> addMessage(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> addMessage(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String eventType = (String) body.get("eventType");
         Object advObj = body.get("advanceMinutes");
         Object menObj = body.get("mentionAll");
@@ -403,6 +417,7 @@ public class AdminBotController {
                 .messageText(text != null && !text.isBlank() ? text.trim() : null)
                 .build();
         messageRepo.save(msg);
+        logService.record("机器人配置", "新增", "新增定时消息 " + eventType + " 提前" + advanceMinutes + "分钟" + (mentionAll ? " @全体" : ""), request);
         return Map.of("success", true, "id", msg.getId());
     }
 
@@ -410,8 +425,10 @@ public class AdminBotController {
 
     @ResponseBody
     @DeleteMapping("/api/bot/messages/{id}")
-    public Map<String, Object> deleteMessage(@PathVariable Long id) {
+    public Map<String, Object> deleteMessage(@PathVariable Long id, HttpServletRequest request) {
+        BotTimedMessage msg = messageRepo.findById(id).orElse(null);
         messageRepo.deleteById(id);
+        logService.record("机器人配置", "删除", "删除定时消息 " + (msg != null ? msg.getEventType() + " 提前" + msg.getAdvanceMinutes() + "分钟" : id.toString()), request);
         return Map.of("success", true);
     }
 
@@ -428,7 +445,7 @@ public class AdminBotController {
 
     @ResponseBody
     @PostMapping("/api/bot/templates")
-    public Map<String, Object> saveTemplate(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> saveTemplate(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String eventType = (String) body.get("eventType");
         String text = (String) body.get("templateText");
         if (eventType == null || text == null || text.isBlank()) {
@@ -460,6 +477,7 @@ public class AdminBotController {
                 .templateText(text.trim())
                 .build();
         templateRepo.save(tpl);
+        logService.record("机器人配置", "修改", "保存消息模板 " + eventType, request);
         return Map.of("success", true, "id", tpl.getId());
     }
 
@@ -467,8 +485,10 @@ public class AdminBotController {
 
     @ResponseBody
     @DeleteMapping("/api/bot/templates/{id}")
-    public Map<String, Object> deleteTemplate(@PathVariable Long id) {
+    public Map<String, Object> deleteTemplate(@PathVariable Long id, HttpServletRequest request) {
+        BotMessageTemplate tpl = templateRepo.findById(id).orElse(null);
         templateRepo.deleteById(id);
+        logService.record("机器人配置", "删除", "删除消息模板 " + (tpl != null ? tpl.getEventType() : id.toString()), request);
         return Map.of("success", true);
     }
 
@@ -546,7 +566,7 @@ public class AdminBotController {
 
     @ResponseBody
     @PostMapping("/api/bot/group/kick")
-    public Map<String, Object> kickMember(@RequestBody Map<String, String> body) {
+    public Map<String, Object> kickMember(@RequestBody Map<String, String> body, HttpServletRequest request) {
         if (!wechatApiProps.isConfigured()) {
             return Map.of("success", false, "message", "API 未配置");
         }
@@ -564,10 +584,11 @@ public class AdminBotController {
 
         WechatApiResponse resp = wechatApiService.removeMember(groupId, List.of(wxid));
         if (resp.isSuccess()) {
-            // 踢出成功后，检查该成员是否也是营地成员，如是则一并删除
+            // 踢出成功后，检查此成员是否也是营地成员，如是则一并删除
             boolean campMemberRemoved = removeLinkedCampMember(wxid);
             // 同时从群成员表中删除
             groupMemberRepo.findByWxid(wxid).ifPresent(groupMemberRepo::delete);
+            logService.record("机器人配置", "删除", "踢出群成员 " + wxid + (campMemberRemoved ? "（同时移除营地成员）" : ""), request);
             Map<String, Object> result = new HashMap<>();
             result.put("campMemberRemoved", campMemberRemoved);
             return Map.of("success", true, "message", "已踢出群聊", "data", result);
@@ -581,7 +602,7 @@ public class AdminBotController {
     @PostMapping("/api/bot/group/sync")
     @Transactional
     @SuppressWarnings("unchecked")
-    public Map<String, Object> syncGroupMembers() {
+    public Map<String, Object> syncGroupMembers(HttpServletRequest request) {
         if (!wechatApiProps.isConfigured()) {
             return Map.of("success", false, "message", "API 未配置");
         }
@@ -662,6 +683,7 @@ public class AdminBotController {
         result.put("added", added);
         result.put("updated", updated);
         result.put("removed", removed);
+        logService.record("机器人配置", "同步", "同步群成员 共" + wxids.size() + "人 新增" + added + " 更新" + updated + " 清理" + removed, request);
         return Map.of("success", true, "data", result, "message", "同步完成");
     }
 
@@ -669,7 +691,7 @@ public class AdminBotController {
 
     @ResponseBody
     @PostMapping("/api/bot/group/kick-by-wxid")
-    public Map<String, Object> kickByWxid(@RequestBody Map<String, String> body) {
+    public Map<String, Object> kickByWxid(@RequestBody Map<String, String> body, HttpServletRequest request) {
         if (!wechatApiProps.isConfigured() || !wechatApiProps.isDeviceBound()) {
             return Map.of("success", false, "message", "设备未就绪");
         }
@@ -686,6 +708,7 @@ public class AdminBotController {
         if (resp.isSuccess()) {
             // 同时从群成员表中删除
             groupMemberRepo.findByWxid(wxid).ifPresent(groupMemberRepo::delete);
+            logService.record("机器人配置", "删除", "踢出群成员(营地联动) " + wxid, request);
             return Map.of("success", true, "message", "已踢出群聊");
         }
         return Map.of("success", false, "message", resp.getMsg() != null ? resp.getMsg() : "踢出失败");

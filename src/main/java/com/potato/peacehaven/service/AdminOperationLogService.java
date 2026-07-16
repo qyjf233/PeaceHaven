@@ -56,6 +56,30 @@ public class AdminOperationLogService {
     }
 
     /**
+     * 记录系统级操作日志（无 HTTP 上下文，如机器人自动操作）
+     *
+     * @param operator 操作人（如“机器人”）
+     * @param module   操作模块
+     * @param action   操作动作
+     * @param detail   操作详情
+     */
+    public void recordBySystem(String operator, String module, String action, String detail) {
+        AdminOperationLog logEntry = AdminOperationLog.builder()
+                .operator(operator)
+                .module(module)
+                .action(action)
+                .detail(detail != null && detail.length() > 490 ? detail.substring(0, 490) : detail)
+                .ip("系统")
+                .build();
+
+        try {
+            operationLogRepository.save(logEntry);
+        } catch (Exception e) {
+            log.error("操作日志记录失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
      * 分页查询操作日志
      */
     public Page<AdminOperationLog> getLogs(String module, String operator, int page, int size) {

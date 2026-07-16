@@ -45,6 +45,7 @@ public class BotPushService {
     private final BotTimedMessageRepository messageRepo;
     private final BotMessageTemplateRepository templateRepo;
     private final BotPushLogRepository pushLogRepo;
+    private final AdminOperationLogService logService;
 
     /** 推送记录保留天数 */
     private static final int LOG_RETAIN_DAYS = 7;
@@ -125,6 +126,12 @@ public class BotPushService {
 
             // 记录日志
             recordPush(eventType, msg.getId(), schedule.getId(), today, now, eventTime, success);
+
+            // 记录操作日志
+            if (success) {
+                logService.recordBySystem("机器人", "机器人配置", "消息推送",
+                        eventType + " 提前" + msg.getAdvanceMinutes() + "分钟提醒" + (msg.getMentionAll() ? " @全体" : ""));
+            }
         }
     }
 

@@ -45,7 +45,9 @@
         <tr th:each="log : ${logPage.content}">
             <td data-label="操作时间" th:text="${#temporals.format(log.createdAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
             <td data-label="操作人">
-                <span class="badge" style="background:#f3e5f5; color:#7B1FA2;" th:text="${log.operator}"></span>
+                <span class="badge" th:classappend="${log.operator == '机器人'} ? 'operator-bot' : ''"
+                      th:style="${log.operator != '机器人'} ? 'background:#f3e5f5; color:#7B1FA2;' : ''"
+                      th:text="${log.operator}"></span>
             </td>
             <td data-label="模块">
                 <span class="badge" th:classappend="${
@@ -54,6 +56,7 @@
                     log.module == '营地成员' ? 'module-member' :
                     log.module == '营地事务' ? 'module-affair' :
                     log.module == '福利系统' ? 'module-welfare' :
+                    log.module == '机器人配置' ? 'module-bot' :
                     'module-contest'
                 }" th:text="${log.module}"></span>
             </td>
@@ -95,6 +98,8 @@
     .module-affair   { background: #fff3e0; color: #E65100; }
     .module-welfare  { background: #f3e5f5; color: #7B1FA2; }
     .module-contest  { background: #e0f2f1; color: #00695C; }
+    .module-bot      { background: #e8eaf6; color: #283593; }
+    .operator-bot    { background: #e3f2fd; color: #1565c0; }
 
     /* 动作徽章颜色 */
     .action-create { background: #e8f5e9; color: #2E7D32; }

@@ -21,7 +21,7 @@ public class AdminOperationLogController {
     private final AdminOperationLogService operationLogService;
 
     private static final List<String> MODULES = List.of(
-            "活动管理", "用户管理", "营地成员", "营地事务", "福利系统", "作品审核"
+            "活动管理", "用户管理", "营地成员", "营地事务", "福利系统", "作品审核", "机器人配置"
     );
 
     @GetMapping
