@@ -81,13 +81,14 @@ public class ReplyDecisionService {
             return ReplyDecision.skip("已达每日上限 " + cfg.getMaxPerDay());
         }
 
-        // 4. cooldown 检查
-        Long lastTime = lastReplyTime.get(chatroomId);
+        // 4. cooldown 检查（私聊时 chatroomId 为 null，用 senderWxid 作为冷却 key）
+        String cooldownKey = (chatroomId != null) ? chatroomId : senderWxid;
+        Long lastTime = (cooldownKey != null) ? lastReplyTime.get(cooldownKey) : null;
         long now = System.currentTimeMillis();
         long cooldownMs = cfg.getCooldownSeconds() * 1000L;
         if (lastTime != null && (now - lastTime) < cooldownMs) {
             long remainSec = (cooldownMs - (now - lastTime)) / 1000;
-            log.info("[Decision] ❌ 跳过：冷却中，距上次 {}s，剩余 {}s chatroom={}", (now - lastTime) / 1000, remainSec, chatroomId);
+            log.info("[Decision] ❌ 跳过：冷却中，距上次 {}s，剩余 {}s key={}", (now - lastTime) / 1000, remainSec, cooldownKey);
             return ReplyDecision.skip("冷却中（距上次 " + (now - lastTime) / 1000 + "s）");
         }
 

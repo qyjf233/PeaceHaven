@@ -38,6 +38,7 @@ public class ChatHistoryRetrievalService {
 
     /**
      * 检索与当前消息最相似的本人历史回复（RAG）
+     * <p>采用多样性过滤：过量检索后按内容相似度去重，避免返回内容高度重复的记录</p>
      *
      * @param currentMessage 当前收到的消息
      * @param topK           返回条数
@@ -55,20 +56,69 @@ public class ChatHistoryRetrievalService {
             return Collections.emptyList();
         }
 
-        // 检索本人历史回复（is_self=true）
+        // 过量检索，为多样性过滤留余量
+        int fetchK = topK * 3;
         Map<String, String> filters = Map.of("is_self", "true");
-        List<VectorSearchResult> results = vectorStore.search(queryVector, topK, filters);
+        List<VectorSearchResult> results = vectorStore.search(queryVector, fetchK, filters);
 
-        return results.stream()
-                .map(r -> RetrievedRecord.builder()
-                        .id(r.getId())
-                        .score(r.getScore())
-                        .content(r.getMetadata() != null ? r.getMetadata().get("content") : null)
-                        .senderNick(r.getMetadata() != null ? r.getMetadata().get("sender_nick") : null)
-                        .createTime(r.getMetadata() != null ? r.getMetadata().get("create_time") : null)
-                        .build())
-                .filter(r -> r.getContent() != null && !r.getContent().isBlank())
-                .collect(Collectors.toList());
+        // 多样性过滤：基于字符 bigram Jaccard 相似度，去除内容高度重复的记录
+        double diversityThreshold = 0.5;
+        List<RetrievedRecord> diverse = new ArrayList<>();
+        List<Set<String>> selectedBigrams = new ArrayList<>();
+
+        for (VectorSearchResult r : results) {
+            String content = (r.getMetadata() != null) ? r.getMetadata().get("content") : null;
+            if (content == null || content.isBlank()) continue;
+
+            Set<String> bigrams = charBigrams(content);
+            boolean tooSimilar = false;
+            for (Set<String> existing : selectedBigrams) {
+                if (jaccardSimilarity(bigrams, existing) > diversityThreshold) {
+                    tooSimilar = true;
+                    break;
+                }
+            }
+            if (tooSimilar) continue;
+
+            diverse.add(RetrievedRecord.builder()
+                    .id(r.getId())
+                    .score(r.getScore())
+                    .content(content)
+                    .senderNick(r.getMetadata() != null ? r.getMetadata().get("sender_nick") : null)
+                    .createTime(r.getMetadata() != null ? r.getMetadata().get("create_time") : null)
+                    .build());
+            selectedBigrams.add(bigrams);
+
+            if (diverse.size() >= topK) break;
+        }
+
+        if (diverse.size() < results.size()) {
+            log.info("[RAG] 多样性过滤：{}/{} 条通过 (fetchK={}, topK={})", diverse.size(), results.size(), fetchK, topK);
+        }
+        return diverse;
+    }
+
+    /**
+     * 提取文本的字符 bigram 集合（用于快速文本相似度比较）
+     */
+    private Set<String> charBigrams(String text) {
+        Set<String> bigrams = new HashSet<>();
+        String normalized = text.replaceAll("\\s+", "").toLowerCase();
+        for (int i = 0; i < normalized.length() - 1; i++) {
+            bigrams.add(normalized.substring(i, i + 2));
+        }
+        return bigrams;
+    }
+
+    /**
+     * 计算两个集合的 Jaccard 相似度
+     */
+    private double jaccardSimilarity(Set<String> a, Set<String> b) {
+        if (a.isEmpty() && b.isEmpty()) return 1.0;
+        if (a.isEmpty() || b.isEmpty()) return 0.0;
+        long intersection = a.stream().filter(b::contains).count();
+        long union = a.size() + b.size() - intersection;
+        return (double) intersection / union;
     }
 
     /**

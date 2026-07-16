@@ -61,6 +61,8 @@ public class PromptBuilder {
         systemPrompt.append("- 参考提供的历史聊天记录学习本人的说话方式\n");
         systemPrompt.append("- 当涉及专业知识时，可结合模型知识补充，但仍需保持本人风格\n");
         systemPrompt.append("- 直接输出回复内容，不要加任何前缀、引号或说明\n");
+        systemPrompt.append("- 历史记录仅用于学习语气和表达习惯，不要照搬其中的具体话题、名词或内容\n");
+        systemPrompt.append("- 禁止在回复中反复提及历史记录里出现过的特定词汇（如人名、食物、地点等），除非当前对话本身在讨论该话题\n");
 
         // 追加用户画像
         if (userMemoryText != null && !userMemoryText.isBlank()) {
@@ -79,7 +81,7 @@ public class PromptBuilder {
         String ragText = formatRagRecords(ragRecords);
         if (ragText != null && !ragText.isBlank()) {
             messages.add(LlmMessage.system(
-                    "以下是本人过去的真实聊天记录，请学习说话风格：\n" + ragText));
+                    "以下是本人过去的真实聊天记录。请从中学习语气、句式、口头禅等表达风格，但不要照搬其中的具体话题或词汇：\n" + ragText));
         }
 
         // ===== System Message 3: 最近上下文 =====
