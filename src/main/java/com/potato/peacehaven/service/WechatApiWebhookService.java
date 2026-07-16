@@ -54,19 +54,19 @@ public class WechatApiWebhookService {
         log.info("[Webhook] 收到事件 typeName={}, appId={}, wxid={}",
                 typeName, event.getAppId(), event.getWxid());
 
-        // 1. 持久化日志（所有事件类型均记录到 bot_message_log）
-        persistLog(event);
-
-        // 2. 去重检查（仅 AddMsg 有 NewMsgId，其他类型不重复）
+        // 1. 去重检查（仅 AddMsg 有 NewMsgId，必须在 persistLog 之前，否则刚插入的记录会被误判为重复）
         if ("AddMsg".equals(typeName)) {
             Long newMsgId = event.getNewMsgId();
             if (newMsgId != null && event.getAppId() != null) {
                 if (messageLogRepo.existsByNewMsgIdAndAppId(newMsgId, event.getAppId())) {
-                    log.debug("[Webhook] 重复消息 newMsgId={}，跳过", newMsgId);
+                    log.info("[Webhook] 重复消息 newMsgId={}，跳过", newMsgId);
                     return;
                 }
             }
         }
+
+        // 2. 持久化日志（仅白名单+训练开启的消息落库 bot_message_log）
+        persistLog(event);
 
         // 3. 按 TypeName 分发
         try {
