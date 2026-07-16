@@ -46,6 +46,7 @@ public class AdminBotController {
         model.addAttribute("apiAppId", wechatApiProps.getAppId());
         model.addAttribute("apiCallbackUrl", wechatApiProps.getCallbackUrl());
         model.addAttribute("apiGroupId", wechatApiProps.getGroupId());
+        model.addAttribute("pushEnabled", wechatApiProps.isPushEnabled());
         return "admin/bot-config";
     }
 
@@ -61,7 +62,21 @@ public class AdminBotController {
         data.put("appId", wechatApiProps.getAppId());
         data.put("callbackUrl", wechatApiProps.getCallbackUrl());
         data.put("groupId", wechatApiProps.getGroupId());
+        data.put("pushEnabled", wechatApiProps.isPushEnabled());
         return Map.of("success", true, "data", data);
+    }
+
+    // ===== API: 推送开关 =====
+
+    @ResponseBody
+    @PostMapping("/api/bot/config/push-toggle")
+    public Map<String, Object> setPushEnabled(@RequestBody Map<String, Boolean> body) {
+        Boolean enabled = body.get("enabled");
+        if (enabled == null) {
+            return Map.of("success", false, "message", "缺少 enabled 参数");
+        }
+        wechatApiConfigService.setPushEnabled(enabled);
+        return Map.of("success", true, "message", Boolean.TRUE.equals(enabled) ? "已开启定时推送" : "已关闭定时推送");
     }
 
     // ===== API: 连接检测（checkOnline + setCallback） =====

@@ -13,9 +13,9 @@ import java.util.Optional;
 /**
  * WechatApi 配置管理服务
  * <p>
- * 优先级：数据库 > 环境变量/yaml
+ * 配置唯一来源：数据库
  * <ul>
- *   <li>启动时：若 DB 有记录则用 DB 值覆盖 Properties；否则将 env 值写入 DB</li>
+ *   <li>启动时：从 DB 加载到 Properties（运行时缓存）</li>
  *   <li>保存时：更新 DB 并刷新 Properties（热生效，无需重启）</li>
  * </ul>
  */
@@ -28,28 +28,16 @@ public class WechatApiConfigService {
     private final WechatApiProperties props;
 
     /**
-     * 启动时加载配置
-     * <p>优先级：配置文件(env/yaml) > 数据库
-     * <ul>
-     *   <li>配置文件有值 → 同步到 DB（覆盖旧值）</li>
-     *   <li>配置文件无值但 DB 有记录 → 用 DB 值</li>
-     *   <li>都没有 → 等待管理员配置</li>
-     * </ul>
+     * 启动时从数据库加载配置
      */
     @PostConstruct
     public void init() {
         Optional<WechatApiConfig> dbConfig = configRepo.findFirstByOrderByIdAsc();
-
-        if (props.isConfigured()) {
-            // 配置文件有值 → 以配置文件为准，同步到 DB
-            syncToDb();
-            log.info("WechatApi 配置已从加载配置文件同步到数据库");
-        } else if (dbConfig.isPresent()) {
-            // 配置文件无值但 DB 有 → 用 DB 值
+        if (dbConfig.isPresent()) {
             applyToProperties(dbConfig.get());
-            log.info("WechatApi 配置文件未设置，已从数据库加载");
+            log.info("WechatApi 配置已从数据库加载");
         } else {
-            log.info("WechatApi 配置未找到（配置文件和数据库均为空），等待管理员配置");
+            log.info("WechatApi 数据库无配置，等待管理员通过后台配置");
         }
     }
 
@@ -88,16 +76,16 @@ public class WechatApiConfigService {
         return cfg;
     }
 
-    /** 将当前 Properties 值同步到 DB（新增或更新） */
-    private void syncToDb() {
+    /**
+     * 设置定时推送开关
+     */
+    public void setPushEnabled(Boolean enabled) {
         WechatApiConfig cfg = configRepo.findFirstByOrderByIdAsc()
                 .orElse(WechatApiConfig.builder().build());
-        cfg.setBaseUrl(props.getBaseUrl());
-        cfg.setToken(props.getToken());
-        cfg.setAppId(props.getAppId());
-        cfg.setCallbackUrl(props.getCallbackUrl());
-        cfg.setGroupId(props.getGroupId());
+        cfg.setPushEnabled(enabled);
         configRepo.save(cfg);
+        props.setPushEnabled(enabled);
+        log.info("定时推送已{}", Boolean.TRUE.equals(enabled) ? "开启" : "关闭");
     }
 
     /** 将 DB 配置值应用到 Properties（热生效） */
@@ -107,6 +95,7 @@ public class WechatApiConfigService {
         props.setAppId(cfg.getAppId());
         props.setCallbackUrl(cfg.getCallbackUrl());
         props.setGroupId(cfg.getGroupId());
+        props.setPushEnabled(cfg.getPushEnabled());
     }
 
     private String blankToNull(String s) {

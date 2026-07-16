@@ -50,6 +50,12 @@ public class WechatApiConfig {
     @Comment("目标群聊 ID")
     private String groupId;
 
+    /** 是否启用定时推送 */
+    @Column(name = "push_enabled")
+    @Comment("是否启用定时推送")
+    @Builder.Default
+    private Boolean pushEnabled = true;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     @Comment("最后更新时间")

@@ -65,6 +65,8 @@ public class BotPushService {
      */
     @Scheduled(fixedRate = 60_000)
     public void checkAndPush() {
+        // 推送开关检查
+        if (!props.isPushEnabled()) return;
         // 仅做本地配置检查，不发 HTTP 请求
         if (!props.isConfigured() || !props.isDeviceBound()) return;
         String groupId = props.getGroupId();

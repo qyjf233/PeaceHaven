@@ -2,17 +2,15 @@ package com.potato.peacehaven.config;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * WechatApi 配置属性
- * 对应 application.yaml 中 wechatapi.* 配置段
+ * WechatApi 配置属性（运行时缓存）
+ * <p>值来源于数据库，由 {@link com.potato.peacehaven.service.WechatApiConfigService} 加载</p>
  */
 @Getter
 @Setter
 @Component
-@ConfigurationProperties(prefix = "wechatapi")
 public class WechatApiProperties {
 
     /** API 基础地址（https://api.wechatapi.net/finder） */
@@ -30,6 +28,9 @@ public class WechatApiProperties {
     /** 目标群聊 ID（格式：xxxxxxxx@chatroom） */
     private String groupId;
 
+    /** 是否启用定时推送 */
+    private Boolean pushEnabled = true;
+
     /**
      * 判断配置是否可用（baseUrl 和 token 均非空）
      */
@@ -43,5 +44,12 @@ public class WechatApiProperties {
      */
     public boolean isDeviceBound() {
         return appId != null && !appId.isBlank();
+    }
+
+    /**
+     * 判断定时推送是否启用
+     */
+    public boolean isPushEnabled() {
+        return pushEnabled != null && pushEnabled;
     }
 }

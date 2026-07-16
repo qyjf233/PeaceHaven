@@ -57,6 +57,7 @@
                             <span class="cfg-badge badge-off" id="cfgOnlineBadge">检测中...</span>
                             <button class="cfg-refresh-btn" onclick="refreshOnline()" id="btnRefreshOnline" title="刷新状态">↺</button>
                             <button class="cfg-login-btn offline" id="btnLoginLogout" onclick="onLoginLogout()" disabled>状态检查中</button>
+                            <button class="cfg-reconnect-btn" id="btnReconnect" onclick="doReconnect()" style="display:none">异常重连</button>
                         </div>
                     </div>
                 </div>
@@ -88,6 +89,16 @@
             </div>
 
             <div class="bot-panel" id="panel-scheduled-push">
+                <div class="push-header">
+                    <h3 class="push-title">定时推送</h3>
+                    <div class="push-toggle-wrap">
+                        <label class="push-toggle-switch">
+                            <input type="checkbox" id="pushToggleSwitch" th:checked="${pushEnabled}" onchange="togglePush(this.checked)">
+                            <span class="push-toggle-slider"></span>
+                        </label>
+                        <span class="push-status-text" th:classappend="${pushEnabled} ? 'status-on' : 'status-off'" id="pushStatusText" th:text="${pushEnabled} ? '已开启' : '已关闭'">已开启</span>
+                    </div>
+                </div>
                 <div class="schedule-grid">
 
                     <!-- 尸潮 -->
@@ -373,6 +384,9 @@
         badge.className = 'cfg-badge ' + (online ? 'badge-ok' : 'badge-off');
         badge.textContent = online ? '在线' : '离线';
         updateLoginLogoutBtn(online);
+        // 显示/隐藏异常重连按钮
+        const reconnectBtn = document.getElementById('btnReconnect');
+        if (reconnectBtn) reconnectBtn.style.display = online ? 'none' : '';
     }
 
     /** 更新登录/退出按钮状态 */
@@ -398,6 +412,30 @@
         btn.className = 'cfg-login-btn checking';
     }
 
+    /** 切换定时推送开关 */
+    window.togglePush = async function (enabled) {
+        const csrf = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        try {
+            const resp = await fetch('/admin/api/bot/config/push-toggle', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf},
+                body: JSON.stringify({enabled: enabled})
+            });
+            const data = await resp.json();
+            showToast(data.message, data.success ? 'success' : 'error');
+            // 更新状态文本
+            const statusText = document.getElementById('pushStatusText');
+            if (statusText) {
+                statusText.textContent = enabled ? '已开启' : '已关闭';
+                statusText.className = 'push-status-text ' + (enabled ? 'status-on' : 'status-off');
+            }
+        } catch (e) {
+            showToast('操作失败: ' + e.message, 'error');
+            // 恢复开关状态
+            document.getElementById('pushToggleSwitch').checked = !enabled;
+        }
+    };
+
     /** 登录/退出按钮点击 */
     window.onLoginLogout = function () {
         if (deviceOnline) {
@@ -414,6 +452,35 @@
         } else {
             // 离线 → 扫码登录
             cfgLogin();
+        }
+    };
+
+    /** 异常重连 */
+    window.doReconnect = async function () {
+        const csrf = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        const btn = document.getElementById('btnReconnect');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '重连中...';
+        }
+        try {
+            const resp = await fetch('/admin/api/bot/config/reconnect', {
+                method: 'POST',
+                headers: {'X-CSRF-TOKEN': csrf}
+            });
+            const data = await resp.json();
+            showToast(data.message || '操作完成', data.success ? 'success' : 'error');
+            // 如果重连成功且设备在线，刷新状态
+            if (data.data && data.data.online) {
+                updateOnlineBadge(true);
+            }
+        } catch (e) {
+            showToast('重连失败: ' + e.message, 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '异常重连';
+            }
         }
     };
 
