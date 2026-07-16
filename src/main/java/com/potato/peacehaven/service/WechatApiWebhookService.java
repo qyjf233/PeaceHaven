@@ -2,11 +2,16 @@ package com.potato.peacehaven.service;
 
 import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.dto.WechatApiCallbackEvent;
+import com.potato.peacehaven.entity.BotChatRecord;
 import com.potato.peacehaven.entity.BotMessageLog;
+import com.potato.peacehaven.repository.BotChatRecordRepository;
+import com.potato.peacehaven.repository.BotGroupMemberRepository;
 import com.potato.peacehaven.repository.BotMessageLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * WechatApi Webhook 事件处理服务
@@ -24,7 +29,12 @@ import org.springframework.stereotype.Service;
 public class WechatApiWebhookService {
 
     private final BotMessageLogRepository messageLogRepo;
+    private final BotChatRecordRepository chatRecordRepo;
+    private final BotGroupMemberRepository groupMemberRepo;
     private final WechatApiProperties props;
+
+    /** 群名本地缓存（1 小时 TTL，避免每条消息都查 DB） */
+    private final RoomNameCache roomNameCache = new RoomNameCache();
 
     /**
      * 主入口：接收解析好的回调事件，执行去重 + 持久化 + 分发
@@ -123,6 +133,9 @@ public class WechatApiWebhookService {
                     mentioned);
 
             // TODO: @机器人自动响应 / 关键词触发 / 定时推送拦截
+
+            // 目标群聊文本消息 → 持久化到聊天记录表（用于 RAG 向量化）
+            saveChatRecord(event, pureContent);
         } else {
             log.info("[Webhook] 私聊文本消息 from={}, content={}",
                     event.getFromWxid(),
@@ -348,5 +361,130 @@ public class WechatApiWebhookService {
         int end = content.indexOf("\"", idx + 6);
         if (end < 0) return null;
         return content.substring(idx + 6, end);
+    }
+
+    // ========================================================================
+    //  聊天记录持久化（目标群聊 → bot_chat_record）
+    // ========================================================================
+
+    /**
+     * 将目标群聊的文本消息持久化到聊天记录表，用于后续 RAG 向量化训练
+     * <p>过滤条件：必须是配置的 groupId 群聊 + AddMsg 文本消息
+     */
+    private void saveChatRecord(WechatApiCallbackEvent event, String pureContent) {
+        String targetGroup = props.getGroupId();
+        String chatroomId = event.getChatroomId();
+
+        // 只保存目标群聊的消息
+        if (targetGroup == null || targetGroup.isBlank()
+                || !targetGroup.equals(chatroomId)) {
+            return;
+        }
+
+        Long newMsgId = event.getNewMsgId();
+        String appId = event.getAppId();
+        if (newMsgId == null || appId == null) return;
+
+        // 去重
+        if (chatRecordRepo.existsByMsgIdAndAppId(newMsgId, appId)) {
+            log.debug("[ChatRecord] 已存在，跳过 msgId={}", newMsgId);
+            return;
+        }
+
+        boolean selfSent = event.isGroupSelfSent();
+        // 真实发送者：自己发的群消息 senderWxid 为当前登录 wxid，否则取 Content 切割出的 wxid
+        String senderWxid = selfSent ? event.getWxid() : event.getGroupSenderWxid();
+        if (senderWxid == null) senderWxid = event.getFromWxid();
+
+        // 解析发送者昵称（优先从群成员表取）
+        String senderNick = resolveSenderNick(senderWxid);
+
+        // 解析群名
+        String roomName = resolveRoomName(chatroomId, appId);
+
+        BotChatRecord record = BotChatRecord.builder()
+                .msgId(newMsgId)
+                .appId(appId)
+                .roomId(chatroomId)
+                .roomName(roomName)
+                .senderWxid(senderWxid)
+                .senderNick(senderNick)
+                .isSelf(selfSent)
+                .msgType(event.getMsgType())
+                .content(pureContent != null ? truncate(pureContent, 65000) : null)
+                .rawContent(event.getContentString())
+                .createTime(event.getData() != null ? event.getData().getCreateTime() : null)
+                .build();
+
+        try {
+            chatRecordRepo.save(record);
+            log.info("[ChatRecord] 已存储 roomId={}, sender={}({}), content={}",
+                    chatroomId, senderNick, senderWxid,
+                    pureContent != null && pureContent.length() > 60
+                            ? pureContent.substring(0, 60) + "..." : pureContent);
+        } catch (Exception e) {
+            log.error("[ChatRecord] 存储失败 msgId={}", newMsgId, e);
+        }
+    }
+
+    /**
+     * 从群成员表解析发送者昵称（displayName > nickName > wxid 兜底）
+     */
+    private String resolveSenderNick(String wxid) {
+        if (wxid == null) return null;
+        return groupMemberRepo.findByWxid(wxid)
+                .map(m -> m.getEffectiveName())
+                .orElse(wxid);
+    }
+
+    /**
+     * 获取群名（内存缓存，1 小时 TTL）
+     * <p>优先从群成员表所在群的群名缓存取，fallback 到 groupId 本身
+     */
+    private String resolveRoomName(String roomId, String appId) {
+        RoomNameCache.Entry entry = roomNameCache.get(roomId);
+        if (entry != null) return entry.name;
+
+        // 从群成员表中任取一条记录所在群的群名（BotGroupMember 不直接存群名，此处暂用 roomId 作 fallback）
+        // 后续可在 syncGroupMembers 时同步群名到独立表，或从 ModContacts 事件中更新
+        String name = roomId;
+        roomNameCache.put(roomId, name);
+        return name;
+    }
+
+    /**
+     * 截断文本，超出 maxLen 保留前 maxLen-3 字符并追加 ...
+     */
+    private String truncate(String text, int maxLen) {
+        if (text == null || text.length() <= maxLen) return text;
+        return text.substring(0, maxLen - 3) + "...";
+    }
+
+    // ========================================================================
+    //  内存缓存
+    // ========================================================================
+
+    /** 群名本地缓存（ConcurrentHashMap，1h TTL） */
+    private static class RoomNameCache {
+        private final ConcurrentHashMap<String, Entry> map = new ConcurrentHashMap<>();
+        private static final long TTL_MS = 3600_000L; // 1 小时
+
+        Entry get(String key) {
+            Entry e = map.get(key);
+            if (e != null && !e.isExpired()) return e;
+            if (e != null) map.remove(key);
+            return null;
+        }
+
+        void put(String key, String name) {
+            map.put(key, new Entry(name, System.currentTimeMillis()));
+        }
+
+        static class Entry {
+            final String name;
+            final long timestamp;
+            Entry(String name, long timestamp) { this.name = name; this.timestamp = timestamp; }
+            boolean isExpired() { return System.currentTimeMillis() - timestamp > TTL_MS; }
+        }
     }
 }
