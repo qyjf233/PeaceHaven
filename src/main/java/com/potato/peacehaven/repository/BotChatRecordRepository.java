@@ -18,6 +18,9 @@ public interface BotChatRecordRepository extends JpaRepository<BotChatRecord, Lo
     /** 查询未向量化的记录（用于批量处理） */
     List<BotChatRecord> findByProcessedFalseOrderByCreateTimeAsc(Pageable pageable);
 
+    /** 查询未向量化的本人真实发言（排除 AI 回复，防止风格回流） */
+    List<BotChatRecord> findByProcessedFalseAndIsSelfTrueAndIsBotReplyFalseOrderByCreateTimeAsc(Pageable pageable);
+
     /** 统计指定时间后的记录数 */
     long countByCreatedAtAfter(LocalDateTime after);
 

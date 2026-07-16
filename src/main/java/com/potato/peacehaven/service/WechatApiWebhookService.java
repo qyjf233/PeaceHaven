@@ -1,6 +1,7 @@
 package com.potato.peacehaven.service;
 
 import com.potato.peacehaven.ai.pipeline.AiReplyPipeline;
+import com.potato.peacehaven.ai.pipeline.AiReplyTracker;
 import com.potato.peacehaven.config.AiProperties;
 import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.dto.WechatApiCallbackEvent;
@@ -37,6 +38,7 @@ public class WechatApiWebhookService {
     private final AiProperties aiProps;
     private final AiReplyPipeline aiReplyPipeline;
     private final AiWhitelistService aiWhitelistService;
+    private final AiReplyTracker aiReplyTracker;
 
     /** 群名本地缓存（1 小时 TTL，避免每条消息都查 DB） */
     private final RoomNameCache roomNameCache = new RoomNameCache();
@@ -461,6 +463,9 @@ public class WechatApiWebhookService {
         // 解析群名
         String roomName = resolveRoomName(chatroomId, appId);
 
+        // 检测是否为 AI 分身发送的回复（防止 AI 风格回流到 RAG 训练数据）
+        boolean isBotReply = selfSent && aiReplyTracker.isAiReply(pureContent);
+
         BotChatRecord record = BotChatRecord.builder()
                 .msgId(newMsgId)
                 .appId(appId)
@@ -469,6 +474,7 @@ public class WechatApiWebhookService {
                 .senderWxid(senderWxid)
                 .senderNick(senderNick)
                 .isSelf(selfSent)
+                .isBotReply(isBotReply)
                 .msgType(event.getMsgType())
                 .content(pureContent != null ? truncate(pureContent, 65000) : null)
                 .rawContent(event.getContentString())
@@ -477,8 +483,8 @@ public class WechatApiWebhookService {
 
         try {
             chatRecordRepo.save(record);
-            log.info("[ChatRecord] 已存储 roomId={}, sender={}({}), content={}",
-                    chatroomId, senderNick, senderWxid,
+            log.info("[ChatRecord] 已存储 roomId={}, sender={}({}), botReply={}, content={}",
+                    chatroomId, senderNick, senderWxid, isBotReply,
                     pureContent != null && pureContent.length() > 60
                             ? pureContent.substring(0, 60) + "..." : pureContent);
         } catch (Exception e) {

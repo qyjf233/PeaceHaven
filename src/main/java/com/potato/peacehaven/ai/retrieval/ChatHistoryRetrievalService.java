@@ -124,8 +124,8 @@ public class ChatHistoryRetrievalService {
     /**
      * 索引新的聊天记录（定时任务 + 手动调用）
      * <p>
-     * 查询 processed=false 且 is_self=true 的记录，批量向量化后存入 VectorStore，
-     * 并标记 processed=true。
+     * 查询 processed=false 的记录，批量向量化后存入 VectorStore，
+     * 并标记 processed=true。AI 生成的回复（is_bot_reply=true）仅标记已处理，不纳入向量库。
      * </p>
      */
     @Scheduled(fixedDelay = 600_000, initialDelay = 30_000) // 每 10 分钟执行一次，启动后延迟 30s
@@ -137,24 +137,42 @@ public class ChatHistoryRetrievalService {
 
         if (pending.isEmpty()) return;
 
-        log.info("[RAG] 发现 {} 条待索引记录，开始向量化...", pending.size());
+        // 分离 AI 回复和真实消息：AI 回复不纳入向量库（防止风格回流）
+        List<BotChatRecord> toIndex = pending.stream()
+                .filter(r -> !Boolean.TRUE.equals(r.getIsBotReply()))
+                .collect(Collectors.toList());
+        long botReplyCount = pending.size() - toIndex.size();
+        if (botReplyCount > 0) {
+            log.info("[RAG] 跳过 {} 条 AI 回复记录（不纳入训练）", botReplyCount);
+        }
+
+        if (toIndex.isEmpty()) {
+            // 全部是 AI 回复，直接标记已处理
+            for (BotChatRecord record : pending) {
+                record.setProcessed(true);
+            }
+            chatRecordRepo.saveAll(pending);
+            return;
+        }
+
+        log.info("[RAG] 发现 {} 条待索引记录（{} 条 AI 回复已排除），开始向量化...", toIndex.size(), botReplyCount);
 
         // 提取文本内容
-        List<String> texts = pending.stream()
+        List<String> texts = toIndex.stream()
                 .map(r -> r.getContent() != null ? r.getContent() : "")
                 .collect(Collectors.toList());
 
         // 批量向量化
         float[][] vectors = embeddingService.embedBatch(texts);
-        if (vectors == null || vectors.length != pending.size()) {
+        if (vectors == null || vectors.length != toIndex.size()) {
             log.error("[RAG] 向量化失败（返回数量不匹配），跳过本次索引");
             return;
         }
 
         // 构建 VectorDocument 列表
         List<VectorDocument> docs = new ArrayList<>();
-        for (int i = 0; i < pending.size(); i++) {
-            BotChatRecord record = pending.get(i);
+        for (int i = 0; i < toIndex.size(); i++) {
+            BotChatRecord record = toIndex.get(i);
             if (vectors[i] == null || vectors[i].length == 0) continue;
 
             Map<String, String> metadata = new LinkedHashMap<>();
@@ -177,13 +195,13 @@ public class ChatHistoryRetrievalService {
         // 写入 VectorStore
         vectorStore.upsertBatch(docs);
 
-        // 标记为已处理
+        // 标记所有记录（包括 AI 回复）为已处理
         for (BotChatRecord record : pending) {
             record.setProcessed(true);
         }
         chatRecordRepo.saveAll(pending);
 
-        log.info("[RAG] 索引完成：写入 {} 条向量，VectorStore 总数={}", docs.size(), vectorStore.count());
+        log.info("[RAG] 索引完成：写入 {} 条向量（跳过 {} 条 AI 回复），VectorStore 总数={}", docs.size(), botReplyCount, vectorStore.count());
     }
 
     /**

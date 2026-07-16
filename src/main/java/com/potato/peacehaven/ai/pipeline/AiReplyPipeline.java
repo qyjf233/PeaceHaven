@@ -46,6 +46,7 @@ public class AiReplyPipeline {
     private final LlmClient llmClient;
     private final ReplyReviewService reviewService;
     private final WechatApiService wechatApiService;
+    private final AiReplyTracker aiReplyTracker;
 
     /**
      * 处理群消息（异步执行）
@@ -159,6 +160,8 @@ public class AiReplyPipeline {
         if (resp.isSuccess()) {
             log.info("[Pipeline] ✅ 发送成功 target={}, reply={}", sendTarget,
                     finalReply.length() > 50 ? finalReply.substring(0, 50) + "..." : finalReply);
+            // 注册 AI 回复指纹，防止 webhook 回调时将 AI 回复混入 RAG 训练数据
+            aiReplyTracker.register(finalReply);
             // 更新决策统计
             decisionService.recordReply(chatroomId != null ? chatroomId : senderWxid);
         } else {

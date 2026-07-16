@@ -81,6 +81,12 @@ public class BotChatRecord {
     @Comment("是否自己发送")
     private Boolean isSelf = false;
 
+    /** 是否由 AI 分身生成（区分真人手打与 AI 自动回复，防止 AI 风格回流到 RAG） */
+    @Column(name = "is_bot_reply", nullable = false)
+    @Builder.Default
+    @Comment("是否 AI 生成的回复（不纳入 RAG 训练）")
+    private Boolean isBotReply = false;
+
     /** 消息类型：1=文本 / 3=图片 / 34=语音 / 43=视频 / 49=复合消息 / 47=Emoji */
     @Column(name = "msg_type", nullable = false)
     @Comment("消息类型")
