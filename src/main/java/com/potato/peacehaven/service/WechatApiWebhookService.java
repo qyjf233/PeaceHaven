@@ -223,10 +223,127 @@ public class WechatApiWebhookService {
 
         // 简易解析 appmsg.type（完整解析需 XML parser，此处用正则快速提取）
         String appMsgType = extractAppMsgType(content);
-        log.debug("[Webhook] 复合消息 MsgType=49, appmsg.type={}, from={}, pushContent={}",
-                appMsgType, event.getFromWxid(), pushContent);
+        boolean isGroup = event.isGroupMessage();
+        log.debug("[Webhook] 复合消息 MsgType=49, appmsg.type={}, isGroup={}, from={}, pushContent={}",
+                appMsgType, isGroup, event.getFromWxid(), pushContent);
 
-        // TODO: 按 appmsg.type 分发具体业务逻辑
+        // 57 = 引用回复消息 → 作为文本消息处理（带引用上下文）
+        if ("57".equals(appMsgType) && isGroup && !event.isGroupSelfSent()) {
+            handleQuotedReply(event, content);
+        }
+    }
+
+    /**
+     * 引用回复消息处理（appmsg.type=57）
+     * <p>
+     * XML 格式：
+     * <pre>
+     * &lt;msg&gt;&lt;appmsg&gt;
+     *   &lt;title&gt;回复的新消息&lt;/title&gt;
+     *   &lt;type&gt;57&lt;/type&gt;
+     *   &lt;refermsg&gt;
+     *     &lt;type&gt;1&lt;/type&gt;
+     *     &lt;content&gt;被引用的原消息&lt;/content&gt;
+     *     &lt;displayname&gt;原发送者&lt;/displayname&gt;
+     *   &lt;/refermsg&gt;
+     * &lt;/appmsg&gt;&lt;/msg&gt;
+     * </pre>
+     * </p>
+     */
+    private void handleQuotedReply(WechatApiCallbackEvent event, String rawContent) {
+        // 群消息 Content 格式: "wxid_xxx:\n<msg>..."
+        String xml = rawContent;
+        if (event.isGroupMessage() && !event.isGroupSelfSent()) {
+            int sep = rawContent.indexOf(":\n");
+            if (sep > 0) {
+                xml = rawContent.substring(sep + 2);
+            }
+        }
+
+        // 解析引用回复内容
+        String replyText = extractXmlTag(xml, "title");
+        String quotedText = extractRefermsgContent(xml);
+        String quotedSender = extractXmlTag(xml, "displayname");
+
+        if (replyText == null || replyText.isBlank()) {
+            log.debug("[Webhook] 引用回复 title 为空，跳过");
+            return;
+        }
+
+        // 组合成带引用上下文的消息：回复内容 + [引用 xxx: 原消息]
+        String combinedContent;
+        if (quotedText != null && !quotedText.isBlank()) {
+            String senderLabel = (quotedSender != null && !quotedSender.isBlank()) ? quotedSender : "对方";
+            combinedContent = replyText + " [引用 " + senderLabel + ": " + quotedText + "]";
+        } else {
+            combinedContent = replyText;
+        }
+
+        String chatroomId = event.getChatroomId();
+        String senderWxid = event.getGroupSenderWxid();
+        if (senderWxid == null) senderWxid = event.getFromWxid();
+        String senderNick = resolveSenderNick(senderWxid);
+
+        log.info("[Webhook] 引用回复 chatroom={}, sender={}, reply={}, quoted={}",
+                chatroomId, senderNick,
+                replyText.length() > 50 ? replyText.substring(0, 50) + "..." : replyText,
+                quotedText != null && quotedText.length() > 50 ? quotedText.substring(0, 50) + "..." : quotedText);
+
+        // 白名单检查
+        boolean trainingAllowed = aiWhitelistService.isGroupTrainingAllowed(chatroomId);
+        boolean replyAllowed = aiWhitelistService.isGroupReplyAllowed(chatroomId);
+        boolean aiReady = aiProps.isReady();
+
+        // 训练：持久化聊天记录（用纯回复文本，不含引用标记）
+        if (trainingAllowed) {
+            saveChatRecord(event, replyText);
+        }
+
+        // AI 回复：使用组合内容（带引用上下文，让 AI 知道对方在引用什么）
+        if (aiReady && replyAllowed) {
+            boolean mentioned = replyText.contains("@");
+            String traceId = TraceContext.get();
+            log.info("[Webhook] 触发 AI Pipeline(引用回复) chatroom={}, sender={}, traceId={}",
+                    chatroomId, senderNick, traceId);
+            aiReplyPipeline.processGroupMessage(
+                    chatroomId, senderWxid, senderNick,
+                    combinedContent, mentioned, traceId);
+        }
+    }
+
+    /**
+     * 从 XML 中提取指定标签的文本内容（轻量级，不引入 XML parser）
+     */
+    private String extractXmlTag(String xml, String tagName) {
+        if (xml == null) return null;
+        String open = "<" + tagName + ">";
+        String close = "</" + tagName + ">";
+        int start = xml.indexOf(open);
+        if (start < 0) return null;
+        start += open.length();
+        int end = xml.indexOf(close, start);
+        if (end < 0) return null;
+        String value = xml.substring(start, end).trim();
+        // 处理 CDATA
+        if (value.startsWith("<![CDATA[")) {
+            value = value.substring(9);
+            if (value.endsWith("]]>")) value = value.substring(0, value.length() - 3);
+        }
+        return value.isEmpty() ? null : value;
+    }
+
+    /**
+     * 从引用回复 XML 中提取 refermsg.content
+     * <p>refermsg 是嵌套在 appmsg 内部的，需要先定位 refermsg 区域</p>
+     */
+    private String extractRefermsgContent(String xml) {
+        if (xml == null) return null;
+        int refStart = xml.indexOf("<refermsg>");
+        if (refStart < 0) return null;
+        int refEnd = xml.indexOf("</refermsg>", refStart);
+        if (refEnd < 0) return null;
+        String refBlock = xml.substring(refStart, refEnd);
+        return extractXmlTag(refBlock, "content");
     }
 
     /**
