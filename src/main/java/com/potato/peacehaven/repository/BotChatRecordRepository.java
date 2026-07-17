@@ -47,4 +47,8 @@ public interface BotChatRecordRepository extends JpaRepository<BotChatRecord, Lo
     /** 查询所有非本人、非AI回复的不同发送者 wxid（去重） */
     @Query("SELECT DISTINCT r.senderWxid FROM BotChatRecord r WHERE r.isSelf = false AND r.isBotReply = false")
     List<String> findDistinctNonSelfSenderWxids();
+
+    /** 查询指定群聊在某个时间点之前的最近 N 条文本消息（用于表情包上下文采集） */
+    @Query("SELECT r FROM BotChatRecord r WHERE r.roomId = :roomId AND r.msgType = 1 AND r.createTime < :before ORDER BY r.createTime DESC")
+    List<BotChatRecord> findRecentTextBefore(String roomId, Long before, Pageable pageable);
 }

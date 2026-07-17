@@ -261,6 +261,22 @@ public class WechatApiService {
                 "linkUrl", linkUrl, "thumbUrl", thumbUrl));
     }
 
+    /**
+     * 发送表情包消息（type=47）
+     * <p>
+     * 表情包需提前通过微信协议上传到表情 CDN，获取 MD5 和文件大小后方可发送。
+     * 同一表情包只需上传一次，后续复用 MD5 + Size 即可。
+     * </p>
+     *
+     * @param toWxid    接收方 wxid（好友）或 xxx@chatroom（群聊）
+     * @param emojiMd5  表情包的 MD5（上传后返回，用于定位表情资源）
+     * @param emojiSize 表情文件大小（字节）
+     */
+    public WechatApiResponse sendEmoji(String toWxid, String emojiMd5, int emojiSize) {
+        return post("/message/postEmoji", bodyWith(
+                "toWxid", toWxid, "emojiMd5", emojiMd5, "emojiSize", emojiSize));
+    }
+
     // ========================================================================
     //  3. 好友管理
     // ========================================================================

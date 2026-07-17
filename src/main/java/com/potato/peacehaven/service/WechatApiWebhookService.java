@@ -8,14 +8,19 @@ import com.potato.peacehaven.config.TraceContext;
 import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.dto.WechatApiCallbackEvent;
 import com.potato.peacehaven.entity.BotChatRecord;
+import com.potato.peacehaven.entity.BotEmojiLibrary;
 import com.potato.peacehaven.entity.BotMessageLog;
 import com.potato.peacehaven.repository.BotChatRecordRepository;
+import com.potato.peacehaven.repository.BotEmojiLibraryRepository;
 import com.potato.peacehaven.repository.BotGroupMemberRepository;
 import com.potato.peacehaven.repository.BotMessageLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.PageRequest;
+
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -36,6 +41,7 @@ public class WechatApiWebhookService {
     private final BotMessageLogRepository messageLogRepo;
     private final BotChatRecordRepository chatRecordRepo;
     private final BotGroupMemberRepository groupMemberRepo;
+    private final BotEmojiLibraryRepository emojiLibraryRepo;
     private final WechatApiProperties props;
     private final AiProperties aiProps;
     private final AiReplyPipeline aiReplyPipeline;
@@ -117,7 +123,7 @@ public class WechatApiWebhookService {
             case 37    -> handleFriendRequest(event);
             case 42    -> log.debug("[Webhook] 名片消息 from={}", from);
             case 43    -> log.debug("[Webhook] 视频消息 from={}", from);
-            case 47    -> log.debug("[Webhook] Emoji 消息 from={}", from);
+            case 47    -> handleEmojiMessage(event);
             case 48    -> log.debug("[Webhook] 位置消息 from={}", from);
             case 49    -> handleAppMsg(event);
             case 10000 -> handleSystemNotice(event);
@@ -344,6 +350,271 @@ public class WechatApiWebhookService {
         if (refEnd < 0) return null;
         String refBlock = xml.substring(refStart, refEnd);
         return extractXmlTag(refBlock, "content");
+    }
+
+    /**
+     * 表情包消息处理（MsgType=47）
+     * <p>
+     * XML 格式：
+     * <pre>
+     * &lt;msg&gt;
+     *   &lt;emoji md5="xxx" type="2" len="14732" productid="..." width="240" height="240"/&gt;
+     *   &lt;gameext type="0" content="0"/&gt;
+     * &lt;/msg&gt;
+     * </pre>
+     * </p>
+     * <p>
+     * 处理逻辑：
+     * <ol>
+     *   <li>提取 emoji 的 MD5、文件大小等关键信息</li>
+     *   <li>入库 / 更新 bot_emoji_library（已存在则 usageCount++）</li>
+     *   <li>采集上下文样本（最近 3 条前后消息）</li>
+     * </ol>
+     * </p>
+     */
+    private void handleEmojiMessage(WechatApiCallbackEvent event) {
+        String rawContent = event.getContentString();
+        if (rawContent == null) {
+            log.debug("[Webhook] Emoji 消息 content 为空，跳过");
+            return;
+        }
+
+        // 群消息 Content 格式: "wxid_xxx:\n<msg>..."
+        String xml = rawContent;
+        if (event.isGroupMessage() && !event.isGroupSelfSent()) {
+            int sep = rawContent.indexOf(":\n");
+            if (sep > 0) xml = rawContent.substring(sep + 2);
+        }
+
+        // 提取 emoji 属性
+        String emojiMd5 = extractXmlAttribute(xml, "emoji", "md5");
+        String lenStr = extractXmlAttribute(xml, "emoji", "len");
+        String typeStr = extractXmlAttribute(xml, "emoji", "type");
+        String widthStr = extractXmlAttribute(xml, "emoji", "width");
+        String heightStr = extractXmlAttribute(xml, "emoji", "height");
+        String productId = extractXmlAttribute(xml, "emoji", "productid");
+
+        if (emojiMd5 == null || emojiMd5.isBlank()) {
+            log.debug("[Webhook] Emoji 消息 MD5 为空，跳过");
+            return;
+        }
+
+        int emojiSize = parseIntSafe(lenStr, 0);
+        Integer emojiType = parseIntSafe(typeStr, null);
+        Integer width = parseIntSafe(widthStr, null);
+        Integer height = parseIntSafe(heightStr, null);
+
+        // 确定发送者
+        String senderWxid;
+        if (event.isGroupMessage()) {
+            senderWxid = event.getGroupSenderWxid();
+            if (senderWxid == null) senderWxid = event.getFromWxid();
+        } else {
+            senderWxid = event.getFromWxid();
+        }
+        String senderNick = resolveSenderNick(senderWxid);
+
+        log.info("[Webhook] 表情包消息 from={}({}), md5={}, size={}, type={}",
+                senderNick, senderWxid, emojiMd5, emojiSize, emojiType);
+
+        // 入库 / 更新 + 上下文样本采集
+        BotEmojiLibrary emoji = null;
+        try {
+            emoji = emojiLibraryRepo.findByMd5(emojiMd5).orElse(null);
+
+            // 采集上下文样本（最近 3 条文本消息）
+            String contextSample = collectEmojiContext(event, senderNick);
+
+            if (emoji == null) {
+                // 新表情包入库
+                String samples = (contextSample != null)
+                        ? "[" + contextSample + "]" : "[]";
+                emoji = BotEmojiLibrary.builder()
+                        .md5(emojiMd5)
+                        .emojiSize(emojiSize)
+                        .emojiType(emojiType)
+                        .width(width)
+                        .height(height)
+                        .productId(productId)
+                        .usageCount(1)
+                        .contextSamples(samples)
+                        .labeled(false)
+                        .build();
+                emojiLibraryRepo.save(emoji);
+                log.info("[EmojiLibrary] 新表情包入库 md5={}, size={}", emojiMd5, emojiSize);
+            } else {
+                // 已存在：使用次数 +1，追加上下文样本
+                emoji.setUsageCount(emoji.getUsageCount() + 1);
+                appendContextSample(emoji, contextSample);
+                emojiLibraryRepo.save(emoji);
+                log.debug("[EmojiLibrary] 表情包使用次数+1 md5={}, count={}",
+                        emojiMd5, emoji.getUsageCount());
+            }
+        } catch (Exception e) {
+            log.error("[EmojiLibrary] 表情包入库失败 md5={}", emojiMd5, e);
+            return;
+        }
+
+        // ── AI 回复决策 ──
+        // 已标注 → 注入描述到 prompt，触发 AI Pipeline
+        // 未标注 → 静默采集，不调 LLM（零成本）
+        if (emoji != null && Boolean.TRUE.equals(emoji.getLabeled())
+                && emoji.getDescription() != null && !emoji.getDescription().isBlank()) {
+
+            if (!event.isGroupMessage() || event.isGroupSelfSent()) return;
+
+            String chatroomId = event.getChatroomId();
+            boolean replyAllowed = aiWhitelistService.isGroupReplyAllowed(chatroomId);
+            boolean aiReady = aiProps.isReady();
+
+            if (aiReady && replyAllowed) {
+                // 构造带语义描述的消息内容（替代原始 XML）
+                String emojiContent = "[对方发了一个表情包：" + emoji.getDescription() + "]";
+                String traceId = TraceContext.get();
+                log.info("[Webhook] 触发 AI Pipeline(表情包) chatroom={}, sender={}, desc={}, traceId={}",
+                        chatroomId, senderNick, emoji.getDescription(), traceId);
+                aiReplyPipeline.processGroupMessage(
+                        chatroomId, senderWxid, senderNick,
+                        emojiContent, false, traceId);
+            }
+        } else {
+            log.debug("[Webhook] 表情包未标注，静默采集 md5={}", emojiMd5);
+        }
+    }
+
+    /**
+     * 采集表情包上下文样本（最近 3 条文本消息）
+     */
+    private String collectEmojiContext(WechatApiCallbackEvent event, String senderNick) {
+        try {
+            if (!event.isGroupMessage()) return null;
+            String chatroomId = event.getChatroomId();
+            Long createTime = event.getData() != null ? event.getData().getCreateTime() : null;
+            if (chatroomId == null || createTime == null) return null;
+
+            // 查最近 3 条文本消息（在表情包之前）
+            List<BotChatRecord> recentMsgs = chatRecordRepo.findRecentTextBefore(
+                    chatroomId, createTime, PageRequest.of(0, 3));
+
+            if (recentMsgs.isEmpty()) return null;
+
+            // 反转使时间正序（查询是 DESC，需要 ASC）
+            StringBuilder sb = new StringBuilder(200);
+            sb.append("{\"sender\":\"").append(escapeJson(senderNick)).append("\",");
+            sb.append("\"before\":[");
+            boolean first = true;
+            // 从后往前遍历（反转为时间正序）
+            for (int i = recentMsgs.size() - 1; i >= 0; i--) {
+                BotChatRecord r = recentMsgs.get(i);
+                if (!first) sb.append(",");
+                first = false;
+                String nick = r.getSenderNick() != null ? r.getSenderNick() : r.getSenderWxid();
+                String content = r.getContent();
+                if (content != null && content.length() > 80) content = content.substring(0, 80) + "...";
+                sb.append("\"").append(escapeJson(nick)).append(": ").append(escapeJson(content)).append("\"");
+            }
+            sb.append("]}");
+            return sb.toString();
+        } catch (Exception e) {
+            log.debug("[EmojiLibrary] 上下文采集失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 追加上下文样本到表情包记录（最多保留 10 条，FIFO 淘汰旧的）
+     */
+    private void appendContextSample(BotEmojiLibrary emoji, String newSample) {
+        if (newSample == null) return;
+
+        String existing = emoji.getContextSamples();
+        if (existing == null || existing.isBlank() || "[]".equals(existing)) {
+            emoji.setContextSamples("[" + newSample + "]");
+            return;
+        }
+
+        // 简易 JSON 数组追加（去掉尾部 ]，追加新样本，加回 ]）
+        String trimmed = existing.trim();
+        if (trimmed.endsWith("]")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+
+        // 计算当前样本数，超过 10 条时 FIFO 淘汰最旧的
+        int sampleCount = countJsonArrayElements(trimmed);
+        if (sampleCount >= 10) {
+            // 找到第一个 },{ 的位置，删除第一个元素
+            int firstEnd = trimmed.indexOf("},{", 1);
+            if (firstEnd > 0) {
+                trimmed = trimmed.substring(0, 1) + trimmed.substring(firstEnd + 1);
+            }
+        }
+
+        emoji.setContextSamples(trimmed + "," + newSample + "]");
+    }
+
+    /**
+     * 简易计算 JSON 数组元素数（按 },{ 分隔符计数）
+     */
+    private int countJsonArrayElements(String jsonArrayWithoutClosingBracket) {
+        if (jsonArrayWithoutClosingBracket == null || jsonArrayWithoutClosingBracket.length() <= 1) return 0;
+        // 内容以 [ 开头，元素之间用 },{ 分隔
+        int count = 1;
+        int idx = 0;
+        while ((idx = jsonArrayWithoutClosingBracket.indexOf("},{", idx)) >= 0) {
+            count++;
+            idx += 3;
+        }
+        return count;
+    }
+
+    /**
+     * 简易 JSON 字符串转义
+     */
+    private String escapeJson(String str) {
+        if (str == null) return "";
+        return str.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+    }
+
+    /**
+     * 从 XML 中提取指定标签的属性值（轻量级，不引入 XML parser）
+     * <p>
+     * 示例：{@code extractXmlAttribute(xml, "emoji", "md5")}
+     * 从 {@code <emoji md5="xxx" .../>} 中提取 "xxx"
+     * </p>
+     */
+    private String extractXmlAttribute(String xml, String tagName, String attrName) {
+        if (xml == null) return null;
+        // 定位标签 "<tagName"
+        String tagPrefix = "<" + tagName;
+        int tagStart = xml.indexOf(tagPrefix);
+        if (tagStart < 0) return null;
+        // 找到标签结束 ">"（自闭合 /> 或 >）
+        int tagEnd = xml.indexOf(">", tagStart);
+        if (tagEnd < 0) return null;
+        String tagContent = xml.substring(tagStart, tagEnd + 1);
+        // 在标签内查找属性 attrName="value"
+        String attrPrefix = attrName + "=\"";
+        int attrStart = tagContent.indexOf(attrPrefix);
+        if (attrStart < 0) return null;
+        attrStart += attrPrefix.length();
+        int attrEnd = tagContent.indexOf("\"", attrStart);
+        if (attrEnd < 0) return null;
+        return tagContent.substring(attrStart, attrEnd);
+    }
+
+    /**
+     * 安全解析整数，失败返回 fallback
+     */
+    private Integer parseIntSafe(String str, Integer fallback) {
+        if (str == null || str.isBlank()) return fallback;
+        try {
+            return Integer.parseInt(str.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     /**
