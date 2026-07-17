@@ -94,7 +94,7 @@ ai:
       如果一句普通的话已经足够自然，不要主动增加风格。
       风格来自自然表达，不是来自刻意设计。
     anti-anchoring-hint: "当前话题已经讨论较多。如果最新消息是新主题，请自然跟随新主题，不要主动回到旧话题。"
-    json-reply-format: true                                        # true=LLM输出JSON(含confidence/memory_used，调试用)  false=纯文本(生产)
+    json-reply-format: false                                       # true=LLM输出JSON(含confidence/memory_used，调试用)  false=纯文本(生产)
     memory-importance-threshold: 0.3                               # 记忆提取重要性阈值（低于此值丢弃）
     max-memory-entries: 50                                         # 每人记忆条目最大数量
     # 人格维度（从 style-description 分离，抽象的人格特征）

@@ -3,8 +3,7 @@ package com.potato.peacehaven.ai.memory;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -49,9 +48,9 @@ public class MemoryEntry {
     /** 存活天数：0=永久，30=30天，180=半年 */
     private int ttlDays;
 
-    /** 创建时间 */
+    /** 创建时间（epoch 秒，避免 LocalDateTime JSON 序列化问题） */
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private long createdAt = Instant.now().getEpochSecond();
 
     /** 来源对话片段（调试追溯用） */
     private String source;
@@ -65,8 +64,7 @@ public class MemoryEntry {
      */
     public boolean isExpired() {
         if (ttlDays <= 0) return false;
-        if (createdAt == null) return false;
-        long daysSinceCreation = ChronoUnit.DAYS.between(createdAt, LocalDateTime.now());
+        long daysSinceCreation = (Instant.now().getEpochSecond() - createdAt) / 86400;
         return daysSinceCreation >= ttlDays;
     }
 

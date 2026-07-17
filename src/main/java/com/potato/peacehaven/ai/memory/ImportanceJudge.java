@@ -34,6 +34,15 @@ public class ImportanceJudge {
             "啊这", "emmm", "emm", "awsl", "yyds", "xswl"
     );
 
+    // ===== 非自述垃圾标签 → 直接丢弃 =====
+    // 群聊中别人给的外号/调侃/指令式称呼，不应作为用户画像
+    private static final Pattern JUNK_LABEL_PATTERN = Pattern.compile(
+            "^(妈妈|爸爸|儿子|女儿|孙子|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|叔叔|阿姨|" +
+            "老公|老婆|宝贝|宝宝|主人|奴[才隶]|" +
+            "狗|猪|傻[子逼瓜]|废物|大佬|菜鸡|大哥|大姐|" +
+            "舔狗|绿茶|渣男|渣女|逗比|沙雕|憨憨|二[逼货]|智障)$"
+    );
+
     // ===== 身份/价值观模式 → 0.8-1.0 =====
     private static final Pattern IDENTITY_PATTERN = Pattern.compile(
             "我是|我是做|我从事|我的职业|我的专业|" +
@@ -83,6 +92,12 @@ public class ImportanceJudge {
 
         // 1. 噪音词 → 丢弃
         if (NOISE_EXACT.contains(trimmed.toLowerCase()) || trimmed.length() <= 2) {
+            return new ImportanceResult(0, 0, 0, false);
+        }
+
+        // 1.5 非自述垃圾标签（外号/调侃）→ 丢弃
+        if (JUNK_LABEL_PATTERN.matcher(trimmed).find()) {
+            log.debug("[ImportanceJudge] 丢弃垃圾标签 content='{}'", trimmed);
             return new ImportanceResult(0, 0, 0, false);
         }
 

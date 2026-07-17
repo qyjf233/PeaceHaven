@@ -109,7 +109,9 @@ public class UserMemoryExtractor {
         sb.append("  \"summary_update\": \"一句话更新用户画像（可选，仅当有足够新信息时）\"\n");
         sb.append("}\n\n");
         sb.append("提取规则：\n");
-        sb.append("- 只提取有长期价值的信息，日常闲聊（‘今天好累’、‘哈哈’、‘666’）不要提取\n");
+        sb.append("- 只提取有长期价值的信息，日常闲聊（'今天好累'、'哈哈'、'666'）不要提取\n");
+        sb.append("- **只提取用户本人主动陈述的信息**（'我是...'、'我有...'、'我喜欢...'），别人对他的调侃、起哄、外号一律不提取\n");
+        sb.append("- 群聊中其他人说的话不要归到这个用户身上\n");
         sb.append("- type: identity=职业/身份/价值观, preference=兴趣偏好, episode=事件经历, relationship=人际关系\n");
         sb.append("- importance: 这条信息对未来回复的影响程度（0-1），0.9=改变身份, 0.5=具体事实, 0.3=临时状态\n");
         sb.append("- confidence: 你对这条信息准确性的把握（0-1）\n");
