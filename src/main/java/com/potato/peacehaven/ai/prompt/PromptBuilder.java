@@ -66,6 +66,13 @@ public class PromptBuilder {
     private volatile String cachedSystemPrompt;
     private volatile int cachedKeyHash;
 
+    /** 手动清除 Prompt 缓存（管理后台修改参数后调用） */
+    public void invalidateCache() {
+        this.cachedSystemPrompt = null;
+        this.cachedKeyHash = 0;
+        log.info("[Prompt] 缓存已手动清除");
+    }
+
     /** 上次 resolve 出的 persona 缓存（用于 Context Prompt 注入） */
     private volatile EffectivePersonaProfile lastPersonaProfile;
 

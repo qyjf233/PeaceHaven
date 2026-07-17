@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模型参数调整 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+    <meta name="_csrf" th:content="${_csrf}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>模型参数调整</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin" class="btn-back">← 返回管理后台</a>
+        </div>
+    </header>
+
+    <div class="bot-config-layout">
+        <nav class="bot-sidebar">
+            <ul class="bot-nav-list">
+                <li class="bot-nav-item active" data-tab="user-memory">
+                    <span class="bot-nav-icon">👤</span><span class="bot-nav-label">用户画像</span>
+                </li>
+                <li class="bot-nav-item" data-tab="style-config">
+                    <span class="bot-nav-icon">🧬</span><span class="bot-nav-label">人格维度</span>
+                </li>
+                <li class="bot-nav-item" data-tab="expression">
+                    <span class="bot-nav-icon">💬</span><span class="bot-nav-label">表达档案</span>
+                </li>
+                <li class="bot-nav-item" data-tab="relationship">
+                    <span class="bot-nav-icon">🤝</span><span class="bot-nav-label">关系画像</span>
+                </li>
+                <li class="bot-nav-item" data-tab="scene">
+                    <span class="bot-nav-icon">🎭</span><span class="bot-nav-label">场景画像</span>
+                </li>
+                <li class="bot-nav-item" data-tab="current-state">
+                    <span class="bot-nav-icon">📊</span><span class="bot-nav-label">当前状态</span>
+                </li>
+                <li class="bot-nav-item" data-tab="snapshot">
+                    <span class="bot-nav-icon">📸</span><span class="bot-nav-label">学习快照</span>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="bot-content">
+            <!-- ====== Tab 1: 用户画像 ====== -->
+            <div class="bot-panel active" id="panel-user-memory">
+                <div class="cfg-section">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">用户画像 (bot_user_memory)</h3>
+                        <div class="gm-actions">
+                            <button class="btn-modal btn-modal-save" onclick="showAddMemory()">新增</button>
+                            <button class="btn-modal btn-modal-save gm-refresh" onclick="loadUserMemory()">刷新</button>
+                        </div>
+                    </div>
+                    <p class="cfg-hint">每个群聊成员的长期记忆档案。AI 回复时加载对方画像作为 Prompt 上下文，实现"了解对方"的效果。</p>
+                    <div id="memoryList"><p class="cfg-hint">加载中...</p></div>
+                </div>
+            </div>
+
+            <!-- ====== Tab 2: 人格维度 ====== -->
+            <div class="bot-panel" id="panel-style-config">
+                <div class="cfg-section">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">人格维度 (learned_style_config)</h3>
+                        <div class="gm-actions">
+                            <button class="btn-modal btn-modal-save" onclick="saveStyleConfig()">保存</button>
+                        </div>
+                    </div>
+                    <p class="cfg-hint">从真实聊天中学到的核心风格参数，影响 System Prompt 中的人格描述。由 StyleLearningService 定时更新，也可在此手动覆盖。</p>
+                    <div id="styleConfigForm"><p class="cfg-hint">加载中...</p></div>
+                </div>
+            </div>
+
+            <!-- ====== Tab 3: 表达档案 ====== -->
+            <div class="bot-panel" id="panel-expression">
+                <div class="cfg-section">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">表达档案 (persona_expression)</h3>
+                        <div class="gm-actions">
+                            <button class="btn-modal btn-modal-save" onclick="showAddExpression()">新增</button>
+                            <button class="btn-modal btn-modal-save gm-refresh" onclick="loadExpression()">刷新</button>
+                        </div>
+                    </div>
+                    <p class="cfg-hint">记录特色表达短语的频率、意图和使用疲劳度。高疲劳度的表达会被 Prompt 标记为"避免使用"。</p>
+                    <div id="expressionList"><p class="cfg-hint">加载中...</p></div>
+                </div>
+            </div>
+
+            <!-- ====== Tab 4: 关系画像 ====== -->
+            <div class="bot-panel" id="panel-relationship">
+                <div class="cfg-section">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">关系画像 (persona_relationship_profile)</h3>
+                        <div class="gm-actions">
+                            <button class="btn-modal btn-modal-save" onclick="showAddRelationship()">新增</button>
+                            <button class="btn-modal btn-modal-save gm-refresh" onclick="loadRelationship()">刷新</button>
+                        </div>
+                    </div>
+                    <p class="cfg-hint">按联系人维护独立的交流风格画像。融合优先级：关系画像 > 场景画像 > 核心人格。真人是"看到某个人决定怎么说话"。</p>
+                    <div id="relationshipList"><p class="cfg-hint">加载中...</p></div>
+                </div>
+            </div>
+
+            <!-- ====== Tab 5: 场景画像 ====== -->
+            <div class="bot-panel" id="panel-scene">
+                <div class="cfg-section">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">场景画像 (persona_scene_profile)</h3>
+                        <div class="gm-actions">
+                            <button class="btn-modal btn-modal-save" onclick="showAddScene()">新增</button>
+                            <button class="btn-modal btn-modal-save gm-refresh" onclick="loadScene()">刷新</button>
+                        </div>
+                    </div>
+                    <p class="cfg-hint">按群聊类型维护交流风格。场景类型：friend_group / work_chat / family / private / stranger。融合优先级低于关系画像。</p>
+                    <div id="sceneList"><p class="cfg-hint">加载中...</p></div>
+                </div>
+            </div>
+
+            <!-- ====== Tab 6: 当前状态 ====== -->
+            <div class="bot-panel" id="panel-current-state">
+                <div class="cfg-section">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">当前状态 + 人格稳定性</h3>
+                        <div class="gm-actions">
+                            <button class="btn-modal btn-modal-save" onclick="saveCurrentState()">保存</button>
+                        </div>
+                    </div>
+                    <p class="cfg-hint">当前状态（current_state_profile）：近 7 天的精力/压力/社交模式，作为 modifier 微调回复风格。<br>人格稳定性（persona_stability）：30 天内各维度变化幅度，高值 = 学习速度慢（防突变）。</p>
+                    <div id="currentStateForm"><p class="cfg-hint">加载中...</p></div>
+                </div>
+            </div>
+
+            <!-- ====== Tab 7: 学习快照 ====== -->
+            <div class="bot-panel" id="panel-snapshot">
+                <div class="cfg-section">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">学习快照 (persona_style_snapshot)</h3>
+                        <div class="gm-actions">
+                            <button class="btn-modal btn-modal-save gm-refresh" onclick="loadSnapshot()">刷新</button>
+                        </div>
+                    </div>
+                    <p class="cfg-hint">每次 StyleLearningService 定时学习产生的历史记录。用于 DriftDetector 对比 30 天趋势和效果回溯。仅支持删除（清理异常快照）。</p>
+                    <div id="snapshotList"><p class="cfg-hint">加载中...</p></div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ====== 通用编辑弹窗 ====== -->
+<div class="modal-overlay" id="editModal" style="display:none;">
+    <div class="modal-box" style="max-width:700px;">
+        <div class="modal-head">
+            <h3 id="modalTitle">编辑</h3>
+            <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body" id="modalBody" style="max-height:70vh;overflow-y:auto;"></div>
+        <div class="modal-foot" style="display:flex; gap:10px; justify-content:flex-end; padding:16px 20px;">
+            <button class="btn-modal btn-modal-cancel" onclick="closeModal()">取消</button>
+            <button class="btn-modal btn-modal-save" id="modalSaveBtn" onclick="saveModal()">保存</button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/ph-dialog.js}"></script>
+<script>
+const CSRF = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+const API = '/admin/api/model-params';
+
+// ===== Tab 切换 =====
+document.querySelectorAll('.bot-nav-item').forEach(item => {
+    item.addEventListener('click', function() {
+        document.querySelectorAll('.bot-nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.bot-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('panel-' + this.dataset.tab).classList.add('active');
+        var tab = this.dataset.tab;
+        if (tab === 'user-memory') loadUserMemory();
+        else if (tab === 'style-config') loadStyleConfig();
+        else if (tab === 'expression') loadExpression();
+        else if (tab === 'relationship') loadRelationship();
+        else if (tab === 'scene') loadScene();
+        else if (tab === 'current-state') loadCurrentState();
+        else if (tab === 'snapshot') loadSnapshot();
+    });
+});
+
+// ===== 通用 API 调用 =====
+function api(method, url, body) {
+    var opts = { method: method, headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF } };
+    if (body) opts.body = JSON.stringify(body);
+    return fetch(url, opts).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    }).catch(function(e) {
+        PHDialog.show({ icon: '❌', title: '请求失败', message: e.message || '网络错误，请重试', confirmText: '知道了' });
+        throw e;
+    });
+}
+
+// ===== 通用弹窗 =====
+var modalSaveFn = null;
+function openModal(title, fields, data, onSave) {
+    document.getElementById('modalTitle').textContent = title;
+    var html = '';
+    fields.forEach(function(f) {
+        var val = data && data[f.key] !== undefined ? data[f.key] : (f.default || '');
+        var color = f.dynamic ? 'color:#e67e22;' : '';
+        var badge = f.dynamic ? ' <span style="font-size:10px;background:#fef3e2;color:#e67e22;padding:1px 5px;border-radius:3px;">自动</span>' : '';
+        var hint = f.hint ? '<p class="cfg-hint" style="margin:2px 0 6px;font-size:11px;">' + f.hint + '</p>' : '';
+        if (f.type === 'textarea') {
+            html += '<label style="display:block;margin-bottom:12px;"><b style="' + color + '">' + f.label + '</b>' + badge + hint +
+                '<textarea class="m-input" id="mf_' + f.key + '" rows="3" style="width:100%;">' + escHtml(String(val)) + '</textarea></label>';
+        } else if (f.type === 'readonly') {
+            html += '<label style="display:block;margin-bottom:12px;"><b style="' + color + '">' + f.label + '</b>' + badge + hint +
+                '<input class="m-input" value="' + escHtml(String(val)) + '" readonly style="background:#f5f5f5;"></label>';
+        } else {
+            html += '<label style="display:block;margin-bottom:12px;"><b style="' + color + '">' + f.label + '</b>' + badge + hint +
+                '<input class="m-input" id="mf_' + f.key + '" value="' + escHtml(String(val)) + '" style="width:100%;"></label>';
+        }
+    });
+    document.getElementById('modalBody').innerHTML = html;
+    modalSaveFn = onSave;
+    document.getElementById('editModal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('editModal').style.display = 'none'; modalSaveFn = null; }
+function saveModal() { if (modalSaveFn) modalSaveFn(); }
+function mf(key) { var el = document.getElementById('mf_' + key); return el ? el.value : ''; }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function confirmDelete(msg, fn) {
+    PHDialog.confirm({ title: '确认删除', message: msg, icon: '🗑️', confirmText: '确认删除', cancelText: '取消', confirmStyle: 'danger', onConfirm: fn });
+}
+
+// ========================================================================
+//  Tab 1: 用户画像
+// ========================================================================
+var memoryFields = [
+    { key: 'wxid', label: 'wxid', hint: '微信唯一标识，新增后不可修改' },
+    { key: 'nickname', label: '昵称', hint: '群内显示名，用于 Prompt 中「聊天对象「XX」」。Pipeline 首次建画像时自动写入，可手动覆盖', dynamic: true },
+    { key: 'summary', label: '画像描述', hint: '一句话概括这个人（如：喜欢打游戏的程序员，说话直接）', type: 'textarea' },
+    { key: 'relationshipType', label: '关系类型', hint: 'friend / colleague / family / stranger' },
+    { key: 'intimacyScore', label: '亲密度', hint: '1-10，影响回复风格（高=随意，低=礼貌）' },
+    { key: 'communicationStyle', label: '交流风格', hint: '文字描述（如：互相调侃、正式克制）' }
+];
+function loadUserMemory() {
+    api('GET', API + '/user-memory').then(function(list) {
+        if (!list.length) { document.getElementById('memoryList').innerHTML = '<p class="cfg-hint">暂无用户画像</p>'; return; }
+        var html = '<table class="admin-table" style="width:100%;"><tr><th>wxid</th><th>昵称</th><th>关系</th><th>亲密度</th><th>记忆数</th><th>操作</th></tr>';
+        list.forEach(function(m) {
+            html += '<tr><td style="font-size:12px;">' + escHtml(m.wxid) + '</td><td>' + escHtml(m.nickname || '-') + '</td>' +
+                '<td>' + escHtml(m.relationshipType || '-') + '</td><td>' + (m.intimacyScore || '-') + '</td><td>' + (m.structuredMemoriesCount || 0) + '</td>' +
+                '<td><button class="btn-modal btn-modal-save" onclick="editMemory(' + m.id + ')">编辑</button> ' +
+                '<button class="btn-modal btn-modal-cancel" onclick="deleteMemory(' + m.id + ')">删除</button></td></tr>';
+        });
+        html += '</table>';
+        document.getElementById('memoryList').innerHTML = html;
+        window._memoryData = list;
+    });
+}
+function showAddMemory() {
+    openModal('新增用户画像', memoryFields, {}, function() {
+        var body = {}; memoryFields.forEach(function(f) { body[f.key] = mf(f.key); });
+        api('POST', API + '/user-memory', body).then(function(r) {
+            if (r.success) { closeModal(); loadUserMemory(); } else { PHDialog.show({ icon: '⚠️', title: '失败', message: r.message, confirmText: '知道了' }); }
+        });
+    });
+}
+function editMemory(id) {
+    var m = window._memoryData.find(function(x) { return x.id === id; });
+    if (!m) return;
+    var fields = memoryFields.map(function(f) { return f.key === 'wxid' ? Object.assign({}, f, { type: 'readonly' }) : f; });
+    openModal('编辑用户画像', fields, m, function() {
+        var body = {}; memoryFields.forEach(function(f) { if (f.key !== 'wxid') body[f.key] = mf(f.key); });
+        // 收集 structuredMemories 编辑结果
+        body.structuredMemories = collectMemories();
+        api('PUT', API + '/user-memory/' + id, body).then(function(r) {
+            if (r.success) { closeModal(); loadUserMemory(); } else { PHDialog.show({ icon: '⚠️', title: '失败', message: r.message, confirmText: '知道了' }); }
+        });
+    });
+    // 追加结构化记忆编辑区
+    var memories = m.structuredMemories || [];
+    var html = '<hr style="margin:16px 0;"><h4 style="margin:0 0 4px;">结构化记忆 (structured_memories)</h4>' +
+        '<p class="cfg-hint" style="font-size:11px;margin-bottom:8px;">每条记忆含类型、内容、重要性、置信度、TTL。AI 回复时通过 Memory RAG 检索注入 Prompt，实现"了解对方"。</p>' +
+        '<div id="memEntryList">';
+    memories.forEach(function(e, i) { html += memEntryHtml(i, e); });
+    html += '</div>' +
+        '<button class="btn-modal btn-modal-save" onclick="addMemEntry()" style="margin-top:8px;">+ 添加记忆条目</button>';
+    document.getElementById('modalBody').insertAdjacentHTML('beforeend', html);
+    window._memEntryCount = memories.length;
+}
+function memEntryHtml(idx, e) {
+    e = e || {};
+    var entryId = e.id || '';
+    return '<div style="border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:8px;background:#fafafa;" id="mem_entry_' + idx + '">' +
+        '<input type="hidden" id="me_id_' + idx + '" value="' + escHtml(entryId) + '">' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<label style="flex:1;min-width:100px;"><b>类型</b><p class="cfg-hint" style="font-size:10px;margin:1px 0 3px;">identity=身份 / preference=偏好 / episode=事件 / relationship=关系</p>' +
+            '<select class="m-input" id="me_type_' + idx + '" style="width:100%;">' +
+            '<option value="identity"' + (e.type === 'identity' ? ' selected' : '') + '>identity 身份</option>' +
+            '<option value="preference"' + (e.type === 'preference' ? ' selected' : '') + '>preference 偏好</option>' +
+            '<option value="episode"' + (e.type === 'episode' ? ' selected' : '') + '>episode 事件</option>' +
+            '<option value="relationship"' + (e.type === 'relationship' ? ' selected' : '') + '>relationship 关系</option></select></label>' +
+        '<label style="flex:2;min-width:200px;"><b>内容</b><p class="cfg-hint" style="font-size:10px;margin:1px 0 3px;">记忆文本，如"养了一只猫叫小花"</p>' +
+            '<input class="m-input" id="me_content_' + idx + '" value="' + escHtml(e.content || '') + '"></label>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">' +
+        '<label style="flex:1;"><b>重要性 (0-1)</b><p class="cfg-hint" style="font-size:10px;margin:1px 0 3px;">低于0.3会被过滤不存储</p>' +
+            '<input class="m-input" id="me_imp_' + idx + '" value="' + (e.importance !== undefined ? e.importance : 0.5) + '"></label>' +
+        '<label style="flex:1;"><b>置信度 (0-1)</b><p class="cfg-hint" style="font-size:10px;margin:1px 0 3px;">信息准确性的把握程度</p>' +
+            '<input class="m-input" id="me_conf_' + idx + '" value="' + (e.confidence !== undefined ? e.confidence : 0.7) + '"></label>' +
+        '<label style="flex:1;"><b>TTL (天)</b><p class="cfg-hint" style="font-size:10px;margin:1px 0 3px;">0=永久 / 30=月度 / 180=半年</p>' +
+            '<input class="m-input" id="me_ttl_' + idx + '" value="' + (e.ttlDays !== undefined ? e.ttlDays : 0) + '"></label>' +
+        '<label style="flex:0 0 auto;display:flex;align-items:flex-end;"><button class="btn-modal btn-modal-cancel" onclick="removeMemEntry(' + idx + ')">删除</button></label>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;margin-top:6px;font-size:11px;color:#999;">' +
+        '<span>ID: ' + escHtml(e.id || '自动生成') + '</span>' +
+        '<span>来源: ' + escHtml(e.source || '-') + '</span>' +
+        '<span>Prompt: ' + escHtml(e.promptVersion || '-') + '</span>' +
+        '</div></div>';
+}
+function addMemEntry() {
+    var idx = window._memEntryCount++;
+    document.getElementById('memEntryList').insertAdjacentHTML('beforeend', memEntryHtml(idx, {}));
+}
+function removeMemEntry(idx) {
+    var el = document.getElementById('mem_entry_' + idx);
+    if (el) el.remove();
+}
+function collectMemories() {
+    var list = [];
+    var container = document.getElementById('memEntryList');
+    if (!container) return list;
+    var entries = container.querySelectorAll('[id^="mem_entry_"]');
+    entries.forEach(function(div) {
+        var idx = div.id.replace('mem_entry_', '');
+        var typeEl = document.getElementById('me_type_' + idx);
+        var contentEl = document.getElementById('me_content_' + idx);
+        if (!typeEl || !contentEl || !contentEl.value.trim()) return;
+        var idEl = document.getElementById('me_id_' + idx);
+        var entryId = idEl ? idEl.value : '';
+        list.push({
+            type: typeEl.value,
+            content: contentEl.value.trim(),
+            importance: parseFloat(document.getElementById('me_imp_' + idx).value) || 0.5,
+            confidence: parseFloat(document.getElementById('me_conf_' + idx).value) || 0.7,
+            ttlDays: parseInt(document.getElementById('me_ttl_' + idx).value) || 0,
+            id: entryId || null
+        });
+    });
+    return list;
+}
+function deleteMemory(id) { confirmDelete('确定删除该用户画像？', function() { api('DELETE', API + '/user-memory/' + id).then(function() { loadUserMemory(); }); }); }
+
+// ========================================================================
+//  Tab 2: 人格维度
+// ========================================================================
+var styleFields = [
+    { key: 'humorScore', label: '幽默度 (humorScore)', hint: '0-1，越高回复越幽默。学习时按 Stability 加权融合', dynamic: true },
+    { key: 'sarcasmScore', label: '吐槽度 (sarcasmScore)', hint: '0-1，越高越爱调侃。学习时按 Stability 加权融合', dynamic: true },
+    { key: 'casualScore', label: '随意度 (casualScore)', hint: '0-1，越高越口语化。学习时按 Stability 加权融合', dynamic: true },
+    { key: 'warmthScore', label: '温暖度 (warmthScore)', hint: '0-1，越高越温暖共情。学习时按 Stability 加权融合', dynamic: true },
+    { key: 'formalScore', label: '正式度 (formalScore)', hint: '0-1，越高越书面（与随意度互补）。学习时直接取新值', dynamic: true },
+    { key: 'slangScore', label: '俚语密度 (slangScore)', hint: '0-1，越高越常用网络用语。学习时直接取新值', dynamic: true },
+    { key: 'avgLength', label: '平均长度 (avgLength)', hint: '整数，历史消息平均字符数。学习时自动统计', dynamic: true },
+    { key: 'lengthVariance', label: '长度方差 (lengthVariance)', hint: '数值越大越像真人（长短不一）。学习时自动统计', dynamic: true },
+    { key: 'expressionVariance', label: '表达方差 (expressionVariance)', hint: '数值越大表达形式越多样。学习时自动统计', dynamic: true },
+    { key: 'intimacyHumor', label: '亲密幽默度 (intimacyHumor)', hint: '0-1，对熟人更幽默的程度。学习时自动统计', dynamic: true },
+    { key: 'empathyHidden', label: '隐藏共情 (empathyHidden)', hint: '0-1，表面不在意但实际关心。学习时自动统计', dynamic: true },
+    { key: 'teasingAllowed', label: '调侃许可度 (teasingAllowed)', hint: '0-1，越高越接受互相调侃。学习时自动统计', dynamic: true },
+    { key: 'styleDescription', label: '风格描述 (styleDescription)', hint: 'LLM 提炼的风格文本，直接注入 System Prompt。消息变化时由 LLM 重新生成', type: 'textarea', dynamic: true },
+    { key: 'styleVersion', label: '风格版本 (styleVersion)', hint: '句式/用词变化版本号。消息 hash 变化时自动 +1', dynamic: true },
+    { key: 'personaVersion', label: '人格版本 (personaVersion)', hint: '价值观/性格变化版本号。核心维度变化 > 0.1 时自动 +1', dynamic: true }
+];
+var styleReadonly = [
+    { key: 'learningConfidence', label: '总置信度', hint: '只读：学习可信度 0-1，由 sample×time×scene×distribution 计算', dynamic: true },
+    { key: 'sampleFactor', label: '样本因子', hint: '只读：min(count/200, 1.0)', dynamic: true },
+    { key: 'timeSpanFactor', label: '时间跨度因子', hint: '只读：min(days/90, 1.0)', dynamic: true },
+    { key: 'sceneFactor', label: '场景因子', hint: '只读：min(scenes/4, 1.0)', dynamic: true },
+    { key: 'distributionFactor', label: '分布均匀度', hint: '只读：消息天数分布均匀度', dynamic: true },
+    { key: 'sampleCount', label: '样本总数', hint: '只读：学习用的消息数', dynamic: true },
+    { key: 'sceneCount', label: '场景数', hint: '只读：不同场景类型数', dynamic: true }
+];
+function loadStyleConfig() {
+    api('GET', API + '/style-config').then(function(d) {
+        if (!d.exists) { document.getElementById('styleConfigForm').innerHTML = '<p class="cfg-hint">尚无学习数据（需 StyleLearningService 运行一次）。可手动填写后保存。</p>'; return; }
+        var html = '';
+        // ── 核心人格维度 ──
+        html += '<h4 style="margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;">核心人格维度</h4>';
+        html += '<p class="cfg-hint" style="margin-bottom:10px;">四维人格模型，0-1 之间。由 LearnedStyleConfig 按置信度与 YAML 基础值加权融合。</p>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+        styleFields.slice(0, 4).forEach(function(f) { html += fieldHtml(f, d); });
+        html += '</div>';
+        // ── 表达模式 ──
+        html += '<h4 style="margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;">表达模式</h4>';
+        html += '<p class="cfg-hint" style="margin-bottom:10px;">控制输出风格的形式特征，随环境变化。</p>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+        styleFields.slice(4, 12).forEach(function(f) { html += fieldHtml(f, d); });
+        html += '</div>';
+        // ── 风格描述与版本 ──
+        html += '<h4 style="margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;">风格描述与版本</h4>';
+        html += '<div style="margin-bottom:12px;">' + fieldHtml(styleFields[12], d) + '</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+        styleFields.slice(13).forEach(function(f) { html += fieldHtml(f, d); });
+        html += '</div>';
+        // ── 置信度指标 ──
+        html += '<h4 style="margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;color:#888;">置信度指标（只读参考）</h4>';
+        html += '<p class="cfg-hint" style="margin-bottom:10px;">由 StyleLearningService 自动计算，反映学习数据的可信程度。</p>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">';
+        styleReadonly.forEach(function(f) {
+            var badge = f.dynamic ? ' <span style="font-size:10px;background:#fef3e2;color:#e67e22;padding:1px 5px;border-radius:3px;">自动</span>' : '';
+            html += '<label style="display:block;"><b style="color:#e67e22;">' + f.label + '</b>' + badge + '<p class="cfg-hint" style="margin:2px 0 6px;font-size:11px;">' + f.hint + '</p>' +
+                '<input class="m-input" value="' + (d[f.key] !== undefined ? d[f.key] : '') + '" readonly style="background:#f5f5f5;"></label>';
+        });
+        html += '</div>';
+        // ── 最后更新 ──
+        if (d.updatedAt) {
+            html += '<p class="cfg-hint" style="margin-top:16px;text-align:right;color:#999;">最后更新: ' + escHtml(String(d.updatedAt).substring(0, 19).replace('T', ' ')) + '</p>';
+        }
+        document.getElementById('styleConfigForm').innerHTML = html;
+        window._styleData = d;
+    });
+}
+function fieldHtml(f, d) {
+    var val = d && d[f.key] !== undefined ? d[f.key] : '';
+    var color = f.dynamic ? 'color:#e67e22;' : '';
+    var badge = f.dynamic ? ' <span style="font-size:10px;background:#fef3e2;color:#e67e22;padding:1px 5px;border-radius:3px;">自动</span>' : '';
+    if (f.type === 'textarea') {
+        return '<label style="display:block;margin-bottom:12px;"><b style="' + color + '">' + f.label + '</b>' + badge + '<p class="cfg-hint" style="margin:2px 0 6px;font-size:11px;">' + f.hint + '</p>' +
+            '<textarea class="m-input" id="sf_' + f.key + '" rows="3" style="width:100%;">' + escHtml(String(val)) + '</textarea></label>';
+    }
+    return '<label style="display:block;"><b style="' + color + '">' + f.label + '</b>' + badge + '<p class="cfg-hint" style="margin:2px 0 6px;font-size:11px;">' + f.hint + '</p>' +
+        '<input class="m-input" id="sf_' + f.key + '" value="' + escHtml(String(val)) + '" style="width:100%;"></label>';
+}
+function saveStyleConfig() {
+    var body = {};
+    styleFields.forEach(function(f) { var el = document.getElementById('sf_' + f.key); if (el) body[f.key] = el.value; });
+    api('PUT', API + '/style-config', body).then(function(r) {
+        if (r.success) { PHDialog.show({ icon: '✅', title: '成功', message: '人格维度已保存', confirmText: '好的' }); }
+    });
+}
+
+// ========================================================================
+//  Tab 3: 表达档案
+// ========================================================================
+var exprFields = [
+    { key: 'phrase', label: '表达短语', hint: '如"不是哥们"、"笑死"。学习时从消息中自动提取高频短语', dynamic: true },
+    { key: 'frequency', label: '频率 (0-1)', hint: '全局出现频率，越高越常用。学习时加权更新（70%旧+30%新）', dynamic: true },
+    { key: 'confidence', label: '置信度 (0-1)', hint: '该表达是否稳定出现。学习时 min(count/10, 1.0)', dynamic: true },
+    { key: 'intent', label: '意图标签', hint: '如 surprise / mock / confusion / greeting。学习不设置，需手动填写' },
+    { key: 'allowedScene', label: '允许场景', hint: '如 friend / work / all。学习时自动推断主导场景', dynamic: true },
+    { key: 'triggerPattern', label: '触发条件', hint: '如 unexpected_statement / question。学习不设置，需手动填写' },
+    { key: 'fatigueScore', label: '疲劳度 (0-1)', hint: '高值时 Prompt 会标记为"避免使用"。Pipeline 实时更新（使用升高，不用衰减×0.7）', dynamic: true },
+    { key: 'consecutiveUsed', label: '连续使用次数', hint: '最近连续使用了几次，影响疲劳度计算。Pipeline 实时更新', dynamic: true }
+];
+function loadExpression() {
+    api('GET', API + '/expression').then(function(list) {
+        if (!list.length) { document.getElementById('expressionList').innerHTML = '<p class="cfg-hint">暂无表达档案</p>'; return; }
+        var html = '<table class="admin-table" style="width:100%;"><tr><th>短语</th><th>频率</th><th>疲劳度</th><th>意图</th><th>场景</th><th>连续使用</th><th>操作</th></tr>';
+        list.forEach(function(e) {
+            html += '<tr><td><b>' + escHtml(e.phrase) + '</b></td><td>' + (e.frequency || 0).toFixed(2) + '</td>' +
+                '<td style="color:' + (e.fatigueScore > 0.6 ? '#d9534f' : '#5cb85c') + ';">' + (e.fatigueScore || 0).toFixed(2) + '</td>' +
+                '<td>' + escHtml(e.intent || '-') + '</td><td>' + escHtml(e.allowedScene || '-') + '</td>' +
+                '<td>' + (e.consecutiveUsed || 0) + '</td>' +
+                '<td><button class="btn-modal btn-modal-save" onclick="editExpression(' + e.id + ')">编辑</button> ' +
+                '<button class="btn-modal btn-modal-cancel" onclick="deleteExpression(' + e.id + ')">删除</button></td></tr>';
+        });
+        html += '</table>';
+        document.getElementById('expressionList').innerHTML = html;
+        window._exprData = list;
+    });
+}
+function showAddExpression() {
+    openModal('新增表达档案', exprFields, {}, function() {
+        var body = {}; exprFields.forEach(function(f) { body[f.key] = mf(f.key); });
+        api('POST', API + '/expression', body).then(function(r) {
+            if (r.success) { closeModal(); loadExpression(); } else { PHDialog.show({ icon: '⚠️', title: '失败', message: r.message, confirmText: '知道了' }); }
+        });
+    });
+}
+function editExpression(id) {
+    var e = window._exprData.find(function(x) { return x.id === id; });
+    if (!e) return;
+    openModal('编辑表达档案', exprFields, e, function() {
+        var body = {}; exprFields.forEach(function(f) { body[f.key] = mf(f.key); });
+        api('PUT', API + '/expression/' + id, body).then(function(r) {
+            if (r.success) { closeModal(); loadExpression(); } else { PHDialog.show({ icon: '⚠️', title: '失败', message: r.message, confirmText: '知道了' }); }
+        });
+    });
+    // 加载场景使用计数并追加到弹窗
+    api('GET', API + '/expression/' + id + '/scenes').then(function(scenes) {
+        var html = '<hr style="margin:16px 0;"><h4 style="margin:0 0 8px;">场景使用计数 (persona_expression_scene)</h4>' +
+            '<p class="cfg-hint" style="font-size:11px;">记录该表达在不同场景下的使用次数。用于区分"他喜欢用XX" vs "他在朋友场景用，工作场景从不用"。</p>';
+        if (scenes && scenes.length) {
+            html += '<div id="exprSceneList">';
+            scenes.forEach(function(s, i) {
+                html += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">' +
+                    '<input class="m-input" value="' + escHtml(s.sceneType) + '" style="width:120px;" id="es_type_' + i + '" placeholder="场景类型">' +
+                    '<input class="m-input" value="' + s.usageCount + '" style="width:80px;" id="es_count_' + i + '" placeholder="次数">' +
+                    '<button class="btn-modal btn-modal-save" onclick="saveExprScene(' + id + ',' + i + ')">保存</button>' +
+                    '<button class="btn-modal btn-modal-cancel" onclick="deleteExprScene(' + s.id + ',' + id + ')">删除</button>' +
+                    '</div>';
+            });
+            html += '</div>';
+        } else {
+            html += '<p class="cfg-hint">暂无场景使用记录</p>';
+        }
+        html += '<div style="display:flex;gap:8px;margin-top:8px;">' +
+            '<input class="m-input" id="es_new_type" placeholder="新场景类型（friend/work/family）" style="width:200px;">' +
+            '<input class="m-input" id="es_new_count" placeholder="次数" style="width:80px;" value="0">' +
+            '<button class="btn-modal btn-modal-save" onclick="addExprScene(' + id + ')">添加</button></div>';
+        document.getElementById('modalBody').insertAdjacentHTML('beforeend', html);
+    });
+}
+function saveExprScene(exprId, idx) {
+    var sceneType = document.getElementById('es_type_' + idx).value;
+    var usageCount = document.getElementById('es_count_' + idx).value;
+    api('POST', API + '/expression/' + exprId + '/scenes', { sceneType: sceneType, usageCount: usageCount }).then(function(r) {
+        if (r.success) { PHDialog.show({ icon: '✅', title: '成功', message: '场景计数已保存', confirmText: '好的' }); }
+    });
+}
+function addExprScene(exprId) {
+    var sceneType = document.getElementById('es_new_type').value;
+    var usageCount = document.getElementById('es_new_count').value;
+    if (!sceneType) { PHDialog.show({ icon: '⚠️', title: '提示', message: '请输入场景类型', confirmText: '知道了' }); return; }
+    api('POST', API + '/expression/' + exprId + '/scenes', { sceneType: sceneType, usageCount: usageCount }).then(function(r) {
+        if (r.success) {
+            // 重新加载场景区域（不关闭弹窗）
+            document.getElementById('es_new_type').value = '';
+            document.getElementById('es_new_count').value = '0';
+            refreshExprScenes(exprId);
+        }
+    });
+}
+function refreshExprScenes(exprId) {
+    api('GET', API + '/expression/' + exprId + '/scenes').then(function(scenes) {
+        var oldList = document.getElementById('exprSceneList');
+        var html = '<div id="exprSceneList">';
+        if (scenes && scenes.length) {
+            scenes.forEach(function(s, i) {
+                html += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">' +
+                    '<input class="m-input" value="' + escHtml(s.sceneType) + '" style="width:120px;" id="es_type_' + i + '" placeholder="场景类型">' +
+                    '<input class="m-input" value="' + s.usageCount + '" style="width:80px;" id="es_count_' + i + '" placeholder="次数">' +
+                    '<button class="btn-modal btn-modal-save" onclick="saveExprScene(' + exprId + ',' + i + ')">保存</button>' +
+                    '<button class="btn-modal btn-modal-cancel" onclick="deleteExprScene(' + s.id + ',' + exprId + ')">删除</button>' +
+                    '</div>';
+            });
+        } else { html += '<p class="cfg-hint">暂无场景使用记录</p>'; }
+        html += '</div>';
+        if (oldList) oldList.outerHTML = html;
+    });
+}
+function deleteExprScene(sceneId, exprId) {
+    api('DELETE', API + '/expression-scene/' + sceneId).then(function() { refreshExprScenes(exprId); });
+}
+function deleteExpression(id) { confirmDelete('确定删除该表达档案？', function() { api('DELETE', API + '/expression/' + id).then(function() { loadExpression(); }); }); }
+
+// ========================================================================
+//  Tab 4: 关系画像
+// ========================================================================
+var relFields = [
+    { key: 'contactName', label: '联系人名称', hint: '昵称或群名，用于匹配聊天对象。学习时用群名作为 key', dynamic: true },
+    { key: 'relationshipType', label: '关系类型', hint: 'friend / colleague / family / stranger。学习时默认 "group"', dynamic: true },
+    { key: 'intimacyLevel', label: '亲密度 (1-10)', hint: '1=陌生 10=非常亲密。学习默认 5，需手动调整' },
+    { key: 'humorScore', label: '幽默度 (0-1)', hint: '与此人交流时的幽默程度。学习时 70%旧+30%新 增量融合', dynamic: true },
+    { key: 'sarcasmScore', label: '吐槽度 (0-1)', hint: '与此人交流时的调侃程度。学习时 70%旧+30%新 增量融合', dynamic: true },
+    { key: 'warmthScore', label: '温暖度 (0-1)', hint: '与此人交流时的温暖程度。学习时 70%旧+30%新 增量融合', dynamic: true },
+    { key: 'formalScore', label: '正式度 (0-1)', hint: '与此人交流时的正式程度。学习时直接取新值', dynamic: true },
+    { key: 'communicationStyle', label: '交流风格描述', hint: '如"互相嘲讽"、"正式克制"。学习时根据分数自动推断', dynamic: true },
+    { key: 'sampleCount', label: '样本数', hint: '用于计算置信度的消息样本数。学习时自动累加', dynamic: true }
+];
+function loadRelationship() {
+    api('GET', API + '/relationship').then(function(list) {
+        if (!list.length) { document.getElementById('relationshipList').innerHTML = '<p class="cfg-hint">暂无关系画像</p>'; return; }
+        var html = '<table class="admin-table" style="width:100%;"><tr><th>联系人</th><th>关系</th><th>亲密度</th><th>幽默</th><th>吐槽</th><th>操作</th></tr>';
+        list.forEach(function(r) {
+            html += '<tr><td><b>' + escHtml(r.contactName) + '</b></td><td>' + escHtml(r.relationshipType || '-') + '</td>' +
+                '<td>' + (r.intimacyLevel || '-') + '</td><td>' + (r.humorScore || 0).toFixed(2) + '</td><td>' + (r.sarcasmScore || 0).toFixed(2) + '</td>' +
+                '<td><button class="btn-modal btn-modal-save" onclick="editRelationship(' + r.id + ')">编辑</button> ' +
+                '<button class="btn-modal btn-modal-cancel" onclick="deleteRelationship(' + r.id + ')">删除</button></td></tr>';
+        });
+        html += '</table>';
+        document.getElementById('relationshipList').innerHTML = html;
+        window._relData = list;
+    });
+}
+function showAddRelationship() {
+    openModal('新增关系画像', relFields, {}, function() {
+        var body = {}; relFields.forEach(function(f) { body[f.key] = mf(f.key); });
+        api('POST', API + '/relationship', body).then(function(r) {
+            if (r.success) { closeModal(); loadRelationship(); } else { PHDialog.show({ icon: '⚠️', title: '失败', message: r.message, confirmText: '知道了' }); }
+        });
+    });
+}
+function editRelationship(id) {
+    var r = window._relData.find(function(x) { return x.id === id; });
+    if (!r) return;
+    openModal('编辑关系画像', relFields, r, function() {
+        var body = {}; relFields.forEach(function(f) { body[f.key] = mf(f.key); });
+        api('PUT', API + '/relationship/' + id, body).then(function(r) {
+            if (r.success) { closeModal(); loadRelationship(); } else { PHDialog.show({ icon: '⚠️', title: '失败', message: r.message, confirmText: '知道了' }); }
+        });
+    });
+}
+function deleteRelationship(id) { confirmDelete('确定删除该关系画像？', function() { api('DELETE', API + '/relationship/' + id).then(function() { loadRelationship(); }); }); }
+
+// ========================================================================
+//  Tab 5: 场景画像
+// ========================================================================
+var sceneFields = [
+    { key: 'sceneType', label: '场景类型', hint: 'friend_group / work_chat / family / private / stranger。学习时从群名自动推断', dynamic: true },
+    { key: 'humorScore', label: '幽默度 (0-1)', hint: '此场景下的幽默程度。学习时 70%旧+30%新', dynamic: true },
+    { key: 'sarcasmScore', label: '吐槽度 (0-1)', hint: '此场景下的调侃程度。学习时 70%旧+30%新', dynamic: true },
+    { key: 'warmthScore', label: '温暖度 (0-1)', hint: '此场景下的温暖程度。学习时 70%旧+30%新', dynamic: true },
+    { key: 'casualScore', label: '随意度 (0-1)', hint: '此场景下的口语化程度。学习时 70%旧+30%新', dynamic: true },
+    { key: 'formalScore', label: '正式度 (0-1)', hint: '此场景下的正式程度。学习时直接取新值', dynamic: true },
+    { key: 'sampleCount', label: '样本数', hint: '用于计算置信度的消息样本数。学习时自动累加', dynamic: true }
+];
+function loadScene() {
+    api('GET', API + '/scene').then(function(list) {
+        if (!list.length) { document.getElementById('sceneList').innerHTML = '<p class="cfg-hint">暂无场景画像</p>'; return; }
+        var html = '<table class="admin-table" style="width:100%;"><tr><th>场景</th><th>幽默</th><th>吐槽</th><th>温暖</th><th>随意</th><th>操作</th></tr>';
+        list.forEach(function(s) {
+            html += '<tr><td><b>' + escHtml(s.sceneType) + '</b></td><td>' + (s.humorScore || 0).toFixed(2) + '</td><td>' + (s.sarcasmScore || 0).toFixed(2) + '</td>' +
+                '<td>' + (s.warmthScore || 0).toFixed(2) + '</td><td>' + (s.casualScore || 0).toFixed(2) + '</td>' +
+                '<td><button class="btn-modal btn-modal-save" onclick="editScene(' + s.id + ')">编辑</button> ' +
+                '<button class="btn-modal btn-modal-cancel" onclick="deleteScene(' + s.id + ')">删除</button></td></tr>';
+        });
+        html += '</table>';
+        document.getElementById('sceneList').innerHTML = html;
+        window._sceneData = list;
+    });
+}
+function showAddScene() {
+    openModal('新增场景画像', sceneFields, {}, function() {
+        var body = {}; sceneFields.forEach(function(f) { body[f.key] = mf(f.key); });
+        api('POST', API + '/scene', body).then(function(r) {
+            if (r.success) { closeModal(); loadScene(); } else { PHDialog.show({ icon: '⚠️', title: '失败', message: r.message, confirmText: '知道了' }); }
+        });
+    });
+}
+function editScene(id) {
+    var s = window._sceneData.find(function(x) { return x.id === id; });
+    if (!s) return;
+    openModal('编辑场景画像', sceneFields, s, function() {
+        var body = {}; sceneFields.forEach(function(f) { body[f.key] = mf(f.key); });
+        api('PUT', API + '/scene/' + id, body).then(function(r) {
+            if (r.success) { closeModal(); loadScene(); } else { PHDialog.show({ icon: '⚠️', title: '失败', message: r.message, confirmText: '知道了' }); }
+        });
+    });
+}
+function deleteScene(id) { confirmDelete('确定删除该场景画像？', function() { api('DELETE', API + '/scene/' + id).then(function() { loadScene(); }); }); }
+
+// ========================================================================
+//  Tab 6: 当前状态
+// ========================================================================
+var stateFields = [
+    { key: 'energy', label: '精力 (energy)', hint: '0-1，高=活跃，低=低落。学习时基于近7天消息活跃度自动推断', dynamic: true },
+    { key: 'stress', label: '压力 (stress)', hint: '0-1，高=压力大。学习时基于短消息占比+活跃度推断', dynamic: true },
+    { key: 'socialMode', label: '社交模式 (socialMode)', hint: '0-1，高=社交活跃，低=独处。学习时基于近7天活跃群数推断', dynamic: true },
+    { key: 'messageCount7d', label: '近7天消息数', hint: '整数，影响活跃度判断。学习时自动统计', dynamic: true },
+    { key: 'stateVersion', label: '状态版本号', hint: '整数，学习时每天最多+1', dynamic: true }
+];
+var stabilityFields = [
+    { key: 'humorStability', label: '幽默度稳定性 (0-1)', hint: '1=稳定不变，0=剧烈波动。DriftDetector 追踪30天变化幅度，高值→学习速度慢', dynamic: true },
+    { key: 'sarcasmStability', label: '吐槽度稳定性 (0-1)', hint: '同上，控制吐槽维度的学习速度。DriftDetector 自动更新', dynamic: true },
+    { key: 'warmthStability', label: '温暖度稳定性 (0-1)', hint: '同上，控制温暖维度的学习速度。DriftDetector 自动更新', dynamic: true }
+];
+function loadCurrentState() {
+    api('GET', API + '/current-state').then(function(d) {
+        var html = '<h4 style="margin:0 0 8px;">当前状态 (current_state_profile)</h4><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+        stateFields.forEach(function(f) {
+            var val = d.stateExists ? (d[f.key] !== undefined ? d[f.key] : '') : '';
+            html += fieldHtml2('cs_', f, val);
+        });
+        html += '</div><h4 style="margin:16px 0 8px;">人格稳定性 (persona_stability)</h4><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">';
+        stabilityFields.forEach(function(f) {
+            var val = d.stabilityExists ? (d[f.key] !== undefined ? d[f.key] : '') : '';
+            html += fieldHtml2('ps_', f, val);
+        });
+        html += '</div>';
+        document.getElementById('currentStateForm').innerHTML = html;
+    });
+}
+function fieldHtml2(prefix, f, val) {
+    var color = f.dynamic ? 'color:#e67e22;' : '';
+    var badge = f.dynamic ? ' <span style="font-size:10px;background:#fef3e2;color:#e67e22;padding:1px 5px;border-radius:3px;">自动</span>' : '';
+    return '<label><b style="' + color + '">' + f.label + '</b>' + badge + '<p class="cfg-hint" style="margin:2px 0 6px;font-size:11px;">' + f.hint + '</p>' +
+        '<input class="m-input" id="' + prefix + f.key + '" value="' + escHtml(String(val)) + '"></label>';
+}
+function saveCurrentState() {
+    var body = {};
+    stateFields.forEach(function(f) { var el = document.getElementById('cs_' + f.key); if (el) body[f.key] = el.value; });
+    stabilityFields.forEach(function(f) { var el = document.getElementById('ps_' + f.key); if (el) body[f.key] = el.value; });
+    api('PUT', API + '/current-state', body).then(function(r) {
+        if (r.success) { PHDialog.show({ icon: '✅', title: '成功', message: '当前状态已保存', confirmText: '好的' }); }
+    });
+}
+
+// ========================================================================
+//  Tab 7: 学习快照
+// ========================================================================
+function loadSnapshot() {
+    api('GET', API + '/snapshot').then(function(list) {
+        if (!list.length) { document.getElementById('snapshotList').innerHTML = '<p class="cfg-hint">暂无学习快照</p>'; return; }
+        var html = '<table class="admin-table" style="width:100%;"><tr><th>ID</th><th>版本</th><th>幽默</th><th>吐槽</th><th>随意</th><th>温暖</th><th>置信度</th><th>样本</th><th>触发</th><th>时间</th><th>操作</th></tr>';
+        list.forEach(function(s) {
+            html += '<tr><td>' + s.id + '</td><td>s' + s.styleVersion + '/p' + s.personaVersion + '</td>' +
+                '<td>' + (s.humorScore || 0).toFixed(2) + '</td><td>' + (s.sarcasmScore || 0).toFixed(2) + '</td>' +
+                '<td>' + (s.casualScore || 0).toFixed(2) + '</td><td>' + (s.warmthScore || 0).toFixed(2) + '</td>' +
+                '<td>' + (s.learningConfidence || 0).toFixed(2) + '</td><td>' + (s.sampleCount || 0) + '</td>' +
+                '<td style="font-size:12px;">' + escHtml(s.trigger || '-') + '</td>' +
+                '<td style="font-size:12px;">' + (s.createdAt ? s.createdAt.substring(0, 16).replace('T', ' ') : '-') + '</td>' +
+                '<td><button class="btn-modal btn-modal-cancel" onclick="deleteSnapshot(' + s.id + ')">删除</button></td></tr>';
+        });
+        html += '</table>';
+        document.getElementById('snapshotList').innerHTML = html;
+    });
+}
+function deleteSnapshot(id) { confirmDelete('确定删除该学习快照？', function() { api('DELETE', API + '/snapshot/' + id).then(function() { loadSnapshot(); }); }); }
+
+// ===== 初始化 =====
+loadUserMemory();
+</script>
+</body>
+</html>
