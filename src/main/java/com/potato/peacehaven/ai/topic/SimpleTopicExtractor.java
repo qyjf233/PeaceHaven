@@ -53,11 +53,20 @@ public class SimpleTopicExtractor implements TopicExtractor {
             "谢谢", "感谢", "辛苦", "客气", "请问", "问题", "情况"
     );
 
+    /** @提及 正则（微信格式：@名字 + 特殊空白符 U+2005 或普通空格） */
+    private static final Pattern AT_MENTION_PATTERN = Pattern.compile(
+            "@[\\w\\u4e00-\\u9fa5]+[\\u2005\\u200B\\s]*"
+    );
+
     @Override
     public String extract(String content) {
         if (content == null || content.isBlank()) return null;
 
-        String trimmed = content.trim();
+        // 0. 去除 @提及（@薯条君 等不算话题）
+        String stripped = AT_MENTION_PATTERN.matcher(content).replaceAll("").trim();
+        if (stripped.isBlank()) return null;
+
+        String trimmed = stripped;
 
         // 1. 纯语气消息过滤
         String normalized = trimmed.toLowerCase().replaceAll("[\\s!！。.]+", "");
