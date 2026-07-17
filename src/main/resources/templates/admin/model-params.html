@@ -67,7 +67,7 @@
                     <div class="gm-header">
                         <h3 class="cfg-title">人格维度 (learned_style_config)</h3>
                         <div class="gm-actions">
-                            <button class="btn-modal" onclick="retrainPersona()" style="background:#e67e22;color:#fff;margin-right:8px;">重新训练</button>
+                            <button class="btn-modal" id="retrainBtn" onclick="retrainPersona()" style="background:#e67e22;color:#fff;margin-right:8px;">重新训练</button>
                             <button class="btn-modal btn-modal-save" onclick="saveStyleConfig()">保存</button>
                         </div>
                     </div>
@@ -450,16 +450,28 @@ function saveStyleConfig() {
     });
 }
 function retrainPersona() {
-    PHDialog.confirm({ icon: '⚠️', title: '重新训练', message: '将强制重新运行学习流程，生成新的 Persona Observation。会消耗一次 LLM 调用。确认？', confirmText: '开始训练', cancelText: '取消' }).then(function() {
+    PHDialog.confirm({ icon: '⚠️', title: '重新训练', message: '将强制重新运行学习流程，生成新的 Persona Observation。会消耗一次 LLM 调用（约 10-30 秒）。确认？', confirmText: '开始训练', cancelText: '取消', onConfirm: function() {
+        var btn = document.getElementById('retrainBtn');
+        btn.disabled = true;
+        btn.textContent = '训练中...';
+        btn.style.opacity = '0.6';
         api('POST', API + '/style-config/retrain').then(function(r) {
+            btn.disabled = false;
+            btn.textContent = '重新训练';
+            btn.style.opacity = '1';
             if (r.success) {
                 PHDialog.show({ icon: '✅', title: '训练完成', message: r.message + (r.hasObservation ? '（' + r.observationLength + ' 字符）' : ''), confirmText: '好的' });
                 loadStyleConfig();
             } else {
                 PHDialog.show({ icon: '❌', title: '训练失败', message: r.error || '未知错误', confirmText: '好的' });
             }
+        }).catch(function(err) {
+            btn.disabled = false;
+            btn.textContent = '重新训练';
+            btn.style.opacity = '1';
+            PHDialog.show({ icon: '❌', title: '训练失败', message: err.message || '网络错误', confirmText: '好的' });
         });
-    });
+    }});
 }
 
 // ========================================================================
