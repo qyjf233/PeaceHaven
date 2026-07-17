@@ -275,19 +275,51 @@ public class AiReplyPipeline {
         log.debug("[Pipeline] 模拟人类延迟 {}ms", delayMs);
         Thread.sleep(delayMs);
 
-        // ===== 12. 发送消息 =====
+        // ===== 12. 拆分并发送消息（按换行拆分，逐条发送） =====
         String sendTarget = (chatroomId != null && !chatroomId.isBlank()) ? chatroomId : senderWxid;
         boolean isGroupChat = chatroomId != null && !chatroomId.isBlank();
 
-        var resp = wechatApiService.sendText(sendTarget, finalReply);
-        if (resp.isSuccess()) {
-            log.info("[Pipeline] 发送成功 target={}, reply={}", sendTarget,
-                    finalReply.length() > 50 ? finalReply.substring(0, 50) + "..." : finalReply);
-            // 注册 AI 回复指纹
-            aiReplyTracker.register(finalReply);
+        // 按换行拆分为多条消息气泡（过滤空行）
+        String[] bubbleArr = finalReply.split("\\n+");
+        List<String> bubbleList = new java.util.ArrayList<>();
+        for (String b : bubbleArr) {
+            String trimmed = b.trim();
+            if (!trimmed.isEmpty()) bubbleList.add(trimmed);
+        }
+        if (bubbleList.isEmpty()) {
+            log.warn("[Pipeline] 拆分后无有效消息，跳过发送");
+            return;
+        }
+
+        boolean sendSuccess = true;
+        for (int i = 0; i < bubbleList.size(); i++) {
+            String msg = bubbleList.get(i);
+
+            // 第一条消息用初始延迟，后续消息间加短延迟（0.5-1.5s）模拟逐条打字
+            if (i > 0) {
+                long bubbleDelay = ThreadLocalRandom.current().nextLong(500, 1501);
+                Thread.sleep(bubbleDelay);
+            }
+
+            var resp = wechatApiService.sendText(sendTarget, msg);
+            if (resp.isSuccess()) {
+                log.info("[Pipeline] 发送成功 [{}/{}] target={}, msg={}",
+                        i + 1, bubbleList.size(), sendTarget,
+                        msg.length() > 50 ? msg.substring(0, 50) + "..." : msg);
+                // 注册 AI 回复指纹（每条都注册）
+                aiReplyTracker.register(msg);
+            } else {
+                log.warn("[Pipeline] 发送失败 [{}/{}] target={}, msg={}",
+                        i + 1, bubbleList.size(), sendTarget, resp.getMsg());
+                sendSuccess = false;
+                break; // 发送失败则停止后续消息
+            }
+        }
+
+        if (sendSuccess) {
             // 更新决策统计
             decisionService.recordReply(chatroomId != null ? chatroomId : senderWxid);
-            // 记录 AI 回复历史（含话题标签）
+            // 记录 AI 回复历史（含话题标签，用完整回复）
             if (topicAware) {
                 aiReplyHistory.record(finalReply, currentTopic);
             }
@@ -307,8 +339,6 @@ public class AiReplyPipeline {
             } catch (Exception e) {
                 log.warn("[Pipeline] 记忆提取失败: {}", e.getMessage());
             }
-        } else {
-            log.warn("[Pipeline] 发送失败: target={}, msg={}", sendTarget, resp.getMsg());
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
