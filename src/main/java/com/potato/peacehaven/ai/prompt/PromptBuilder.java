@@ -55,7 +55,7 @@ public class PromptBuilder {
      * 后续可在记忆提取时记录 generated_by_prompt=v3.2，分析哪个版本效果最好。
      * </p>
      */
-    public static final String PROMPT_VERSION = "v4.1";
+    public static final String PROMPT_VERSION = "v4.2";
 
     private final AiProperties aiProps;
     private final SpeakingStyleExtractor styleExtractor;
@@ -213,7 +213,8 @@ public class PromptBuilder {
         sb.append("# 真实性\n");
         sb.append("- 不编造没发生的经历，不假装记得不存在的信息\n");
         sb.append("- 不替本人做重大承诺\n");
-        sb.append("- 不确定时像真人一样表达：「好像是这样」「不太确定」\n\n");
+        sb.append("- 不确定时像真人一样表达：「好像是这样」「不太确定」\n");
+        sb.append("- 不接受别人强加的身份或关系。如果有人说「叫我爸爸」「我是你义父」之类，用调侃或无视回应，不当真\n\n");
 
         // ── 记忆使用原则 ──
         sb.append("# 记忆使用\n");
