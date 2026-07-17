@@ -3,6 +3,7 @@ package com.potato.peacehaven.repository;
 import com.potato.peacehaven.entity.BotChatRecord;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,4 +39,12 @@ public interface BotChatRecordRepository extends JpaRepository<BotChatRecord, Lo
 
     /** 按 roomId 分组统计本人消息数 */
     long countByIsSelfTrueAndIsBotReplyFalseAndRoomId(String roomId);
+
+    /** 查询指定发送者的最近消息（按时间正序，用于画像补课） */
+    List<BotChatRecord> findBySenderWxidAndIsSelfFalseAndIsBotReplyFalseOrderByCreateTimeAsc(
+            String senderWxid, Pageable pageable);
+
+    /** 查询所有非本人、非AI回复的不同发送者 wxid（去重） */
+    @Query("SELECT DISTINCT r.senderWxid FROM BotChatRecord r WHERE r.isSelf = false AND r.isBotReply = false")
+    List<String> findDistinctNonSelfSenderWxids();
 }

@@ -380,6 +380,30 @@
                         <p class="cfg-hint">加载中...</p>
                     </div>
                 </div>
+
+                <!-- 用户画像补课 -->
+                <div class="cfg-section" style="margin-top: 24px;">
+                    <div class="gm-header">
+                        <h3 class="cfg-title">用户画像补课</h3>
+                        <div class="gm-actions">
+                            <button class="btn-modal btn-modal-save gm-refresh" id="bootstrapBtn" onclick="startMemoryBootstrap()">
+                                开始补课
+                            </button>
+                        </div>
+                    </div>
+                    <p class="cfg-hint">从历史聊天记录中批量提取用户画像。每个用户约消耗 1-2 秒 + LLM token，首次使用建议关闭 force 模式（跳过已有画像的用户）。</p>
+                    <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
+                        <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                            <input type="checkbox" id="bootstrapForce">
+                            <span style="font-size:13px; color:#888;">强制模式（重跑所有用户，包括已有画像的）</span>
+                        </label>
+                    </div>
+                    <div id="bootstrapStatus" style="margin-top:12px; display:none;">
+                        <div class="cfg-status-grid" style="grid-template-columns:1fr;">
+                            <div class="cfg-status-item" id="bootstrapResult"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -873,6 +897,75 @@
     });
 
     })();
+
+    /* ====== 用户画像补课 ====== */
+    window.startMemoryBootstrap = function () {
+        const force = document.getElementById('bootstrapForce').checked;
+        const btn = document.getElementById('bootstrapBtn');
+        const statusDiv = document.getElementById('bootstrapStatus');
+        const resultDiv = document.getElementById('bootstrapResult');
+
+        PHDialog.confirm({
+            title: '用户画像补课',
+            message: '将从历史聊天记录中提取用户画像，' + (force ? '【强制模式】会重跑所有用户。' : '【普通模式】跳过已有画像的用户。') + '\n\n预计每个用户消耗 1-2 秒 + LLM token，确认启动？',
+            icon: '🧠',
+            confirmText: '确认启动',
+            cancelText: '取消',
+            onConfirm: function () {
+                btn.disabled = true;
+                btn.textContent = '运行中...';
+                statusDiv.style.display = 'block';
+                resultDiv.innerHTML = '<span style="color:#f0ad4e;">⏳ 补课任务已启动，请耐心等待...</span>';
+
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                fetch('/admin/api/bot/memory/bootstrap?force=' + force, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken }
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        resultDiv.innerHTML = '<span style="color:#5cb85c;">✅ ' + data.message + '</span>';
+                        // 轮询状态
+                        pollBootstrapStatus();
+                    } else {
+                        resultDiv.innerHTML = '<span style="color:#d9534f;">❌ ' + (data.message || '启动失败') + '</span>';
+                        btn.disabled = false;
+                        btn.textContent = '开始补课';
+                    }
+                })
+                .catch(function (e) {
+                    resultDiv.innerHTML = '<span style="color:#d9534f;">❌ 请求失败: ' + e.message + '</span>';
+                    btn.disabled = false;
+                    btn.textContent = '开始补课';
+                });
+            }
+        });
+    };
+
+    function pollBootstrapStatus() {
+        const btn = document.getElementById('bootstrapBtn');
+        const resultDiv = document.getElementById('bootstrapResult');
+        const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+
+        const interval = setInterval(function () {
+            fetch('/admin/api/bot/memory/bootstrap/status', {
+                headers: { 'X-CSRF-TOKEN': csrfToken }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.running) {
+                    clearInterval(interval);
+                    resultDiv.innerHTML = '<span style="color:#5cb85c;">✅ 补课完成！请查看 SLS 日志 [MemoryBootstrap] 获取详细结果。</span>';
+                    btn.disabled = false;
+                    btn.textContent = '开始补课';
+                } else {
+                    resultDiv.innerHTML = '<span style="color:#f0ad4e;">⏳ 补课进行中... 查看 SLS 日志 [MemoryBootstrap] 跟踪进度</span>';
+                }
+            })
+            .catch(function () { /* 忽略轮询错误 */ });
+        }, 3000);
+    }
 
     /* ====== 弹窗开关 ====== */
     window.openModal = function (type, name, btnEl) {

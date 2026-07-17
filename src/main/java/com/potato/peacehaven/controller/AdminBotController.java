@@ -1,5 +1,6 @@
 package com.potato.peacehaven.controller;
 
+import com.potato.peacehaven.ai.memory.MemoryBootstrapService;
 import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.entity.*;
 import com.potato.peacehaven.repository.*;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Controller
@@ -37,6 +39,7 @@ public class AdminBotController {
     private final WechatApiConfigService wechatApiConfigService;
     private final AdminOperationLogService logService;
     private final AiWhitelistService aiWhitelistService;
+    private final MemoryBootstrapService memoryBootstrapService;
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
     @GetMapping("/bot")
@@ -994,5 +997,36 @@ public class AdminBotController {
             return Map.of("success", true, "message", "已更新");
         }
         return Map.of("success", false, "message", "条目不存在");
+    }
+
+    // ===== 用户画像补课 =====
+
+    /**
+     * 从历史聊天记录批量提取用户画像（补课功能）
+     * <p>
+     * 注意：会大量调用 LLM，每个用户约消耗 1-2s + 若干 token。
+     * 建议仅在首次初始化或修复 bug 后使用一次。
+     * </p>
+     *
+     * @param force 是否强制重新处理已有画像的用户（默认 false）
+     */
+    @PostMapping("/api/bot/memory/bootstrap")
+    @ResponseBody
+    public Map<String, Object> bootstrapMemory(
+            @RequestParam(defaultValue = "false") boolean force,
+            HttpServletRequest request) {
+        logService.record("用户画像", "补课", "force=" + force, request);
+        // 异步执行，避免 HTTP 超时
+        CompletableFuture.runAsync(() -> memoryBootstrapService.bootstrap(force));
+        return Map.of("success", true, "message", "补课任务已启动，查看日志 [MemoryBootstrap] 跟踪进度");
+    }
+
+    /**
+     * 查询补课任务状态
+     */
+    @GetMapping("/api/bot/memory/bootstrap/status")
+    @ResponseBody
+    public Map<String, Object> bootstrapStatus() {
+        return Map.of("running", memoryBootstrapService.isRunning());
     }
 }
