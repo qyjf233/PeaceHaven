@@ -49,7 +49,6 @@ public class ContextRetrievalService {
 
         return records.stream()
                 .filter(r -> r.getContent() != null && !r.getContent().isBlank())
-                .filter(r -> !Boolean.TRUE.equals(r.getIsBotReply())) // 排除 AI 回复，防止风格回流
                 .map(r -> ContextMessage.builder()
                         .senderNick(r.getSenderNick() != null ? r.getSenderNick() : r.getSenderWxid())
                         .senderWxid(r.getSenderWxid())
@@ -79,6 +78,37 @@ public class ContextRetrievalService {
                     return prefix + ": " + m.getContent();
                 })
                 .collect(Collectors.joining("\n"));
+    }
+
+    /**
+     * 持久化 bot 的 AI 回复到聊天记录表（用于下次上下文拉取，保持话题延续性）
+     * <p>
+     * 标记 isSelf=true + isBotReply=true，这样：
+     * - 上下文拉取时可以看到 bot 刚才说了什么（话题延续）
+     * - Memory RAG / Style RAG 不会把 AI 回复当成本人真实发言
+     * </p>
+     */
+    public void saveBotReply(String roomId, String roomName, String content) {
+        try {
+            BotChatRecord record = BotChatRecord.builder()
+                    .msgId(System.currentTimeMillis()) // bot 回复无真实 msgId，用时间戳
+                    .appId("bot-reply")
+                    .roomId(roomId)
+                    .roomName(roomName)
+                    .senderWxid("self")
+                    .senderNick("我")
+                    .isSelf(true)
+                    .isBotReply(true)
+                    .msgType(1)
+                    .content(content)
+                    .createTime(System.currentTimeMillis() / 1000)
+                    .build();
+            chatRecordRepo.save(record);
+            log.debug("[Context] 已存储 bot 回复 roomId={}, content={}",
+                    roomId, content.length() > 50 ? content.substring(0, 50) + "..." : content);
+        } catch (Exception e) {
+            log.warn("[Context] 存储 bot 回复失败: {}", e.getMessage());
+        }
     }
 
     /**

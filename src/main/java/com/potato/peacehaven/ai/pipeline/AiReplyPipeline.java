@@ -145,6 +145,9 @@ public class AiReplyPipeline {
                 chatroomId, replyCfg.getContextSize());
         log.debug("[Pipeline] 拉取上下文 {} 条", contextMessages.size());
 
+        // 格式化最近原始消息（保留 bot 回复，让 LLM 知道自己刚才说了什么）
+        String recentRawMessages = contextRetrievalService.formatContextForPrompt(contextMessages);
+
         String conversationSummary = "";
         if (replyCfg.isUseConversationSummary()) {
             conversationSummary = summaryService.summarize(chatroomId, contextMessages);
@@ -205,7 +208,7 @@ public class AiReplyPipeline {
 
         // ===== 8. 构建 Prompt =====
         List<LlmMessage> messages = promptBuilder.buildMessages(
-                senderNick, content, conversationSummary, memoryText, ragRecords, antiAnchoringHint);
+                senderNick, content, conversationSummary, recentRawMessages, memoryText, ragRecords, antiAnchoringHint);
         boolean jsonMode = aiProps.getPrompt().isJsonReplyFormat();
         log.debug("[Pipeline] Prompt 构建完成 msgs={}, persona={}, version={}, jsonMode={}",
                 messages.size(), aiProps.getPrompt().getPersonaName(),
@@ -317,6 +320,11 @@ public class AiReplyPipeline {
         }
 
         if (sendSuccess) {
+            // 持久化 bot 回复到聊天记录（下次上下文拉取时可见，保持话题延续性）
+            if (isGroupChat) {
+                contextRetrievalService.saveBotReply(sendTarget, null, finalReply);
+            }
+
             // 更新决策统计
             decisionService.recordReply(chatroomId != null ? chatroomId : senderWxid);
             // 记录 AI 回复历史（含话题标签，用完整回复）
@@ -329,13 +337,14 @@ public class AiReplyPipeline {
             } catch (Exception e) {
                 log.warn("[Pipeline] expression fatigue 追踪失败: {}", e.getMessage());
             }
-            // 异步提取用户记忆
+            // 异步提取用户记忆（只保留非 bot 消息，防止 bot 自己的话被归入用户画像）
             try {
                 List<String> contextTexts = contextMessages.stream()
-                        .map(m -> (m.isSelf() ? "我" : m.getSenderNick()) + ": " + m.getContent())
+                        .filter(m -> !m.isSelf())
+                        .map(m -> m.getSenderNick() + ": " + m.getContent())
                         .limit(5)
                         .collect(Collectors.toList());
-                userMemoryExtractor.extractAndUpdate(senderWxid, senderNick, content, finalReply, contextTexts);
+                userMemoryExtractor.extractAndUpdate(senderWxid, senderNick, content, null, contextTexts);
             } catch (Exception e) {
                 log.warn("[Pipeline] 记忆提取失败: {}", e.getMessage());
             }

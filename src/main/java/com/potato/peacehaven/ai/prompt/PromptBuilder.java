@@ -81,7 +81,8 @@ public class PromptBuilder {
      *
      * @param senderNick          发送者昵称
      * @param currentMessage      当前消息内容
-     * @param conversationSummary 对话摘要（替代原始上下文）
+     * @param conversationSummary 对话摘要（宏观概括）
+     * @param recentRawMessages   最近原始消息（含 bot 回复，保持话题延续性）
      * @param userMemoryText      用户记忆文本（Memory RAG）
      * @param ragRecords          RAG 检索的本人历史回复（Style RAG）
      * @param antiAnchoringHint   反锚定提示（可为 null，话题过热时注入）
@@ -91,6 +92,7 @@ public class PromptBuilder {
             String senderNick,
             String currentMessage,
             String conversationSummary,
+            String recentRawMessages,
             String userMemoryText,
             List<RetrievedRecord> ragRecords,
             String antiAnchoringHint) {
@@ -106,7 +108,7 @@ public class PromptBuilder {
 
         // ── 2. Context Prompt: 动态上下文注入 ──
         String context = buildContextPrompt(
-                userMemoryText, conversationSummary, ragRecords, antiAnchoringHint, persona);
+                userMemoryText, conversationSummary, recentRawMessages, ragRecords, antiAnchoringHint, persona);
         if (!context.isBlank()) {
             messages.add(LlmMessage.system(context));
         }
@@ -303,6 +305,7 @@ public class PromptBuilder {
      * </p>
      */
     private String buildContextPrompt(String memoryText, String summary,
+                                       String recentRawMessages,
                                        List<RetrievedRecord> ragRecords,
                                        String antiAnchoringHint,
                                        EffectivePersonaProfile persona) {
@@ -321,9 +324,15 @@ public class PromptBuilder {
             ctx.append("以上信息是辅助参考。使用规则：只在语境自然需要时使用，不要主动展示、不要生硬引用、不要每条回复都引用历史。\n\n");
         }
 
-        // ── 最近聊天（Summary）──
+        // ── 最近聊天记录（原始消息，保持话题延续性）──
+        if (recentRawMessages != null && !recentRawMessages.isBlank()) {
+            ctx.append("# 最近聊天记录\n");
+            ctx.append(recentRawMessages).append("\n\n");
+        }
+
+        // ── 对话摘要（宏观背景，可选）──
         if (summary != null && !summary.isBlank()) {
-            ctx.append("# 最近聊天\n");
+            ctx.append("# 聊天背景\n");
             ctx.append(summary).append("\n\n");
         }
 
