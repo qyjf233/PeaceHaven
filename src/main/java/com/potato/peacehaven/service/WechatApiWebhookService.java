@@ -695,8 +695,12 @@ public class WechatApiWebhookService {
         log.debug("[Webhook] 联系人变更 isGroup={}, userName={}, nickName={}", isGroup, userName, nickName);
 
         if (isGroup) {
-            // 群信息变更（群名/群主等）
+            // 群信息变更（群名/群主等）— 将群名写入缓存
             String chatRoomOwner = event.getData().getChatRoomOwner();
+            if (nickName != null && userName != null) {
+                roomNameCache.put(userName, nickName);
+                log.debug("[Webhook] 群名已缓存 chatroom={}, name={}", userName, nickName);
+            }
             log.debug("[Webhook] 群信息变更 chatroom={}, owner={}", userName, chatRoomOwner);
         } else {
             // 好友资料变更 / 新好友通过验证

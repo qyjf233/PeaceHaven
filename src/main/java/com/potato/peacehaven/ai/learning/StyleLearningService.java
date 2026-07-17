@@ -163,8 +163,9 @@ public class StyleLearningService {
         double sampleFactor = Math.min((double) allFeatures.size() / 200, 1.0);
         double timeSpanFactor = computeTimeSpanFactor(selfMessages);
         double timeFactor = 0.5 + 0.5 * timeSpanFactor;
-        int distinctSceneTypes = (int) roomSceneType.values().stream().distinct().count();
-        double sceneFactor = Math.min((double) distinctSceneTypes / 4, 1.0);
+        // 按 distinct room 计数（每个群 = 不同社交上下文），不再按推断的 sceneType
+        int distinctRooms = (int) byRoom.keySet().stream().filter(k -> !"private".equals(k)).count();
+        double sceneFactor = Math.min((double) distinctRooms / 3.0, 1.0);
         double distributionFactor = computeDistributionFactor(selfMessages);
         double confidence = sampleFactor * timeFactor * sceneFactor * distributionFactor;
 
@@ -230,7 +231,7 @@ public class StyleLearningService {
         config.setSceneFactor(sceneFactor);
         config.setDistributionFactor(distributionFactor);
         config.setSampleCount(allFeatures.size());
-        config.setSceneCount(distinctSceneTypes);
+        config.setSceneCount(distinctRooms);
         config.setStyleSourceHash(currentHash);
         learnedStyleRepo.save(config);
 
@@ -247,7 +248,7 @@ public class StyleLearningService {
                     .styleDescription(config.getStyleDescription())
                     .learningConfidence(confidence)
                     .sampleCount(allFeatures.size())
-                    .sceneCount(distinctSceneTypes)
+                    .sceneCount(distinctRooms)
                     .trigger(bootstrapMode ? "bootstrap_collect" : "new_" + allFeatures.size() + "_messages")
                     .build();
             snapshotRepo.save(snapshot);
@@ -255,7 +256,7 @@ public class StyleLearningService {
 
         log.info("[Learning] 学习完成: hash={}, bootstrap={}, confidence={}, samples={}, scenes={}, personaV={}, styleV={}",
                 currentHash.substring(0, 8), bootstrapMode, fmt(confidence),
-                allFeatures.size(), distinctSceneTypes,
+                allFeatures.size(), distinctRooms,
                 config.getPersonaVersion(), config.getStyleVersion());
     }
 
@@ -316,15 +317,24 @@ public class StyleLearningService {
     }
 
     /**
-     * 计算时间跨度因子
+     * 计算时间跨度因子（渐进式）
+     * <p>
+     * 旧逻辑：days/90（同一天=0，导致 confidence 极低）
+     * 新逻辑：base 0.3 + 渐进奖励，确保同一天也有基本置信度
+     * <ul>
+     *   <li>0 天 → 0.30</li>
+     *   <li>3 天 → 0.51</li>
+     *   <li>7 天 → 0.65</li>
+     *   <li>30 天 → 1.00</li>
+     * </ul>
      */
     private double computeTimeSpanFactor(List<BotChatRecord> messages) {
-        if (messages.size() < 2) return 0.0;
+        if (messages.size() < 2) return 0.3;
         LocalDateTime oldest = messages.get(messages.size() - 1).getCreatedAt();
         LocalDateTime newest = messages.get(0).getCreatedAt();
         if (oldest == null || newest == null) return 0.5;
         long days = Duration.between(oldest, newest).toDays();
-        return Math.min((double) days / 90, 1.0);
+        return 0.3 + 0.7 * Math.min((double) days / 30.0, 1.0);
     }
 
     /**
@@ -540,16 +550,31 @@ public class StyleLearningService {
 
             String contactName = roomId;
             List<BotChatRecord> roomRecords = entry.getValue();
-            if (!roomRecords.isEmpty() && roomRecords.get(0).getRoomName() != null) {
+            if (!roomRecords.isEmpty() && roomRecords.get(0).getRoomName() != null
+                    && !roomRecords.get(0).getRoomName().equals(roomId)) {
                 contactName = roomRecords.get(0).getRoomName();
             }
+            final String finalContactName = contactName;
 
-            RelationshipProfile profile = relationshipRepo.findByContactName(contactName)
-                    .orElse(RelationshipProfile.builder()
-                            .contactName(contactName)
-                            .relationshipType("group")
-                            .intimacyLevel(5)
-                            .build());
+            // 查找 profile：优先按 contactName，也尝试按 roomId 查旧数据
+            RelationshipProfile profile = relationshipRepo.findByContactName(finalContactName)
+                    .orElseGet(() -> {
+                        // 如果 contactName 是群名（非 roomId），检查是否有旧的 roomId-based profile
+                        if (!finalContactName.equals(roomId)) {
+                            var oldProfile = relationshipRepo.findByContactName(roomId);
+                            if (oldProfile.isPresent()) {
+                                RelationshipProfile p = oldProfile.get();
+                                p.setContactName(finalContactName); // 迁移 contactName
+                                log.info("[Learning] 迁移 relationship contactName: {} → {}", roomId, finalContactName);
+                                return p;
+                            }
+                        }
+                        return RelationshipProfile.builder()
+                                .contactName(finalContactName)
+                                .relationshipType("group")
+                                .intimacyLevel(5)
+                                .build();
+                    });
 
             // 只更新客观统计维度，主观 persona 分数保留旧值
             profile.setFormalScore(roomStyle.getFormalAvg());

@@ -40,57 +40,29 @@ public class PersonaDriftDetector {
     private static final double CHANGE_THRESHOLD = 0.15;
 
     /**
-     * 检测并更新人格稳定性
+     * 更新 stability（当前设为中性值 0.5）
      * <p>
-     * 对比当前学习值与 30 天内 snapshot 的历史均值，
-     * 计算各维度变化幅度，更新 PersonaStability。
+     * 旧逻辑：基于 humor/sarcasm/warmth 正则打分的历史快照计算 stability。
+     * 新架构下这些分数不再更新，导致 stability 始终接近 1.0（假稳定）。
+     * 改为固定 0.5（中性值），避免虚假高稳定性阻碍学习。
+     * 后续可改为基于 Observation 文本相似度或客观统计的 drift 检测。
      * </p>
-     *
-     * @param currentHumor    当前学习到的 humor
-     * @param currentSarcasm  当前学习到的 sarcasm
-     * @param currentWarmth   当前学习到的 warmth
      */
     public void detectAndUpdateStability(double currentHumor, double currentSarcasm, double currentWarmth) {
-        // 获取 30 天内 snapshot
+        // 获取 30 天内 snapshot（保留日志，便于排查）
         LocalDateTime windowStart = LocalDateTime.now().minusDays(DRIFT_WINDOW_DAYS);
         List<PersonaStyleSnapshot> snapshots = snapshotRepo.findByCreatedAtAfterOrderByCreatedAtAsc(windowStart);
 
-        if (snapshots.size() < 2) {
-            log.info("[DriftDetector] 快照不足 2 条({}), 跳过检测", snapshots.size());
-            return;
-        }
+        log.info("[DriftDetector] 快照数={}, 当前设 stability=0.5（中性值，旧正则打分已废弃）", snapshots.size());
 
-        // 计算历史均值
-        double histHumor = snapshots.stream().mapToDouble(PersonaStyleSnapshot::getHumorScore).average().orElse(currentHumor);
-        double histSarcasm = snapshots.stream().mapToDouble(PersonaStyleSnapshot::getSarcasmScore).average().orElse(currentSarcasm);
-        double histWarmth = snapshots.stream().mapToDouble(PersonaStyleSnapshot::getWarmthScore).average().orElse(currentWarmth);
-
-        // 计算变化幅度
-        double humorDelta = Math.abs(currentHumor - histHumor);
-        double sarcasmDelta = Math.abs(currentSarcasm - histSarcasm);
-        double warmthDelta = Math.abs(currentWarmth - histWarmth);
-
-        // stability = 1 - normalized delta（delta 越大，stability 越低）
-        double humorStability = Math.max(0, 1.0 - humorDelta / CHANGE_THRESHOLD);
-        double sarcasmStability = Math.max(0, 1.0 - sarcasmDelta / CHANGE_THRESHOLD);
-        double warmthStability = Math.max(0, 1.0 - warmthDelta / CHANGE_THRESHOLD);
-
-        // 持久化
+        // 设为中性值
         PersonaStability stability = stabilityRepo.findById(1L).orElse(
                 PersonaStability.builder().id(1L).build()
         );
-        stability.setHumorStability(humorStability);
-        stability.setSarcasmStability(sarcasmStability);
-        stability.setWarmthStability(warmthStability);
+        stability.setHumorStability(0.5);
+        stability.setSarcasmStability(0.5);
+        stability.setWarmthStability(0.5);
         stabilityRepo.save(stability);
-
-        log.info("[DriftDetector] stability updated: humor={}, sarcasm={}, warmth={} (deltas: h={}, s={}, w={})",
-                String.format("%.2f", humorStability),
-                String.format("%.2f", sarcasmStability),
-                String.format("%.2f", warmthStability),
-                String.format("%.3f", humorDelta),
-                String.format("%.3f", sarcasmDelta),
-                String.format("%.3f", warmthDelta));
     }
 
     /**
