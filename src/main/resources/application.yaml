@@ -65,7 +65,7 @@ ai:
   reply:
     max-per-day: 10000                                             # 每日回复上限（前期放开多聊）
     cooldown-seconds: 1                                            # 同群最短回复间隔（秒）
-    random-rate: 0.2                                               # 群聊无触发条件时随机回复概率
+    random-rate: 0                                                 # 群聊无触发条件时随机回复概率
     only-at: false                                                 # true = 仅被@时才回复
     context-size: 15                                               # 拉取最近 N 条群消息作为上下文
     rag-top-k: 12                                                  # RAG 检索 N 条本人历史作为风格示例
