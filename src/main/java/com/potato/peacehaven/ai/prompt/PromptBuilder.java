@@ -5,10 +5,13 @@ import com.potato.peacehaven.ai.persona.EffectivePersonaProfile;
 import com.potato.peacehaven.ai.persona.PersonaProfileService;
 import com.potato.peacehaven.ai.retrieval.ChatHistoryRetrievalService.RetrievedRecord;
 import com.potato.peacehaven.config.AiProperties;
+import com.potato.peacehaven.entity.UserManualStatus;
+import com.potato.peacehaven.repository.UserManualStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -57,6 +60,7 @@ public class PromptBuilder {
     private final AiProperties aiProps;
     private final SpeakingStyleExtractor styleExtractor;
     private final PersonaProfileService personaProfileService;
+    private final UserManualStatusRepository manualStatusRepository;
 
     // ===== 缓存的 System Prompt（配置不变时复用） =====
     private volatile String cachedSystemPrompt;
@@ -304,6 +308,12 @@ public class PromptBuilder {
                                        EffectivePersonaProfile persona) {
         StringBuilder ctx = new StringBuilder(400);
 
+        // ── 本人当前状态（手动设置）──
+        String manualStatus = buildManualStatus();
+        if (!manualStatus.isBlank()) {
+            ctx.append(manualStatus);
+        }
+
         // ── 关于对方（Memory RAG）──
         if (memoryText != null && !memoryText.isBlank()) {
             ctx.append("# 关于对方\n");
@@ -341,6 +351,28 @@ public class PromptBuilder {
         }
 
         return ctx.toString().trim();
+    }
+
+    /**
+     * 构建手动状态区块（用户主动设置的临时状态）
+     */
+    private String buildManualStatus() {
+        try {
+            List<UserManualStatus> statuses = manualStatusRepository.findActiveStatuses(LocalDateTime.now());
+            if (statuses == null || statuses.isEmpty()) return "";
+
+            StringBuilder sb = new StringBuilder(100);
+            sb.append("# 本人当前状态\n");
+            sb.append("以下内容描述的是最近一段时间的真实状态，仅作为理解聊天背景使用。如果与当前话题有关，可以自然体现；无关时无需主动提及，也不要直接复述：\n");
+            for (UserManualStatus s : statuses) {
+                sb.append("- ").append(s.getStatusText()).append("\n");
+            }
+            sb.append("\n");
+            return sb.toString();
+        } catch (Exception e) {
+            log.warn("[Prompt] 查询手动状态失败: {}", e.getMessage());
+            return "";
+        }
     }
 
     /**
