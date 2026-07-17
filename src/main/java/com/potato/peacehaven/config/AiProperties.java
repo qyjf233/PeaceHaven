@@ -171,10 +171,10 @@ public class AiProperties {
         private boolean jsonReplyFormat = false;
 
         /** 记忆提取重要性阈值（低于此值丢弃） */
-        private double memoryImportanceThreshold = 0.3;
+        private double memoryImportanceThreshold = 0.4;
 
         /** 记忆条目最大数量（每人） */
-        private int maxMemoryEntries = 50;
+        private int maxMemoryEntries = 15;
 
         /** 人格维度配置（从 style-description 分离） */
         private PersonalityConfig personality;

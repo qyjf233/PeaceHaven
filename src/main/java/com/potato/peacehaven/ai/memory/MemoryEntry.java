@@ -58,6 +58,10 @@ public class MemoryEntry {
     /** 生成该记忆的 Prompt 版本号 */
     private String promptVersion;
 
+    /** 是否为手动添加（手动添加的条目不会被自动提取覆盖或截断） */
+    @Builder.Default
+    private boolean manual = false;
+
     /**
      * 判断此记忆是否已过期
      * <p>ttlDays=0 表示永久记忆，永不过期</p>

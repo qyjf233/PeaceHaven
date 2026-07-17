@@ -141,6 +141,9 @@ public class AdminModelParamController {
                 }
                 b.source(str(raw.get("source")));
                 b.promptVersion(str(raw.get("promptVersion")));
+                if (raw.get("manual") != null) {
+                    b.manual(Boolean.TRUE.equals(raw.get("manual")) || "true".equals(raw.get("manual").toString()));
+                }
                 return b.build();
             }).collect(Collectors.toList());
             m.setStructuredMemories(entries);
@@ -749,9 +752,9 @@ public class AdminModelParamController {
                     return m;
                 }).collect(Collectors.toList()));
 
-        // 8. User Memories (summary, not full structured data)
+        // 8. User Memory (完整数据，含 structuredMemories)
         List<BotUserMemory> memories = userMemoryRepo.findAll();
-        data.put("userMemorySummary", Map.of(
+        data.put("userMemory", Map.of(
                 "totalCount", memories.size(),
                 "memories", memories.stream().map(um -> {
                     Map<String, Object> m = new LinkedHashMap<>();
@@ -763,8 +766,22 @@ public class AdminModelParamController {
                     m.put("summary", um.getSummary());
                     m.put("tags", um.getTags());
                     m.put("facts", um.getFacts());
-                    m.put("structuredMemoryCount", um.getStructuredMemories() != null ? um.getStructuredMemories().size() : 0);
                     m.put("updatedAt", um.getUpdatedAt());
+                    // 完整 structuredMemories
+                    if (um.getStructuredMemories() != null && !um.getStructuredMemories().isEmpty()) {
+                        m.put("structuredMemories", um.getStructuredMemories().stream().map(me -> {
+                            Map<String, Object> sm = new LinkedHashMap<>();
+                            sm.put("id", me.getId());
+                            sm.put("type", me.getType());
+                            sm.put("content", me.getContent());
+                            sm.put("importance", me.getImportance());
+                            sm.put("confidence", me.getConfidence());
+                            sm.put("ttlDays", me.getTtlDays());
+                            sm.put("source", me.getSource());
+                            sm.put("createdAt", me.getCreatedAt());
+                            return sm;
+                        }).collect(Collectors.toList()));
+                    }
                     return m;
                 }).collect(Collectors.toList())));
 

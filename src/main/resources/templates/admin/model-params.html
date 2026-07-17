@@ -316,6 +316,9 @@ function memEntryHtml(idx, e) {
             '<input class="m-input" id="me_conf_' + idx + '" value="' + (e.confidence !== undefined ? e.confidence : 0.7) + '"></label>' +
         '<label style="flex:1;"><b>TTL (天)</b><p class="cfg-hint" style="font-size:10px;margin:1px 0 3px;">0=永久 / 30=月度 / 180=半年</p>' +
             '<input class="m-input" id="me_ttl_' + idx + '" value="' + (e.ttlDays !== undefined ? e.ttlDays : 0) + '"></label>' +
+        '<label style="flex:0 0 auto;display:flex;align-items:flex-end;gap:4px;">' +
+            '<input type="checkbox" id="me_manual_' + idx + '"' + (e.manual ? ' checked' : '') + ' style="margin:0;">' +
+            '<span style="font-size:11px;" title="手动添加的条目不会被自动提取覆盖">手动</span></label>' +
         '<label style="flex:0 0 auto;display:flex;align-items:flex-end;"><button class="btn-modal btn-modal-cancel" onclick="removeMemEntry(' + idx + ')">删除</button></label>' +
         '</div>' +
         '<div style="display:flex;gap:6px;margin-top:6px;font-size:11px;color:#999;">' +
@@ -326,7 +329,7 @@ function memEntryHtml(idx, e) {
 }
 function addMemEntry() {
     var idx = window._memEntryCount++;
-    document.getElementById('memEntryList').insertAdjacentHTML('beforeend', memEntryHtml(idx, {}));
+    document.getElementById('memEntryList').insertAdjacentHTML('beforeend', memEntryHtml(idx, { manual: true }));
 }
 function removeMemEntry(idx) {
     var el = document.getElementById('mem_entry_' + idx);
@@ -350,7 +353,8 @@ function collectMemories() {
             importance: parseFloat(document.getElementById('me_imp_' + idx).value) || 0.5,
             confidence: parseFloat(document.getElementById('me_conf_' + idx).value) || 0.7,
             ttlDays: parseInt(document.getElementById('me_ttl_' + idx).value) || 0,
-            id: entryId || null
+            id: entryId || null,
+            manual: document.getElementById('me_manual_' + idx) ? document.getElementById('me_manual_' + idx).checked : false
         });
     });
     return list;

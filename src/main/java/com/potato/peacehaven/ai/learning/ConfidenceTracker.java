@@ -154,17 +154,26 @@ public class ConfidenceTracker {
 
     // ===== 内部计算 =====
 
+    /**
+     * 计算回复风格与人格特征的匹配度
+     * <p>
+     * 注意：主观语义维度（humor/sarcasm/warmth）已由 LLM Observation 替代，
+     * StyleFeature 只保留客观特征（formalScore/slangScore/length/emoji/punctuation）。
+     * 因此 styleMatch 只基于可用的客观特征计算。
+     * </p>
+     */
     private double computeStyleMatch(StyleFeature reply, double pHumor, double pSarcasm,
                                       double pWarmth, double pFormal) {
         if (reply == null) return 0.5;
 
-        double humorDiff = Math.abs(reply.getHumorScore() - pHumor);
-        double sarcasmDiff = Math.abs(reply.getSarcasmScore() - pSarcasm);
-        double warmthDiff = Math.abs(reply.getWarmthScore() - pWarmth);
+        // 只有 formalScore 在 StyleFeature 和 persona 中都有，可直接比较
         double formalDiff = Math.abs(reply.getFormalScore() - pFormal);
 
-        // 平均偏差 → 匹配度（偏差越大，匹配越低）
-        double avgDiff = (humorDiff + sarcasmDiff + warmthDiff + formalDiff) / 4;
+        // slangScore 间接反映 casualness（与 formal 反向相关）
+        double slangFormalMismatch = Math.max(0, reply.getSlangScore() - (1.0 - pFormal));
+
+        // 平均偏差 → 匹配度
+        double avgDiff = (formalDiff + slangFormalMismatch) / 2;
         return Math.max(0, 1.0 - avgDiff);
     }
 

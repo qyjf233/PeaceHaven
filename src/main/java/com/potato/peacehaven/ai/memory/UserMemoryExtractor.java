@@ -109,9 +109,15 @@ public class UserMemoryExtractor {
         sb.append("  \"summary_update\": \"一句话更新用户画像（可选，仅当有足够新信息时）\"\n");
         sb.append("}\n\n");
         sb.append("提取规则：\n");
+        sb.append("- 每次最多提取 2 条最有价值的信息，宁缺毋滥\n");
         sb.append("- 只提取有长期价值的信息，日常闲聊（'今天好累'、'哈哈'、'666'）不要提取\n");
         sb.append("- **只提取用户本人主动陈述的信息**（'我是...'、'我有...'、'我喜欢...'），别人对他的调侃、起哄、外号一律不提取\n");
         sb.append("- 群聊中其他人说的话不要归到这个用户身上\n");
+        sb.append("- **区分'关于本人'和'提到他人'**：用户在消息中提到别人的名字或昵称（如'XX是良子'、'XX好菜'），这是关于他人的信息，不要提取为该用户的 identity/preference。identity 只能描述用户自己的身份特征\n");
+        sb.append("- **群聊调侃/串子/玩笑不是事实**：如'我是gay'、'不是男的'、'我是你爸'等群聊互怼内容，不要提取为身份信息\n");
+        sb.append("- **游戏/社区术语不要过度解读**：如'5电'、'电喷'、'金条'等术语，如果不确定含义就降低 confidence 到 0.5 以下，或标记为 episode 而非 identity\n");
+        sb.append("- **一次性交易/临时数字不要存**：如'我有6万金'、'98w成交'这类具体金额，变化很快，没有长期价值\n");
+        sb.append("- **不要提取过于琐碎的行为**：如'电风扇坏了'、'浪费材料'这种随手一句话没有长期价值\n");
         sb.append("- type: identity=职业/身份/价值观, preference=兴趣偏好, episode=事件经历, relationship=人际关系\n");
         sb.append("- importance: 这条信息对未来回复的影响程度（0-1），0.9=改变身份, 0.5=具体事实, 0.3=临时状态\n");
         sb.append("- confidence: 你对这条信息准确性的把握（0-1）\n");
@@ -187,9 +193,9 @@ public class UserMemoryExtractor {
             ImportanceJudge.ImportanceResult judgeResult =
                     importanceJudge.judge(candidate.content, candidate.type);
 
-            // 取 LLM 评分和规则评分的较高值
-            double finalImportance = Math.max(candidate.importance, judgeResult.getImportance());
-            double finalConfidence = Math.max(candidate.confidence, judgeResult.getConfidence());
+            // 加权融合：规则评分权重 0.6，LLM 评分权重 0.4（规则更保守可靠）
+            double finalImportance = 0.6 * judgeResult.getImportance() + 0.4 * candidate.importance;
+            double finalConfidence = 0.6 * judgeResult.getConfidence() + 0.4 * candidate.confidence;
             int ttlDays = judgeResult.getTtlDays();
 
             if (finalImportance < threshold || !judgeResult.isShouldStore()) {
@@ -228,10 +234,19 @@ public class UserMemoryExtractor {
         memories.removeIf(MemoryEntry::isExpired);
         int cleaned = beforeClean - memories.size();
 
-        // 限制总数量（按 importance 排序，保留高价值）
+        // 限制总数量（manual 条目永远保留，auto 条目按 importance 截断）
         if (memories.size() > maxEntries) {
-            memories.sort((a, b) -> Double.compare(b.getImportance(), a.getImportance()));
-            memories = new ArrayList<>(memories.subList(0, maxEntries));
+            List<MemoryEntry> manualEntries = memories.stream()
+                    .filter(MemoryEntry::isManual)
+                    .collect(Collectors.toList());
+            List<MemoryEntry> autoEntries = memories.stream()
+                    .filter(m -> !m.isManual())
+                    .sorted((a, b) -> Double.compare(b.getImportance(), a.getImportance()))
+                    .collect(Collectors.toList());
+
+            int autoSlots = Math.max(0, maxEntries - manualEntries.size());
+            memories = new ArrayList<>(manualEntries);
+            memories.addAll(autoEntries.subList(0, Math.min(autoSlots, autoEntries.size())));
         }
 
         // 更新 summary
@@ -248,13 +263,39 @@ public class UserMemoryExtractor {
     }
 
     /**
-     * 简单相似度检查（双向子串包含）
+     * 相似度检查：双向子串 + 字符重叠率
+     * <p>
+     * 解决"曾将暗恋对象制作成AI女友" vs "曾将crush转化为AI女友"
+     * 这类措辞不同但语义相同的重复问题。
+     * </p>
      */
     private boolean isSimilar(String existing, String candidate) {
         if (existing == null || candidate == null) return false;
         String a = existing.toLowerCase();
         String b = candidate.toLowerCase();
-        return a.contains(b) || b.contains(a);
+
+        // 双向子串包含
+        if (a.contains(b) || b.contains(a)) return true;
+
+        // 字符重叠率：较短字符串中有多少字符出现在较长字符串中
+        String shorter = a.length() <= b.length() ? a : b;
+        String longer = a.length() > b.length() ? a : b;
+
+        if (shorter.length() < 4) return false;
+
+        int matchCount = 0;
+        boolean[] used = new boolean[longer.length()];
+        for (char c : shorter.toCharArray()) {
+            for (int i = 0; i < longer.length(); i++) {
+                if (!used[i] && longer.charAt(i) == c) {
+                    used[i] = true;
+                    matchCount++;
+                    break;
+                }
+            }
+        }
+        double overlapRatio = (double) matchCount / shorter.length();
+        return overlapRatio > 0.7; // 70% 以上字符重叠视为重复
     }
 
     /**

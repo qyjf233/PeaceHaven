@@ -54,12 +54,30 @@ public class BotGroupMember {
     private LocalDateTime syncedAt;
 
     /**
-     * 获取有效昵称（displayName 优先，fallback nickName）
+     * 获取有效昵称（nickName 优先，displayName 仅作 fallback）
+     * <p>
+     * nickName 是微信个人资料昵称，跟人绑定，不会被群名片篡改。
+     * displayName 是群内昵称（群名片），可被群友随意修改（如串子改名），
+     * 不应作为用户身份标识。
+     * </p>
      */
     public String getEffectiveName() {
+        if (nickName != null && !nickName.isBlank()) {
+            return nickName;
+        }
         if (displayName != null && !displayName.isBlank()) {
             return displayName;
         }
-        return nickName != null ? nickName : wxid;
+        return wxid;
+    }
+
+    /**
+     * 获取群内显示名（仅用于消息渲染场景）
+     */
+    public String getDisplayName() {
+        if (displayName != null && !displayName.isBlank()) {
+            return displayName;
+        }
+        return getEffectiveName();
     }
 }

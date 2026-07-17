@@ -95,6 +95,28 @@ public class MemoryBootstrapService {
                         .reduce((a, b) -> b) // 取最后一个非空的
                         .orElse(wxid);
 
+                // force 模式：先清除自动提取的记忆，保留手动添加的
+                if (force) {
+                    try {
+                        var existingMemory = memoryRepo.findByWxid(wxid);
+                        if (existingMemory.isPresent()) {
+                            var mem = existingMemory.get();
+                            var existing = mem.getStructuredMemories();
+                            if (existing != null && !existing.isEmpty()) {
+                                var manualOnly = existing.stream()
+                                        .filter(com.potato.peacehaven.ai.memory.MemoryEntry::isManual)
+                                        .collect(Collectors.toList());
+                                mem.setStructuredMemories(new ArrayList<>(manualOnly));
+                                memoryRepo.save(mem);
+                                log.debug("[MemoryBootstrap] force 清除自动记忆 wxid={}, 保留 manual={}",
+                                        wxid, manualOnly.size());
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.debug("[MemoryBootstrap] 清除旧记忆失败 wxid={}: {}", wxid, e.getMessage());
+                    }
+                }
+
                 // 逐条消息提取记忆（模拟实时 Pipeline 的行为）
                 List<String> contextBuffer = new ArrayList<>();
                 for (BotChatRecord record : records) {

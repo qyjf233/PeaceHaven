@@ -353,10 +353,11 @@ public class AiReplyPipeline {
             } catch (Exception e) {
                 log.warn("[Pipeline] expression fatigue 追踪失败: {}", e.getMessage());
             }
-            // 异步提取用户记忆（只保留非 bot 消息，防止 bot 自己的话被归入用户画像）
+            // 异步提取用户记忆（只保留目标用户自己的消息，防止别人的话被归入此人画像）
             try {
                 List<String> contextTexts = contextMessages.stream()
-                        .filter(m -> !m.isSelf())
+                        .filter(m -> !m.isSelf() && !m.isBotReply()
+                                && senderWxid.equals(m.getSenderWxid()))
                         .map(m -> m.getSenderNick() + ": " + m.getContent())
                         .limit(5)
                         .collect(Collectors.toList());

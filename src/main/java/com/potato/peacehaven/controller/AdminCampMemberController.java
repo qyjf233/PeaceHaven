@@ -134,7 +134,9 @@ public class AdminCampMemberController {
         String nickname = member.getNickname();
         List<BotGroupMember> groupMembers = groupMemberRepository.findAll();
         for (BotGroupMember gm : groupMembers) {
-            if (gm.getEffectiveName().equals(nickname)) {
+            if (gm.getEffectiveName().equals(nickname)
+                    || (gm.getDisplayName() != null && gm.getDisplayName().equals(nickname))
+                    || (gm.getNickName() != null && gm.getNickName().equals(nickname))) {
                 Map<String, Object> result = new HashMap<>();
                 result.put("inGroup", true);
                 result.put("wxid", gm.getWxid());
