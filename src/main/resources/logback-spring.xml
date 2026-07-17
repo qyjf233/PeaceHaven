@@ -9,11 +9,15 @@
     <springProperty scope="context" name="appName"            source="spring.application.name" defaultValue="peacehaven"/>
 
     <!-- ======================== -->
-    <!-- 1. 控制台输出（始终启用）   -->
+    <!-- 1. 控制台输出（始终启用，仅 WARN+ 级别） -->
     <!-- ======================== -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- 本地控制台只输出 WARN 及以上级别，减少噪音 -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{20} - %msg%n</pattern>
             <!-- Windows 控制台默认 GBK 编码，与 PowerShell 保持一致，中文不乱码 -->
             <charset>GBK</charset>
         </encoder>
@@ -46,9 +50,9 @@
                 <baseRetryBackoffMs>100</baseRetryBackoffMs>
                 <maxRetryBackoffMs>50000</maxRetryBackoffMs>
 
-                <!-- 日志格式 -->
+                <!-- 日志格式：自动携带 traceId 字段，支持 SLS 链路追踪 -->
                 <encoder>
-                    <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg</pattern>
+                    <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} traceId=%X{traceId:-} - %msg</pattern>
                 </encoder>
                 <timeFormat>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timeFormat>
                 <timeZone>Asia/Shanghai</timeZone>
@@ -74,7 +78,7 @@
     <!-- ======================== -->
     <!-- 3. Logger 级别配置        -->
     <!-- ======================== -->
-    <!-- 应用代码日志级别 -->
+    <!-- 应用代码 DEBUG 级别（CONSOLE 通过 ThresholdFilter 只显示 WARN+，DEBUG 日志仅进 SLS） -->
     <logger name="com.potato.peacehaven" level="DEBUG"/>
 
     <!-- 框架日志级别（减少噪音） -->

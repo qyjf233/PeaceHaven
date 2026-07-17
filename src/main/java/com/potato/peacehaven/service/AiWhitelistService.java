@@ -41,9 +41,9 @@ public class AiWhitelistService {
         refreshCache();
         log.info("[AiWhitelist] 初始化完成，训练群 {} 个，回复群 {} 个，回复好友 {} 个",
                 trainingGroupIds.size(), replyGroupIds.size(), replyFriendWxids.size());
-        log.info("[AiWhitelist] 训练群ID: {}", trainingGroupIds);
-        log.info("[AiWhitelist] 回复群ID: {}", replyGroupIds);
-        log.info("[AiWhitelist] 回复好友wxid: {}", replyFriendWxids);
+        log.debug("[AiWhitelist] 训练群ID: {}", trainingGroupIds);
+        log.debug("[AiWhitelist] 回复群ID: {}", replyGroupIds);
+        log.debug("[AiWhitelist] 回复好友wxid: {}", replyFriendWxids);
         log.info("[AiSystem] AI分身就绪状态: enabled={}, apiKey={}, baseUrl={}, isReady={}",
                 aiProperties.isEnabled(),
                 aiProperties.getLlm().getApiKey() != null && !aiProperties.getLlm().getApiKey().isBlank(),

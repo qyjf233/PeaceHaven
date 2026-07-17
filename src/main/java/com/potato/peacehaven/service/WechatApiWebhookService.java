@@ -4,6 +4,7 @@ import com.potato.peacehaven.ai.pipeline.AiReplyPipeline;
 import com.potato.peacehaven.ai.pipeline.AiReplyTracker;
 import com.potato.peacehaven.ai.pipeline.PrivateMessageBuffer;
 import com.potato.peacehaven.config.AiProperties;
+import com.potato.peacehaven.config.TraceContext;
 import com.potato.peacehaven.config.WechatApiProperties;
 import com.potato.peacehaven.dto.WechatApiCallbackEvent;
 import com.potato.peacehaven.entity.BotChatRecord;
@@ -63,7 +64,7 @@ public class WechatApiWebhookService {
             Long newMsgId = event.getNewMsgId();
             if (newMsgId != null && event.getAppId() != null) {
                 if (messageLogRepo.existsByNewMsgIdAndAppId(newMsgId, event.getAppId())) {
-                    log.info("[Webhook] 重复消息 newMsgId={}，跳过", newMsgId);
+                    log.debug("[Webhook] 重复消息 newMsgId={}，跳过", newMsgId);
                     return;
                 }
             }
@@ -79,9 +80,9 @@ public class WechatApiWebhookService {
                 case "ModContacts"   -> handleModContacts(event);
                 case "DelContacts"   -> handleDelContacts(event);
                 case "Offline"       -> handleOffline(event);
-                case "FinderSyncMsg" -> log.info("[Webhook] 视频号互动通知 appId={}", event.getAppId());
-                case "FinderBypMsg"  -> log.info("[Webhook] 视频号私信通知 appId={}", event.getAppId());
-                default              -> log.info("[Webhook] 未知事件类型 typeName={}", typeName);
+                case "FinderSyncMsg" -> log.debug("[Webhook] 视频号互动通知 appId={}", event.getAppId());
+                case "FinderBypMsg"  -> log.debug("[Webhook] 视频号私信通知 appId={}", event.getAppId());
+                default              -> log.debug("[Webhook] 未知事件类型 typeName={}", typeName);
             }
         } catch (Exception e) {
             log.error("[Webhook] 处理事件异常 typeName={}", typeName, e);
@@ -104,7 +105,7 @@ public class WechatApiWebhookService {
         String groupSender = event.getGroupSenderWxid();
         String pureContent = event.getPureContent();
 
-        log.info("[Webhook] AddMsg msgType={}, isGroup={}, from={}, groupSender={}, pushContent={}",
+        log.debug("[Webhook] AddMsg msgType={}, isGroup={}, from={}, groupSender={}, pushContent={}",
                 msgType, isGroup, from, groupSender,
                 event.getData().getPushContent() != null
                         ? event.getData().getPushContent().getString() : null);
@@ -135,7 +136,7 @@ public class WechatApiWebhookService {
             String chatroomId = event.getChatroomId();
             // 判断是否 @机器人（通过昵称匹配，后续可从配置读取机器人昵称）
             boolean mentioned = pureContent != null && pureContent.contains("@");
-            log.info("[Webhook] 群文本消息 chatroom={}, sender={}, content={}, mentioned={}",
+            log.debug("[Webhook] 群文本消息 chatroom={}, sender={}, content={}, mentioned={}",
                     chatroomId, groupSender,
                     pureContent != null && pureContent.length() > 100
                             ? pureContent.substring(0, 100) + "..." : pureContent,
@@ -147,7 +148,7 @@ public class WechatApiWebhookService {
             boolean trainingAllowed = aiWhitelistService.isGroupTrainingAllowed(chatroomId);
             boolean replyAllowed = aiWhitelistService.isGroupReplyAllowed(chatroomId);
             boolean aiReady = aiProps.isReady();
-            log.info("[Webhook] 群消息白名单诊断 chatroom={}, training={}, reply={}, aiReady={}",
+            log.debug("[Webhook] 群消息白名单诊断 chatroom={}, training={}, reply={}, aiReady={}",
                     chatroomId, trainingAllowed, replyAllowed, aiReady);
 
             // 目标群聊文本消息 → 持久化到聊天记录表（用于 RAG 向量化，需训练白名单命中）
@@ -162,13 +163,16 @@ public class WechatApiWebhookService {
                 String senderWxid = event.getGroupSenderWxid();
                 if (senderWxid == null) senderWxid = event.getFromWxid();
                 String senderNick = resolveSenderNick(senderWxid);
+                String traceId = TraceContext.get();
+                log.info("[Webhook] 触发 AI Pipeline chatroom={}, sender={}, traceId={}",
+                        chatroomId, senderNick, traceId);
                 aiReplyPipeline.processGroupMessage(
                         chatroomId, senderWxid, senderNick,
-                        pureContent, mentioned);
+                        pureContent, mentioned, traceId);
             }
         } else {
             String senderWxid = event.getFromWxid();
-            log.info("[Webhook] 私聊文本消息 from={}, content={}",
+            log.debug("[Webhook] 私聊文本消息 from={}, content={}",
                     senderWxid,
                     pureContent != null && pureContent.length() > 100
                             ? pureContent.substring(0, 100) + "..." : pureContent);
@@ -176,11 +180,13 @@ public class WechatApiWebhookService {
             // AI 分身回复私聊（好友回复白名单命中时触发）
             boolean friendReplyAllowed = aiWhitelistService.isFriendReplyAllowed(senderWxid);
             boolean aiReady = aiProps.isReady();
-            log.info("[Webhook] 私聊白名单诊断 from={}, friendReply={}, aiReady={}",
+            log.debug("[Webhook] 私聊白名单诊断 from={}, friendReply={}, aiReady={}",
                     senderWxid, friendReplyAllowed, aiReady);
             if (aiReady && friendReplyAllowed) {
                 // 通过消息聚合器处理（等待对方发完再回复，避免抢话）
-                privateMessageBuffer.accept(senderWxid, "", pureContent);
+                String traceId = TraceContext.get();
+                log.info("[Webhook] 触发 AI Pipeline(私聊) from={}, traceId={}", senderWxid, traceId);
+                privateMessageBuffer.accept(senderWxid, "", pureContent, traceId);
             }
         }
     }
@@ -190,7 +196,7 @@ public class WechatApiWebhookService {
      * <p>Content.string 包含申请人信息 XML，可用于自动同意好友
      */
     private void handleFriendRequest(WechatApiCallbackEvent event) {
-        log.info("[Webhook] 好友请求 from={}, pushContent={}",
+        log.debug("[Webhook] 好友请求 from={}, pushContent={}",
                 event.getFromWxid(),
                 event.getData().getPushContent() != null
                         ? event.getData().getPushContent().getString() : null);
@@ -217,7 +223,7 @@ public class WechatApiWebhookService {
 
         // 简易解析 appmsg.type（完整解析需 XML parser，此处用正则快速提取）
         String appMsgType = extractAppMsgType(content);
-        log.info("[Webhook] 复合消息 MsgType=49, appmsg.type={}, from={}, pushContent={}",
+        log.debug("[Webhook] 复合消息 MsgType=49, appmsg.type={}, from={}, pushContent={}",
                 appMsgType, event.getFromWxid(), pushContent);
 
         // TODO: 按 appmsg.type 分发具体业务逻辑
@@ -230,7 +236,7 @@ public class WechatApiWebhookService {
     private void handleSystemNotice(WechatApiCallbackEvent event) {
         String content = event.getContentString();
         String from = event.getFromWxid();
-        log.info("[Webhook] 系统通知 from={}, content={}",
+        log.debug("[Webhook] 系统通知 from={}, content={}",
                 from, content != null && content.length() > 200 ? content.substring(0, 200) : content);
 
         if (content != null) {
@@ -238,9 +244,9 @@ public class WechatApiWebhookService {
                 log.warn("[Webhook] 机器人被踢出群聊 chatroom={}", from);
                 // TODO: 告警通知管理员
             } else if (content.contains("修改群名")) {
-                log.info("[Webhook] 群名变更 chatroom={}", from);
+                log.debug("[Webhook] 群名变更 chatroom={}", from);
             } else if (content.contains("新群主")) {
-                log.info("[Webhook] 群主变更 chatroom={}", from);
+                log.debug("[Webhook] 群主变更 chatroom={}", from);
             }
         }
     }
@@ -261,7 +267,7 @@ public class WechatApiWebhookService {
         String from = event.getFromWxid();
 
         String sysType = extractSysMsgType(content);
-        log.info("[Webhook] XML系统消息 MsgType=10002, sysmsg.type={}, from={}", sysType, from);
+        log.debug("[Webhook] XML系统消息 MsgType=10002, sysmsg.type={}, from={}", sysType, from);
 
         if (sysType != null) {
             switch (sysType) {
@@ -272,10 +278,10 @@ public class WechatApiWebhookService {
                     if (content != null && content.contains("解散")) {
                         log.warn("[Webhook] 群聊解散 chatroom={}", from);
                     } else if (content != null && content.contains("移出")) {
-                        log.info("[Webhook] 踢出群成员 chatroom={}", from);
+                        log.debug("[Webhook] 踢出群成员 chatroom={}", from);
                     }
                 }
-                case "mmchatroombarannouncememt" -> log.info("[Webhook] 群公告更新 chatroom={}", from);
+                case "mmchatroombarannouncememt" -> log.debug("[Webhook] 群公告更新 chatroom={}", from);
                 case "roomtoolstips" -> log.debug("[Webhook] 群待办 chatroom={}", from);
                 default -> log.debug("[Webhook] 未处理 sysmsg.type={}", sysType);
             }
@@ -298,15 +304,15 @@ public class WechatApiWebhookService {
                 ? event.getData().getNickName().getString() : null;
         boolean isGroup = userName != null && userName.endsWith("@chatroom");
 
-        log.info("[Webhook] 联系人变更 isGroup={}, userName={}, nickName={}", isGroup, userName, nickName);
+        log.debug("[Webhook] 联系人变更 isGroup={}, userName={}, nickName={}", isGroup, userName, nickName);
 
         if (isGroup) {
             // 群信息变更（群名/群主等）
             String chatRoomOwner = event.getData().getChatRoomOwner();
-            log.info("[Webhook] 群信息变更 chatroom={}, owner={}", userName, chatRoomOwner);
+            log.debug("[Webhook] 群信息变更 chatroom={}, owner={}", userName, chatRoomOwner);
         } else {
             // 好友资料变更 / 新好友通过验证
-            log.info("[Webhook] 好友资料变更 wxid={}, nickName={}", userName, nickName);
+            log.debug("[Webhook] 好友资料变更 wxid={}, nickName={}", userName, nickName);
         }
     }
 
@@ -322,9 +328,9 @@ public class WechatApiWebhookService {
         boolean isGroup = userName != null && userName.endsWith("@chatroom");
 
         if (isGroup) {
-            log.info("[Webhook] 退出群聊 chatroom={}, scene={}", userName, scene);
+            log.debug("[Webhook] 退出群聊 chatroom={}, scene={}", userName, scene);
         } else {
-            log.info("[Webhook] 删除好友 wxid={}, scene={}", userName, scene);
+            log.debug("[Webhook] 删除好友 wxid={}, scene={}", userName, scene);
         }
     }
 
@@ -374,7 +380,7 @@ public class WechatApiWebhookService {
                 return;
             }
 
-            log.info("[Webhook] persistLog 落库: {}, msgType={}", filterReason, event.getMsgType());
+            log.debug("[Webhook] persistLog 落库: {}, msgType={}", filterReason, event.getMsgType());
 
             String content = event.getContentString();
             if (content != null && content.length() > 2000) {
@@ -484,7 +490,7 @@ public class WechatApiWebhookService {
 
         try {
             chatRecordRepo.save(record);
-            log.info("[ChatRecord] 已存储 roomId={}, sender={}({}), botReply={}, content={}",
+            log.debug("[ChatRecord] 已存储 roomId={}, sender={}({}), botReply={}, content={}",
                     chatroomId, senderNick, senderWxid, isBotReply,
                     pureContent != null && pureContent.length() > 60
                             ? pureContent.substring(0, 60) + "..." : pureContent);

@@ -117,6 +117,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                 || path.startsWith("/images/")
                 || path.startsWith("/fonts/")
                 || path.equals("/favicon.ico")
+                || path.startsWith("/webhook/")
                 || path.endsWith(".png")
                 || path.endsWith(".jpg")
                 || path.endsWith(".jpeg")

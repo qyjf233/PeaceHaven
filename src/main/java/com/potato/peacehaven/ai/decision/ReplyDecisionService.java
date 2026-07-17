@@ -52,7 +52,7 @@ public class ReplyDecisionService {
      */
     public ReplyDecision decide(String chatroomId, String senderWxid, String content, boolean isMentioned) {
         if (!aiProps.isReady()) {
-            log.info("[Decision] AI 系统未就绪 chatroom={}", chatroomId);
+            log.debug("[Decision] AI 系统未就绪 chatroom={}", chatroomId);
             return ReplyDecision.skip("AI 系统未就绪");
         }
 
@@ -68,25 +68,25 @@ public class ReplyDecisionService {
 
         resetDailyIfNeeded();
 
-        log.info("[Decision] 开始决策 scene={}, chatroom={}, sender={}, mentioned={}, dailyCount={}/{}, cooldown={}s, randomRate={}, questionRate={}",
+        log.debug("[Decision] 开始决策 scene={}, chatroom={}, sender={}, mentioned={}, dailyCount={}/{}, cooldown={}s, randomRate={}, questionRate={}",
                 scene, chatroomId, senderWxid, isMentioned,
                 dailyCount.get(), cfg.getMaxPerDay(), cooldownSec, randomRate, questionRate);
 
         // 1. 被 @提及 -> 必须回复（仅群聊有效）
         if (isMentioned && !isPrivate) {
-            log.info("[Decision] ✅ 回复：被@提及 chatroom={}", chatroomId);
+            log.info("[Decision] 回复：被@提及 chatroom={}", chatroomId);
             return ReplyDecision.reply("被@提及");
         }
 
         // 2. only-at 模式 -> 仅@时才回复（仅群聊）
         if (cfg.isOnlyAt() && !isPrivate) {
-            log.info("[Decision] ❌ 跳过：only-at 模式，未被@ chatroom={}", chatroomId);
+            log.info("[Decision] 跳过：only-at 模式，未被@ chatroom={}", chatroomId);
             return ReplyDecision.skip("only-at 模式，未被@不回复");
         }
 
         // 3. 每日上限检查
         if (dailyCount.get() >= cfg.getMaxPerDay()) {
-            log.info("[Decision] ❌ 跳过：已达每日上限 {}/{} scene={}", dailyCount.get(), cfg.getMaxPerDay(), scene);
+            log.info("[Decision] 跳过：已达每日上限 {}/{} scene={}", dailyCount.get(), cfg.getMaxPerDay(), scene);
             return ReplyDecision.skip("已达每日上限 " + cfg.getMaxPerDay());
         }
 
@@ -97,7 +97,7 @@ public class ReplyDecisionService {
         long cooldownMs = cooldownSec * 1000L;
         if (lastTime != null && (now - lastTime) < cooldownMs) {
             long remainSec = (cooldownMs - (now - lastTime)) / 1000;
-            log.info("[Decision] ❌ 跳过：冷却中，距上次 {}s，剩余 {}s scene={}", (now - lastTime) / 1000, remainSec, scene);
+            log.debug("[Decision] 跳过：冷却中，距上次 {}s，剩余 {}s scene={}", (now - lastTime) / 1000, remainSec, scene);
             return ReplyDecision.skip("冷却中（距上次 " + (now - lastTime) / 1000 + "s）");
         }
 
@@ -106,21 +106,21 @@ public class ReplyDecisionService {
         if (isQuestion) {
             double roll = ThreadLocalRandom.current().nextDouble();
             if (roll < questionRate) {
-                log.info("[Decision] ✅ 回复：检测到提问 (roll={:.2f}<{}, scene={})", roll, questionRate, scene);
+                log.info("[Decision] 回复：检测到提问 (roll={}, <{}, scene={})", String.format("%.2f", roll), questionRate, scene);
                 return ReplyDecision.reply("检测到提问");
             }
-            log.info("[Decision] ❌ 跳过：检测到提问但概率未命中 (roll={:.2f}>={}, scene={})", roll, questionRate, scene);
+            log.debug("[Decision] 跳过：检测到提问但概率未命中 (roll={}, >={}, scene={})", String.format("%.2f", roll), questionRate, scene);
             return ReplyDecision.skip("检测到提问但概率未命中");
         }
 
         // 6. 随机概率
         double roll = ThreadLocalRandom.current().nextDouble();
         if (roll < randomRate) {
-            log.info("[Decision] ✅ 回复：随机触发 (roll={:.2f}<{}, scene={})", roll, randomRate, scene);
+            log.info("[Decision] 回复：随机触发 (roll={}, <{}, scene={})", String.format("%.2f", roll), randomRate, scene);
             return ReplyDecision.reply("随机触发");
         }
 
-        log.info("[Decision] ❌ 跳过：无触发条件 (roll={:.2f}>={}, scene={})", roll, randomRate, scene);
+        log.debug("[Decision] 跳过：无触发条件 (roll={}, >={}, scene={})", String.format("%.2f", roll), randomRate, scene);
         return ReplyDecision.skip("无触发条件");
     }
 

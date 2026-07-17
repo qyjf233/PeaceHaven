@@ -23,6 +23,7 @@ import com.potato.peacehaven.ai.review.ReviewResult;
 import com.potato.peacehaven.ai.summary.ConversationSummaryService;
 import com.potato.peacehaven.ai.topic.*;
 import com.potato.peacehaven.config.AiProperties;
+import com.potato.peacehaven.config.TraceContext;
 import com.potato.peacehaven.service.WechatApiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -92,16 +93,18 @@ public class AiReplyPipeline {
     @Async("aiReplyExecutor")
     public void processGroupMessage(String chatroomId, String senderWxid,
                                      String senderNick, String content,
-                                     boolean isMentioned) {
-        if (!aiProps.isReady()) {
-            log.info("[Pipeline] ❗ AI 系统未就绪（isReady=false），跳过处理");
-            return;
-        }
-
+                                     boolean isMentioned, String traceId) {
+        TraceContext.set(traceId);
         try {
+            if (!aiProps.isReady()) {
+                log.debug("[Pipeline] AI 系统未就绪（isReady=false），跳过处理");
+                return;
+            }
             doProcess(chatroomId, senderWxid, senderNick, content, isMentioned);
         } catch (Exception e) {
             log.error("[Pipeline] 处理异常 chatroom={}, sender={}", chatroomId, senderWxid, e);
+        } finally {
+            TraceContext.clear();
         }
     }
 
@@ -130,22 +133,22 @@ public class AiReplyPipeline {
         if (topicAware) {
             currentTopic = topicExtractor.extract(content);
             conversationStateManager.update(chatroomId, currentTopic);
-            log.info("[Pipeline] 话题提取 topic={}, chatroom={}", currentTopic, chatroomId);
+            log.debug("[Pipeline] 话题提取 topic={}, chatroom={}", currentTopic, chatroomId);
         }
 
         // ===== 3. RAG 必要性判断 =====
         boolean needsRag = topicJudgeService.needsRagLookup(content, chatroomId);
-        log.info("[Pipeline] RAG 判断 needsRag={}", needsRag);
+        log.debug("[Pipeline] RAG 判断 needsRag={}", needsRag);
 
         // ===== 4. 拉取最近上下文 + 生成摘要 =====
         List<ContextMessage> contextMessages = contextRetrievalService.getRecentContext(
                 chatroomId, replyCfg.getContextSize());
-        log.info("[Pipeline] 拉取上下文 {} 条", contextMessages.size());
+        log.debug("[Pipeline] 拉取上下文 {} 条", contextMessages.size());
 
         String conversationSummary = "";
         if (replyCfg.isUseConversationSummary()) {
             conversationSummary = summaryService.summarize(chatroomId, contextMessages);
-            log.info("[Pipeline] 对话摘要: {}",
+            log.debug("[Pipeline] 对话摘要: {}",
                     conversationSummary.length() > 80 ? conversationSummary.substring(0, 80) + "..." : conversationSummary);
         }
 
@@ -154,12 +157,12 @@ public class AiReplyPipeline {
         if (needsRag) {
             try {
                 ragRecords = chatHistoryRetrievalService.retrieve(content, replyCfg.getRagTopK());
-                log.info("[Pipeline] Style RAG 检索 {} 条", ragRecords.size());
+                log.debug("[Pipeline] Style RAG 检索 {} 条", ragRecords.size());
             } catch (Exception e) {
                 log.warn("[Pipeline] Style RAG 检索失败，继续无 RAG: {}", e.getMessage());
             }
         } else {
-            log.info("[Pipeline] 跳过 Style RAG（无需检索）");
+            log.debug("[Pipeline] 跳过 Style RAG（无需检索）");
         }
 
         // ===== 6. Memory RAG（条件：senderWxid 有记忆） =====
@@ -168,7 +171,7 @@ public class AiReplyPipeline {
             try {
                 memoryText = memoryRagService.retrieveRelevantMemory(senderWxid, content);
                 if (!memoryText.isBlank()) {
-                    log.info("[Pipeline] Memory RAG 命中: {}",
+                    log.debug("[Pipeline] Memory RAG 命中: {}",
                             memoryText.length() > 80 ? memoryText.substring(0, 80) + "..." : memoryText);
                 }
             } catch (Exception e) {
@@ -195,7 +198,7 @@ public class AiReplyPipeline {
             boolean historyStale = aiReplyHistory.isTopicOverused(currentTopic, replyCfg.getTopicStaleThreshold());
             if (convStale || historyStale) {
                 antiAnchoringHint = aiProps.getPrompt().getAntiAnchoringHint();
-                log.info("[Pipeline] 话题过热，注入反锚定提示 convStale={}, historyStale={}, topic={}",
+                log.debug("[Pipeline] 话题过热，注入反锚定提示 convStale={}, historyStale={}, topic={}",
                         convStale, historyStale, currentTopic);
             }
         }
@@ -204,7 +207,7 @@ public class AiReplyPipeline {
         List<LlmMessage> messages = promptBuilder.buildMessages(
                 senderNick, content, conversationSummary, memoryText, ragRecords, antiAnchoringHint);
         boolean jsonMode = aiProps.getPrompt().isJsonReplyFormat();
-        log.info("[Pipeline] Prompt 构建完成 msgs={}, persona={}, version={}, jsonMode={}",
+        log.debug("[Pipeline] Prompt 构建完成 msgs={}, persona={}, version={}, jsonMode={}",
                 messages.size(), aiProps.getPrompt().getPersonaName(),
                 com.potato.peacehaven.ai.prompt.PromptBuilder.PROMPT_VERSION, jsonMode);
 
@@ -214,7 +217,7 @@ public class AiReplyPipeline {
         Double temperature = aiProps.resolveTemperature(scene);
         String rawReply = llmClient.chat(messages, temperature, llmCfg.getMaxTokens());
         if (scene != null) {
-            log.info("[Pipeline] 场景检测: scene={}, temperature={}", scene, temperature);
+            log.debug("[Pipeline] 场景检测: scene={}, temperature={}", scene, temperature);
         }
         if (rawReply == null || rawReply.isBlank()) {
             log.warn("[Pipeline] LLM 返回空，跳过发送");
@@ -227,11 +230,9 @@ public class AiReplyPipeline {
             LlmReply parsed = LlmReply.parse(rawReply);
             if (parsed != null) {
                 aiReply = parsed.getReply();
-                log.info("[Pipeline] LLM 结构化输出: confidence={}, memoryUsed={}, reason={}, updateMem={}, reply={}",
+                log.info("[Pipeline] LLM 结构化输出: confidence={}, reason={}, reply={}",
                         String.format("%.2f", parsed.getConfidence()),
-                        parsed.getMemoryUsed(),
                         parsed.getReplyReason(),
-                        parsed.isShouldUpdateMemory(),
                         aiReply != null && aiReply.length() > 80 ? aiReply.substring(0, 80) + "..." : aiReply);
             } else {
                 log.warn("[Pipeline] JSON 解析失败，fallback 到原始文本: {}",
@@ -263,7 +264,7 @@ public class AiReplyPipeline {
                     personaProfile.getWarmthScore(), personaProfile.getFormalScore(),
                     llmConfidence);
             confidenceTracker.recordReply(llmConfidence, personaMatch);
-            log.info("[Pipeline] personaMatch={}, llmConf={}",
+            log.debug("[Pipeline] personaMatch={}, llmConf={}",
                     String.format("%.2f", personaMatch), String.format("%.2f", llmConfidence));
         } catch (Exception e) {
             log.warn("[Pipeline] personaMatch 计算失败: {}", e.getMessage());
@@ -271,14 +272,12 @@ public class AiReplyPipeline {
 
         // ===== 11. 模拟人类延迟（1-3s 随机） =====
         long delayMs = ThreadLocalRandom.current().nextLong(1000, 3001);
-        log.info("[Pipeline] 模拟人类延迟 {}ms", delayMs);
+        log.debug("[Pipeline] 模拟人类延迟 {}ms", delayMs);
         Thread.sleep(delayMs);
 
         // ===== 12. 发送消息 =====
         String sendTarget = (chatroomId != null && !chatroomId.isBlank()) ? chatroomId : senderWxid;
         boolean isGroupChat = chatroomId != null && !chatroomId.isBlank();
-        log.info("[Pipeline] 准备发送 target={}, isGroup={}, reply={}",
-                sendTarget, isGroupChat, finalReply.length() > 80 ? finalReply.substring(0, 80) + "..." : finalReply);
 
         var resp = wechatApiService.sendText(sendTarget, finalReply);
         if (resp.isSuccess()) {

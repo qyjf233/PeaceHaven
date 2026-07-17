@@ -98,20 +98,20 @@ public class StyleLearningService {
                 .findByIsSelfTrueAndIsBotReplyFalseOrderByCreatedAtDesc(PageRequest.of(0, maxSamples));
 
         if (selfMessages.isEmpty()) {
-            log.info("[Learning] 无本人消息，跳过");
+            log.debug("[Learning] 无本人消息，跳过");
             return;
         }
 
         int minSamples = aiProps.getLearning().getMinSamples();
         if (selfMessages.size() < minSamples) {
-            log.info("[Learning] 本人消息不足 {}/{}，跳过", selfMessages.size(), minSamples);
+            log.debug("[Learning] 本人消息不足 {}/{}，跳过", selfMessages.size(), minSamples);
             return;
         }
 
         // Bootstrap 检查
         boolean bootstrapMode = isInBootstrapPhase();
         if (bootstrapMode) {
-            log.info("[Learning] Bootstrap 阶段：只采集不更新 persona");
+            log.debug("[Learning] Bootstrap 阶段：只采集不更新 persona");
         }
 
         // Step 2: Hash 检查
@@ -121,7 +121,7 @@ public class StyleLearningService {
 
         boolean hashChanged = !currentHash.equals(config.getStyleSourceHash());
         if (!hashChanged) {
-            log.info("[Learning] 消息 hash 未变化，跳过 LLM 提炼");
+            log.debug("[Learning] 消息 hash 未变化，跳过 LLM 提炼");
         }
 
         // Step 3: 按 Scene(roomId) + Person 分组
@@ -147,12 +147,12 @@ public class StyleLearningService {
         }
 
         if (allFeatures.isEmpty()) {
-            log.info("[Learning] 无有效特征，跳过");
+            log.debug("[Learning] 无有效特征，跳过");
             return;
         }
 
         AggregatedStyle globalStyle = styleAggregator.aggregate(allFeatures);
-        log.info("[Learning] 全局聚合: samples={}, humor={}, sarcasm={}, warmth={}, formal={}",
+        log.debug("[Learning] 全局聚合: samples={}, humor={}, sarcasm={}, warmth={}, formal={}",
                 globalStyle.getSampleCount(),
                 fmt(globalStyle.getHumorAvg()),
                 fmt(globalStyle.getSarcasmAvg()),
@@ -168,7 +168,7 @@ public class StyleLearningService {
         double distributionFactor = computeDistributionFactor(selfMessages);
         double confidence = sampleFactor * timeFactor * sceneFactor * distributionFactor;
 
-        log.info("[Learning] confidence={}: sample={}, time={}, scene={}, distribution={}",
+        log.debug("[Learning] confidence={}: sample={}, time={}, scene={}, distribution={}",
                 fmt(confidence), fmt(sampleFactor), fmt(timeFactor), fmt(sceneFactor), fmt(distributionFactor));
 
         // Step 6: ExpressionProfile 更新（提取高频特色表达）
@@ -531,7 +531,7 @@ public class StyleLearningService {
             profile.setSampleCount(profile.getSampleCount() + sceneStyle.getSampleCount());
 
             sceneRepo.save(profile);
-            log.info("[Learning] SceneProfile {}: humor={}, sarcasm={}, warmth={}, samples={}",
+            log.debug("[Learning] SceneProfile {}: humor={}, sarcasm={}, warmth={}, samples={}",
                     sceneType, fmt(profile.getHumorScore()), fmt(profile.getSarcasmScore()),
                     fmt(profile.getWarmthScore()), profile.getSampleCount());
         }
@@ -603,7 +603,7 @@ public class StyleLearningService {
             );
             String result = llmClient.chat(messages, 0.3, 300);
             if (result != null && !result.isBlank()) {
-                log.info("[Learning] LLM 风格提炼成功: {}",
+                log.debug("[Learning] LLM 风格提炼成功: {}",
                         result.length() > 80 ? result.substring(0, 80) + "..." : result);
                 return result.trim();
             }

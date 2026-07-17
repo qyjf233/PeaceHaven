@@ -22,7 +22,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update # 开发环境自动建表
-    show-sql: true
+    show-sql: false
+    open-in-view: false
   thymeleaf:
     cache: false # 开发阶段关闭缓存，方便调试 HTML
   servlet:
@@ -73,10 +74,10 @@ ai:
     use-conversation-summary: true                                 # 是否启用对话摘要替代原始上下文
     summary-cache-seconds: 300                                     # 摘要缓存时间（秒）
     private-chat:
-      random-rate: 1                                             # 私聊随机回复概率（1对1应高）
+      random-rate: 1                                               # 私聊随机回复概率（1对1应高）
       cooldown-seconds: 1                                          # 私聊最短回复间隔（秒）
       buffer-seconds: 5                                            # 消息聚合等待时间（等待对方发完再回）
-      question-rate: 1                                          # 私聊提问回复概率
+      question-rate: 1                                             # 私聊提问回复概率
   prompt:
     persona-name: ${AI_PERSONA_NAME:}
     custom-instructions: ""
@@ -94,14 +95,14 @@ ai:
       风格来自自然表达，不是来自刻意设计。
     anti-anchoring-hint: "当前话题已经讨论较多。如果最新消息是新主题，请自然跟随新主题，不要主动回到旧话题。"
     json-reply-format: true                                        # true=LLM输出JSON(含confidence/memory_used，调试用)  false=纯文本(生产)
-    memory-importance-threshold: 0.3                                 # 记忆提取重要性阈值（低于此值丢弃）
+    memory-importance-threshold: 0.3                               # 记忆提取重要性阈值（低于此值丢弃）
     max-memory-entries: 50                                         # 每人记忆条目最大数量
     # 人格维度（从 style-description 分离，抽象的人格特征）
     personality:
       humor-level: high                                            # 幽默感：high/medium/low
       sarcasm-level: medium                                        # 吐槽/调侃
       casual-level: high                                           # 随意程度
-      warmth-level: medium                                            # 温暖度
+      warmth-level: medium                                         # 温暖度
     # 场景 temperature 覆盖（不配则用 llm.temperature 基础值）
     scene-temperature:
       normal: 0.7                                                  # 普通聊天
@@ -109,7 +110,7 @@ ai:
       question: 0.65                                               # 提问场景（稍低，更稳定）
   # Persona Engine 学习配置（Phase 4 启用）
   learning:
-    enabled: true                                                  # 定时学习总开关
+    enabled: true                                                   # 定时学习总开关
     interval-hours: 6                                               # 学习间隔（小时）
     min-samples: 50                                                 # 最低本人消息数才触发
     max-samples: 200                                                # 学习窗口最大消息数

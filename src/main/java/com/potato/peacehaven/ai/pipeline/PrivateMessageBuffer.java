@@ -1,6 +1,7 @@
 package com.potato.peacehaven.ai.pipeline;
 
 import com.potato.peacehaven.config.AiProperties;
+import com.potato.peacehaven.config.TraceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -57,7 +58,7 @@ public class PrivateMessageBuffer {
      * @param senderNick 发送者昵称
      * @param content    消息内容
      */
-    public void accept(String senderWxid, String senderNick, String content) {
+    public void accept(String senderWxid, String senderNick, String content, String traceId) {
         if (senderWxid == null || content == null) return;
 
         int bufferSeconds = aiProps.getReply().getPrivateChat().getBufferSeconds();
@@ -67,6 +68,7 @@ public class PrivateMessageBuffer {
         // 追加消息到缓冲区
         synchronized (buffer) {
             buffer.messages.add(content);
+            buffer.traceId = traceId;
 
             // 取消之前的定时器
             if (buffer.pendingFlush != null) {
@@ -80,7 +82,7 @@ public class PrivateMessageBuffer {
                     TimeUnit.SECONDS
             );
 
-            log.info("[PrivateBuffer] 缓冲消息 sender={}, content={}, 等待 {}s 后处理",
+            log.debug("[PrivateBuffer] 缓冲消息 sender={}, content={}, 等待 {}s 后处理",
                     senderNick, content.length() > 30 ? content.substring(0, 30) + "..." : content, bufferSeconds);
         }
     }
@@ -93,24 +95,29 @@ public class PrivateMessageBuffer {
         if (buffer == null) return;
 
         List<String> messages;
+        String traceId;
         synchronized (buffer) {
             messages = List.copyOf(buffer.messages);
             buffer.messages.clear();
+            traceId = buffer.traceId;
         }
 
         if (messages.isEmpty()) return;
 
-        // 合并消息：用换行连接，形成完整上下文
-        String combinedContent = String.join("\n", messages);
-        log.info("[PrivateBuffer] 聚合完成 sender={}, 消息数={}, 合并内容={}",
-                senderNick, messages.size(),
-                combinedContent.length() > 80 ? combinedContent.substring(0, 80) + "..." : combinedContent);
-
-        // 触发 AI Pipeline（chatroomId=null 表示私聊）
+        TraceContext.set(traceId);
         try {
-            aiReplyPipeline.processGroupMessage(null, senderWxid, senderNick, combinedContent, false);
+            // 合并消息：用换行连接，形成完整上下文
+            String combinedContent = String.join("\n", messages);
+            log.debug("[PrivateBuffer] 聚合完成 sender={}, 消息数={}, 合并内容={}",
+                    senderNick, messages.size(),
+                    combinedContent.length() > 80 ? combinedContent.substring(0, 80) + "..." : combinedContent);
+
+            // 触发 AI Pipeline（chatroomId=null 表示私聊）
+            aiReplyPipeline.processGroupMessage(null, senderWxid, senderNick, combinedContent, false, traceId);
         } catch (Exception e) {
             log.error("[PrivateBuffer] 触发 Pipeline 失败 sender={}", senderNick, e);
+        } finally {
+            TraceContext.clear();
         }
     }
 
@@ -120,5 +127,6 @@ public class PrivateMessageBuffer {
     private static class SenderBuffer {
         final CopyOnWriteArrayList<String> messages = new CopyOnWriteArrayList<>();
         volatile ScheduledFuture<?> pendingFlush;
+        volatile String traceId;
     }
 }

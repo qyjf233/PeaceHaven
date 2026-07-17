@@ -1,5 +1,6 @@
 package com.potato.peacehaven.controller;
 
+import com.potato.peacehaven.config.TraceContext;
 import com.potato.peacehaven.dto.WechatApiCallbackEvent;
 import com.potato.peacehaven.service.WechatApiWebhookService;
 import lombok.RequiredArgsConstructor;
@@ -61,16 +62,21 @@ public class WechatApiWebhookController {
      */
     @PostMapping("/wechat")
     public ResponseEntity<String> onCallback(@RequestBody WechatApiCallbackEvent event) {
-        // 记录接收日志（含 TypeName 摘要）
-        log.info("[Webhook] 收到回调 typeName={}, appId={}",
-                event.getTypeName(), event.getAppId());
+        // 生成链路追踪 ID，贯穿整条消息处理链路
+        String traceId = TraceContext.generate();
+
+        log.info("[Webhook] 收到回调 typeName={}, appId={}, traceId={}",
+                event.getTypeName(), event.getAppId(), traceId);
 
         // 异步处理，不阻塞 HTTP 响应
         CompletableFuture.runAsync(() -> {
+            TraceContext.set(traceId);
             try {
                 webhookService.handleEvent(event);
             } catch (Exception e) {
-                log.error("[Webhook] 异步处理异常", e);
+                log.error("[Webhook] 异步处理异常 traceId={}", traceId, e);
+            } finally {
+                TraceContext.clear();
             }
         });
 

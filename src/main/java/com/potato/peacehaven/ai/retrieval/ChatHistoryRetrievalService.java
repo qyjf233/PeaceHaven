@@ -78,7 +78,7 @@ public class ChatHistoryRetrievalService {
 
         int filtered = candidates.size() - selected.size();
         if (filtered > 0) {
-            log.info("[RAG] MMR 重排：{}/{} 条通过 (过滤 {} 条, fetchK={}, topK={}, lambda={})",
+            log.debug("[RAG] MMR 重排：{}/{} 条通过 (过滤 {} 条, fetchK={}, topK={}, lambda={})",
                     selected.size(), candidates.size(), filtered, fetchK, topK, lambda);
         }
 
@@ -129,7 +129,7 @@ public class ChatHistoryRetrievalService {
         int need = topK - maxFeatured;
         balanced.addAll(common.subList(0, Math.min(need, common.size())));
 
-        log.info("[RAG] 风格多样性平衡: featured {}/{} (max={}), common={}, total={}",
+        log.debug("[RAG] 风格多样性平衡: featured {}/{} (max={}), common={}, total={}",
                 maxFeatured, featured.size(), maxFeatured, balanced.size() - maxFeatured, balanced.size());
         return balanced;
     }
@@ -238,7 +238,7 @@ public class ChatHistoryRetrievalService {
                 .collect(Collectors.toList());
         long botReplyCount = pending.size() - toIndex.size();
         if (botReplyCount > 0) {
-            log.info("[RAG] 跳过 {} 条 AI 回复记录（不纳入训练）", botReplyCount);
+            log.debug("[RAG] 跳过 {} 条 AI 回复记录（不纳入训练）", botReplyCount);
         }
 
         if (toIndex.isEmpty()) {

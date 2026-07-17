@@ -74,9 +74,9 @@ public class WechatApiService {
     private WechatApiResponse postWithHeaders(String path, Map<String, Object> body, HttpHeaders headers) {
         String url = props.getBaseUrl() + path;
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        log.info("WechatApi 请求 [{}] URL: {}", path, url);
-        log.info("WechatApi 请求 [{}] Headers: {}", path, headers);
-        log.info("WechatApi 请求 [{}] Body: {}", path, body);
+        log.debug("WechatApi 请求 [{}] URL: {}", path, url);
+        log.debug("WechatApi 请求 [{}] Headers: {}", path, headers);
+        log.debug("WechatApi 请求 [{}] Body: {}", path, body);
         try {
             ResponseEntity<WechatApiResponse> resp = restTemplate.exchange(
                     url, HttpMethod.POST, entity, WechatApiResponse.class);
@@ -86,7 +86,7 @@ public class WechatApiService {
                 result.setRet(500);
                 result.setMsg("Empty response from WechatApi");
             }
-            log.info("WechatApi 响应 [{}] ret={}, msg={}, data={}", path, result.getRet(), result.getMsg(), result.getData());
+            log.debug("WechatApi 响应 [{}] ret={}, msg={}, data={}", path, result.getRet(), result.getMsg(), result.getData());
             return result;
         } catch (RestClientException e) {
             log.error("WechatApi 请求失败 [{}]: {}", path, e.getMessage());
