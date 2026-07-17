@@ -59,6 +59,10 @@ public class ConversationStateManager {
                 if (m.get("lastChangeEpoch") != null) {
                     state.setLastTopicChangeTime(Instant.ofEpochSecond(((Number) m.get("lastChangeEpoch")).longValue()));
                 }
+                state.setBotReplyCount(toInt(m.get("botReplyCount")));
+                if (m.get("progressionScore") != null) {
+                    state.setProgressionScore(((Number) m.get("progressionScore")).doubleValue());
+                }
                 states.put(entry.getKey(), state);
             }
             log.info("[ConvState] 从磁盘加载 {} 个对话状态", states.size());
@@ -81,6 +85,8 @@ public class ConversationStateManager {
                 m.put("previousTopic", s.getPreviousTopic());
                 m.put("topicStartEpoch", s.getTopicStartTime() != null ? s.getTopicStartTime().getEpochSecond() : null);
                 m.put("lastChangeEpoch", s.getLastTopicChangeTime() != null ? s.getLastTopicChangeTime().getEpochSecond() : null);
+                m.put("botReplyCount", s.getBotReplyCount());
+                m.put("progressionScore", s.getProgressionScore());
                 serializable.put(entry.getKey(), m);
             }
             objectMapper.writeValue(SNAPSHOT_FILE, serializable);
@@ -132,6 +138,7 @@ public class ConversationStateManager {
                 state.setTopicMentionCount(1);
                 state.setTopicStartTime(Instant.now());
                 state.setLastTopicChangeTime(Instant.now());
+                state.resetStanceTracking(); // 话题切换时重置立场追踪
                 log.info("[ConvState] 话题切换 chatroom={}, {} -> {}", chatroomId, state.getPreviousTopic(), topic);
             }
             return state;
@@ -162,5 +169,36 @@ public class ConversationStateManager {
                     threshold, state.topicDurationSeconds());
         }
         return stale;
+    }
+
+    /**
+     * 记录 bot 回复到对话状态（含行为分类）
+     *
+     * @param chatroomId 群聊 ID
+     * @param reply      bot 回复内容
+     * @param behavior   行为分类
+     */
+    public void recordBotReply(String chatroomId, String reply, BotBehavior behavior) {
+        if (chatroomId == null) return;
+        ConversationState state = states.get(chatroomId);
+        if (state != null) {
+            state.recordBotReply(reply, behavior);
+            log.debug("[ConvState] 记录 bot 回复 chatroom={}, behavior={}, botReplyCount={}, reply={}",
+                    chatroomId, behavior, state.getBotReplyCount(),
+                    reply != null && reply.length() > 30 ? reply.substring(0, 30) + "..." : reply);
+        }
+    }
+
+    /**
+     * 获取或创建对话状态（确保状态存在）
+     */
+    public ConversationState getOrCreateState(String chatroomId) {
+        if (chatroomId == null) return null;
+        return states.computeIfAbsent(chatroomId, k -> {
+            ConversationState s = new ConversationState();
+            s.setTopicStartTime(Instant.now());
+            s.setLastTopicChangeTime(Instant.now());
+            return s;
+        });
     }
 }

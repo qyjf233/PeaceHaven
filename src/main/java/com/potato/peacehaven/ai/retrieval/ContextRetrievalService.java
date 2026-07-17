@@ -54,6 +54,7 @@ public class ContextRetrievalService {
                         .senderWxid(r.getSenderWxid())
                         .content(r.getContent())
                         .isSelf(r.getIsSelf() != null && r.getIsSelf())
+                        .isBotReply(r.getIsBotReply() != null && r.getIsBotReply())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -67,17 +68,43 @@ public class ContextRetrievalService {
      * 小红: 是啊适合出去走走
      * 我: 确实
      * </pre>
+     * <p>
+     * <b>重要：限制 bot 回复数量</b>
+     * 上下文中只保留最近 1 条 bot 回复（保持话题延续性），
+     * 更早的 bot 回复被移除（防止 LLM 被自己的语言模式锚定，导致重复回复）。
      * </p>
      */
     public String formatContextForPrompt(List<ContextMessage> messages) {
         if (messages == null || messages.isEmpty()) return "";
 
-        return messages.stream()
-                .map(m -> {
-                    String prefix = m.isSelf() ? "我" : m.getSenderNick();
-                    return prefix + ": " + m.getContent();
-                })
-                .collect(Collectors.joining("\n"));
+        // 限制 bot 回复：只保留最近 1 条 bot 回复，移除更早的
+        int maxBotReplies = 1;
+        int botReplyCount = 0;
+
+        // 从后往前扫描，找到最近 maxBotReplies 条 bot 回复的位置
+        boolean[] keepBotReply = new boolean[messages.size()];
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            if (messages.get(i).isBotReply()) {
+                botReplyCount++;
+                if (botReplyCount <= maxBotReplies) {
+                    keepBotReply[i] = true;
+                }
+                // 超过 maxBotReplies 的 bot 回复不标记保留（默认 false）
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < messages.size(); i++) {
+            ContextMessage m = messages.get(i);
+            // 如果是 bot 回复且不在保留范围内，跳过
+            if (m.isBotReply() && !keepBotReply[i]) {
+                continue;
+            }
+            String prefix = m.isSelf() ? "我" : m.getSenderNick();
+            sb.append(prefix).append(": ").append(m.getContent()).append("\n");
+        }
+
+        return sb.toString().trim();
     }
 
     /**
@@ -121,5 +148,6 @@ public class ContextRetrievalService {
         private String senderWxid;
         private String content;
         private boolean isSelf;
+        private boolean isBotReply;
     }
 }

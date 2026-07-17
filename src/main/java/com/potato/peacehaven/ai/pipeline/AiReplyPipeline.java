@@ -70,6 +70,7 @@ public class AiReplyPipeline {
     private final ConfidenceTracker confidenceTracker;
     private final PersonaProfileService personaProfileService;
     private final StyleTagger styleTagger;
+    private final ConversationProgressionService conversationProgressionService;
 
     /** 幽默场景检测正则 */
     private static final Pattern HUMOR_PATTERN = Pattern.compile(
@@ -194,7 +195,7 @@ public class AiReplyPipeline {
             }
         }
 
-        // ===== 7. 检查话题过热（反锚定提示） =====
+        // ===== 7. 检查话题过热（反锚定提示）+ 对话推进提示 =====
         String antiAnchoringHint = null;
         if (topicAware && currentTopic != null) {
             boolean convStale = conversationStateManager.isTopicStale(chatroomId);
@@ -206,9 +207,16 @@ public class AiReplyPipeline {
             }
         }
 
+        // 对话推进提示（bot 回复重复时注入，引导改变立场）
+        String progressionHint = conversationProgressionService.getProgressionHint(chatroomId);
+        if (progressionHint != null) {
+            log.debug("[Pipeline] 注入对话推进提示 chatroom={}, hint={}",
+                    chatroomId, progressionHint.length() > 60 ? progressionHint.substring(0, 60) + "..." : progressionHint);
+        }
+
         // ===== 8. 构建 Prompt =====
         List<LlmMessage> messages = promptBuilder.buildMessages(
-                senderNick, content, conversationSummary, recentRawMessages, memoryText, ragRecords, antiAnchoringHint);
+                senderNick, content, conversationSummary, recentRawMessages, memoryText, ragRecords, antiAnchoringHint, progressionHint);
         boolean jsonMode = aiProps.getPrompt().isJsonReplyFormat();
         log.debug("[Pipeline] Prompt 构建完成 msgs={}, persona={}, version={}, jsonMode={}",
                 messages.size(), aiProps.getPrompt().getPersonaName(),
@@ -323,6 +331,14 @@ public class AiReplyPipeline {
             // 持久化 bot 回复到聊天记录（下次上下文拉取时可见，保持话题延续性）
             if (isGroupChat) {
                 contextRetrievalService.saveBotReply(sendTarget, null, finalReply);
+            }
+
+            // 对话推进追踪：记录 bot 回复 + 行为分类 + 更新推进分数
+            try {
+                conversationProgressionService.analyzeAndUpdateProgression(
+                        chatroomId != null ? chatroomId : senderWxid, finalReply, content);
+            } catch (Exception e) {
+                log.warn("[Pipeline] 对话推进追踪失败: {}", e.getMessage());
             }
 
             // 更新决策统计

@@ -86,6 +86,7 @@ public class PromptBuilder {
      * @param userMemoryText      用户记忆文本（Memory RAG）
      * @param ragRecords          RAG 检索的本人历史回复（Style RAG）
      * @param antiAnchoringHint   反锚定提示（可为 null，话题过热时注入）
+     * @param progressionHint    对话推进提示（可为 null，bot 回复重复时注入）
      * @return LLM messages 列表（固定 2-3 条）
      */
     public List<LlmMessage> buildMessages(
@@ -95,7 +96,8 @@ public class PromptBuilder {
             String recentRawMessages,
             String userMemoryText,
             List<RetrievedRecord> ragRecords,
-            String antiAnchoringHint) {
+            String antiAnchoringHint,
+            String progressionHint) {
 
         // 解析有效人格画像（注入到 Prompt 中）
         EffectivePersonaProfile persona = personaProfileService.resolve(senderNick, null);
@@ -108,7 +110,7 @@ public class PromptBuilder {
 
         // ── 2. Context Prompt: 动态上下文注入 ──
         String context = buildContextPrompt(
-                userMemoryText, conversationSummary, recentRawMessages, ragRecords, antiAnchoringHint, persona);
+                userMemoryText, conversationSummary, recentRawMessages, ragRecords, antiAnchoringHint, progressionHint, persona);
         if (!context.isBlank()) {
             messages.add(LlmMessage.system(context));
         }
@@ -301,13 +303,14 @@ public class PromptBuilder {
     /**
      * 构建动态上下文 Prompt
      * <p>
-     * 按模块分区注入：关于对方 → 最近聊天 → 风格样本 → 当前注意
+     * 按模块分区注入：关于对方 → 最近聊天 → 风格样本 → 当前注意 → 对话推进
      * </p>
      */
     private String buildContextPrompt(String memoryText, String summary,
                                        String recentRawMessages,
                                        List<RetrievedRecord> ragRecords,
                                        String antiAnchoringHint,
+                                       String progressionHint,
                                        EffectivePersonaProfile persona) {
         StringBuilder ctx = new StringBuilder(400);
 
@@ -357,6 +360,12 @@ public class PromptBuilder {
         if (antiAnchoringHint != null && !antiAnchoringHint.isBlank()) {
             ctx.append("# 当前注意\n");
             ctx.append(antiAnchoringHint).append("\n");
+        }
+
+        // ── 对话推进提示（bot 回复重复时注入，引导改变立场）──
+        if (progressionHint != null && !progressionHint.isBlank()) {
+            ctx.append("# 对话推进\n");
+            ctx.append(progressionHint).append("\n");
         }
 
         return ctx.toString().trim();
