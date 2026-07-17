@@ -6,16 +6,19 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 单条消息的多维风格特征（由 StyleTagger.analyze 产出）
+ * 单条消息的客观风格特征（由 StyleTagger.analyze 产出）
  * <p>
- * 分为两层：
+ * 只包含可量化、跨模型一致的客观特征：
  * <ul>
- *   <li>Core Persona 维度：humor / sarcasm / warmth / directness —— 稳定人格特质</li>
- *   <li>Expression Mode：formal / slang / length / emoji / punctuation —— 随环境变化的表达模式</li>
+ *   <li>length — 消息字符数</li>
+ *   <li>emojiUsage — emoji 密度</li>
+ *   <li>punctuation — 标点密度</li>
+ *   <li>formalScore — 正式词密度（正则匹配，客观）</li>
+ *   <li>slangScore — 俚语密度（正则匹配，客观）</li>
+ *   <li>category — 风格标签（common/catchphrase/humor/rare，用于 RAG 多样性）</li>
  * </ul>
- * <p>
- * 注意：variance（方差）不在此类中计算。单条消息无法产生方差。
- * 由 {@link StyleAggregator} 对一组 StyleFeature 做聚合后产出 variance。
+ * 主观语义维度（humor/sarcasm/warmth/directness）已由 LLM Observation 替代，
+ * 不再由规则打分。参见 {@link com.potato.peacehaven.ai.learning.StyleLearningService#generatePersonaObservation}。
  * </p>
  */
 @Data
@@ -24,26 +27,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class StyleFeature {
 
-    // ===== Core Persona 维度 0-1 =====
+    // ===== 客观 Expression Mode =====
 
-    /** 幽默感：段子、玩笑、搞笑表达 */
-    private double humorScore;
-
-    /** 讽刺/吐槽：攻击性幽默、反话 */
-    private double sarcasmScore;
-
-    /** 温暖度：关心、共情、支持 */
-    private double warmthScore;
-
-    /** 直接度：不绕弯子、不客套 */
-    private double directnessScore;
-
-    // ===== Expression Mode（非人格，随环境变）=====
-
-    /** 正式程度：真人 ~0.1，AI 默认 ~0.8 */
+    /** 正式词密度（正则匹配，客观） */
     private double formalScore;
 
-    /** 俚语/网络用语密度 */
+    /** 俚语/网络用语密度（正则匹配，客观） */
     private double slangScore;
 
     /** 消息长度（字符数） */
@@ -55,18 +44,7 @@ public class StyleFeature {
     /** 标点密度（标点字符占比） */
     private double punctuation;
 
-    // ===== 社交上下文维度 0-1 =====
-
-    /** 亲密关系中允许的攻击性幽默 */
-    private double intimacyHumor;
-
-    /** 隐藏的共情表达（吐槽中的关心） */
-    private double empathyHidden;
-
-    /** 调侃许可度 */
-    private double teasingAllowed;
-
-    // ===== 兼容旧逻辑 =====
+    // ===== 风格标签（用于 RAG 多样性，不用于打分）=====
 
     /** 风格标签：common / catchphrase / humor / rare */
     private String category;

@@ -12,8 +12,9 @@
 <div class="admin-container">
     <header class="admin-header">
         <h1>模型参数调整</h1>
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; gap:10px; align-items:center;">
             <a href="/admin" class="btn-back">← 返回管理后台</a>
+            <button onclick="exportAllData()" style="padding:5px 14px;border:1px solid #3498db;background:#fff;color:#3498db;border-radius:4px;cursor:pointer;font-size:13px;">导出数据</button>
         </div>
     </header>
 
@@ -66,6 +67,7 @@
                     <div class="gm-header">
                         <h3 class="cfg-title">人格维度 (learned_style_config)</h3>
                         <div class="gm-actions">
+                            <button class="btn-modal" onclick="retrainPersona()" style="background:#e67e22;color:#fff;margin-right:8px;">重新训练</button>
                             <button class="btn-modal btn-modal-save" onclick="saveStyleConfig()">保存</button>
                         </div>
                     </div>
@@ -359,21 +361,22 @@ function deleteMemory(id) { confirmDelete('确定删除该用户画像？', func
 //  Tab 2: 人格维度
 // ========================================================================
 var styleFields = [
-    { key: 'humorScore', label: '幽默度 (humorScore)', hint: '0-1，越高回复越幽默。学习时按 Stability 加权融合', dynamic: true },
-    { key: 'sarcasmScore', label: '吐槽度 (sarcasmScore)', hint: '0-1，越高越爱调侃。学习时按 Stability 加权融合', dynamic: true },
-    { key: 'casualScore', label: '随意度 (casualScore)', hint: '0-1，越高越口语化。学习时按 Stability 加权融合', dynamic: true },
-    { key: 'warmthScore', label: '温暖度 (warmthScore)', hint: '0-1，越高越温暖共情。学习时按 Stability 加权融合', dynamic: true },
-    { key: 'formalScore', label: '正式度 (formalScore)', hint: '0-1，越高越书面（与随意度互补）。学习时直接取新值', dynamic: true },
-    { key: 'slangScore', label: '俚语密度 (slangScore)', hint: '0-1，越高越常用网络用语。学习时直接取新值', dynamic: true },
+    { key: 'personaObservation', label: '人格观察 (personaObservation)', hint: 'LLM 从真实聊天生成的行为观察，直接注入 Prompt，是 Persona Engine 的核心驱动', type: 'textarea', dynamic: true, core: true },
+    { key: 'formalScore', label: '正式度 (formalScore)', hint: '0-1，正式词密度。学习时自动统计', dynamic: true },
+    { key: 'slangScore', label: '俚语密度 (slangScore)', hint: '0-1，网络用语密度。学习时自动统计', dynamic: true },
     { key: 'avgLength', label: '平均长度 (avgLength)', hint: '整数，历史消息平均字符数。学习时自动统计', dynamic: true },
     { key: 'lengthVariance', label: '长度方差 (lengthVariance)', hint: '数值越大越像真人（长短不一）。学习时自动统计', dynamic: true },
     { key: 'expressionVariance', label: '表达方差 (expressionVariance)', hint: '数值越大表达形式越多样。学习时自动统计', dynamic: true },
-    { key: 'intimacyHumor', label: '亲密幽默度 (intimacyHumor)', hint: '0-1，对熟人更幽默的程度。学习时自动统计', dynamic: true },
-    { key: 'empathyHidden', label: '隐藏共情 (empathyHidden)', hint: '0-1，表面不在意但实际关心。学习时自动统计', dynamic: true },
-    { key: 'teasingAllowed', label: '调侃许可度 (teasingAllowed)', hint: '0-1，越高越接受互相调侃。学习时自动统计', dynamic: true },
-    { key: 'styleDescription', label: '风格描述 (styleDescription)', hint: 'LLM 提炼的风格文本，直接注入 System Prompt。消息变化时由 LLM 重新生成', type: 'textarea', dynamic: true },
+    { key: 'humorScore', label: '幽默度 (humorScore)', hint: '0-1（辅助统计，旧正则打分值）', dynamic: true, auxiliary: true },
+    { key: 'sarcasmScore', label: '吐槽度 (sarcasmScore)', hint: '0-1（辅助统计，旧正则打分值）', dynamic: true, auxiliary: true },
+    { key: 'casualScore', label: '随意度 (casualScore)', hint: '0-1（辅助统计，旧正则打分值）', dynamic: true, auxiliary: true },
+    { key: 'warmthScore', label: '温暖度 (warmthScore)', hint: '0-1（辅助统计，旧正则打分值）', dynamic: true, auxiliary: true },
+    { key: 'intimacyHumor', label: '亲密幽默度 (intimacyHumor)', hint: '0-1（辅助统计，旧规则推断值）', dynamic: true, auxiliary: true },
+    { key: 'empathyHidden', label: '隐藏共情 (empathyHidden)', hint: '0-1（辅助统计，旧规则推断值）', dynamic: true, auxiliary: true },
+    { key: 'teasingAllowed', label: '调侃许可度 (teasingAllowed)', hint: '0-1（辅助统计，旧规则推断值）', dynamic: true, auxiliary: true },
+    { key: 'styleDescription', label: '风格描述 (styleDescription)', hint: 'LLM 提炼的风格文本（兜底）。personaObservation 存在时不注入 Prompt', type: 'textarea', dynamic: true },
     { key: 'styleVersion', label: '风格版本 (styleVersion)', hint: '句式/用词变化版本号。消息 hash 变化时自动 +1', dynamic: true },
-    { key: 'personaVersion', label: '人格版本 (personaVersion)', hint: '价值观/性格变化版本号。核心维度变化 > 0.1 时自动 +1', dynamic: true }
+    { key: 'personaVersion', label: '人格版本 (personaVersion)', hint: 'Observation 更新时自动 +1', dynamic: true }
 ];
 var styleReadonly = [
     { key: 'learningConfidence', label: '总置信度', hint: '只读：学习可信度 0-1，由 sample×time×scene×distribution 计算', dynamic: true },
@@ -388,23 +391,27 @@ function loadStyleConfig() {
     api('GET', API + '/style-config').then(function(d) {
         if (!d.exists) { document.getElementById('styleConfigForm').innerHTML = '<p class="cfg-hint">尚无学习数据（需 StyleLearningService 运行一次）。可手动填写后保存。</p>'; return; }
         var html = '';
-        // ── 核心人格维度 ──
-        html += '<h4 style="margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;">核心人格维度</h4>';
-        html += '<p class="cfg-hint" style="margin-bottom:10px;">四维人格模型，0-1 之间。由 LearnedStyleConfig 按置信度与 YAML 基础值加权融合。</p>';
+        // ── 核心：Persona Observation ──
+        html += '<h4 style="margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e67e22;">核心：人格观察 <span style="font-size:10px;background:#fef3e2;color:#e67e22;padding:1px 5px;border-radius:3px;">自动</span></h4>';
+        html += '<p class="cfg-hint" style="margin-bottom:10px;">LLM 从真实聊天中提炼的行为模式观察。直接注入 System Prompt，是 Persona Engine 的核心驱动。</p>';
+        html += '<div style="margin-bottom:16px;">' + fieldHtml(styleFields[0], d) + '</div>';
+        // ── 客观统计特征 ──
+        html += '<h4 style="margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;">客观统计特征</h4>';
+        html += '<p class="cfg-hint" style="margin-bottom:10px;">由规则统计的可量化特征（长度/emoji/标点/正式词/俚语），跨模型一致。</p>';
         html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-        styleFields.slice(0, 4).forEach(function(f) { html += fieldHtml(f, d); });
-        html += '</div>';
-        // ── 表达模式 ──
-        html += '<h4 style="margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;">表达模式</h4>';
-        html += '<p class="cfg-hint" style="margin-bottom:10px;">控制输出风格的形式特征，随环境变化。</p>';
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-        styleFields.slice(4, 12).forEach(function(f) { html += fieldHtml(f, d); });
+        styleFields.slice(1, 6).forEach(function(f) { html += fieldHtml(f, d); });
         html += '</div>';
         // ── 风格描述与版本 ──
         html += '<h4 style="margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;">风格描述与版本</h4>';
-        html += '<div style="margin-bottom:12px;">' + fieldHtml(styleFields[12], d) + '</div>';
+        html += '<div style="margin-bottom:12px;">' + fieldHtml(styleFields[13], d) + '</div>';
         html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-        styleFields.slice(13).forEach(function(f) { html += fieldHtml(f, d); });
+        styleFields.slice(14).forEach(function(f) { html += fieldHtml(f, d); });
+        html += '</div>';
+        // ── 辅助统计（旧分数，视觉降级）──
+        html += '<h4 style="margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #ddd;color:#999;">辅助统计（旧分数，向后兼容）</h4>';
+        html += '<p class="cfg-hint" style="margin-bottom:10px;color:#aaa;">这些分数来自旧的正则打分机制，已不作为 Prompt 核心驱动。保留用于参考和向后兼容。</p>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;opacity:0.7;">';
+        styleFields.slice(6, 13).forEach(function(f) { html += fieldHtml(f, d); });
         html += '</div>';
         // ── 置信度指标 ──
         html += '<h4 style="margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #eee;color:#888;">置信度指标（只读参考）</h4>';
@@ -440,6 +447,18 @@ function saveStyleConfig() {
     styleFields.forEach(function(f) { var el = document.getElementById('sf_' + f.key); if (el) body[f.key] = el.value; });
     api('PUT', API + '/style-config', body).then(function(r) {
         if (r.success) { PHDialog.show({ icon: '✅', title: '成功', message: '人格维度已保存', confirmText: '好的' }); }
+    });
+}
+function retrainPersona() {
+    PHDialog.confirm({ icon: '⚠️', title: '重新训练', message: '将强制重新运行学习流程，生成新的 Persona Observation。会消耗一次 LLM 调用。确认？', confirmText: '开始训练', cancelText: '取消' }).then(function() {
+        api('POST', API + '/style-config/retrain').then(function(r) {
+            if (r.success) {
+                PHDialog.show({ icon: '✅', title: '训练完成', message: r.message + (r.hasObservation ? '（' + r.observationLength + ' 字符）' : ''), confirmText: '好的' });
+                loadStyleConfig();
+            } else {
+                PHDialog.show({ icon: '❌', title: '训练失败', message: r.error || '未知错误', confirmText: '好的' });
+            }
+        });
     });
 }
 
@@ -724,6 +743,28 @@ function deleteSnapshot(id) { confirmDelete('确定删除该学习快照？', fu
 
 // ===== 初始化 =====
 loadUserMemory();
+
+// ===== 一键导出 =====
+function exportAllData() {
+    fetch(API + '/export-all')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var json = JSON.stringify(data, null, 2);
+            var blob = new Blob([json], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'persona-export-' + new Date().toISOString().slice(0, 10) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            PHDialog.show({ icon: '✅', title: '导出成功', message: '已下载 persona-export JSON 文件', confirmText: '好的' });
+        })
+        .catch(function(err) {
+            PHDialog.show({ icon: '❌', title: '导出失败', message: err.message, confirmText: '好的' });
+        });
+}
 </script>
 </body>
 </html>

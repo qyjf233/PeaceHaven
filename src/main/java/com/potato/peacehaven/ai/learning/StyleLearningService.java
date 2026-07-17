@@ -152,12 +152,12 @@ public class StyleLearningService {
         }
 
         AggregatedStyle globalStyle = styleAggregator.aggregate(allFeatures);
-        log.debug("[Learning] 全局聚合: samples={}, humor={}, sarcasm={}, warmth={}, formal={}",
+        log.debug("[Learning] 全局聚合: samples={}, lengthAvg={}, formal={}, slang={}, lengthVar={}",
                 globalStyle.getSampleCount(),
-                fmt(globalStyle.getHumorAvg()),
-                fmt(globalStyle.getSarcasmAvg()),
-                fmt(globalStyle.getWarmthAvg()),
-                fmt(globalStyle.getFormalAvg()));
+                globalStyle.getLengthAvg(),
+                fmt(globalStyle.getFormalAvg()),
+                fmt(globalStyle.getSlangAvg()),
+                fmt(globalStyle.getLengthVariance()));
 
         // Step 5: 多维 confidence
         double sampleFactor = Math.min((double) allFeatures.size() / 200, 1.0);
@@ -185,48 +185,36 @@ public class StyleLearningService {
             updateRelationshipProfiles(selfMessages, featuresByRoom, byRoom);
         }
 
-        // Step 9: DriftDetector
+        // Step 9: DriftDetector（保留，基于历史快照对比）
         if (!bootstrapMode && hashChanged) {
             driftDetector.detectAndUpdateStability(
-                    globalStyle.getHumorAvg(),
-                    globalStyle.getSarcasmAvg(),
-                    globalStyle.getWarmthAvg());
+                    config.getHumorScore(),
+                    config.getSarcasmScore(),
+                    config.getWarmthScore());
         }
 
-        // Step 10: Stability 正则化融合
-        double ec = driftDetector.computeEffectiveConfidence(confidence, "humor");
-        double newHumor = blend(config.getHumorScore(), globalStyle.getHumorAvg(), ec);
-        double ecSarcasm = driftDetector.computeEffectiveConfidence(confidence, "sarcasm");
-        double newSarcasm = blend(config.getSarcasmScore(), globalStyle.getSarcasmAvg(), ecSarcasm);
-        double ecWarmth = driftDetector.computeEffectiveConfidence(confidence, "warmth");
-        double newWarmth = blend(config.getWarmthScore(), globalStyle.getWarmthAvg(), ecWarmth);
-
+        // Step 10: 客观统计融合（不再 blend 主观 persona 分数）
         if (!bootstrapMode) {
-            config.setHumorScore(newHumor);
-            config.setSarcasmScore(newSarcasm);
-            config.setWarmthScore(newWarmth);
-            config.setCasualScore(blend(config.getCasualScore(), globalStyle.getDirectnessAvg(), ec));
             config.setFormalScore(globalStyle.getFormalAvg());
             config.setSlangScore(globalStyle.getSlangAvg());
             config.setAvgLength(globalStyle.getLengthAvg());
             config.setLengthVariance(globalStyle.getLengthVariance());
             config.setExpressionVariance(globalStyle.getExpressionVariance());
-            config.setIntimacyHumor(globalStyle.getIntimacyHumorAvg());
-            config.setEmpathyHidden(globalStyle.getEmpathyHiddenAvg());
-            config.setTeasingAllowed(globalStyle.getTeasingAllowedAvg());
         }
 
-        // Step 11: LLM 风格提炼（hash 变化时）
+        // Step 11: LLM Observation 生成（hash 变化时，核心改造）
         if (hashChanged && !bootstrapMode) {
-            String styleDescription = extractStyleDescription(allFeatures, globalStyle);
+            String observation = generatePersonaObservation(selfMessages, globalStyle);
+            config.setPersonaObservation(observation);
+            // styleDescription 保留作为兜底（observation 已是核心）
+            String styleDescription = extractStyleDescription(selfMessages, globalStyle);
             config.setStyleDescription(styleDescription);
         }
 
-        // Step 12: 双版本判断 + Snapshot
+        // Step 12: 版本判断 + Snapshot
+        // personaChanged：observation 有变化即认为人格变化
         boolean personaChanged = hashChanged && !bootstrapMode &&
-                (Math.abs(newHumor - config.getHumorScore()) > 0.1 ||
-                 Math.abs(newSarcasm - config.getSarcasmScore()) > 0.1 ||
-                 Math.abs(newWarmth - config.getWarmthScore()) > 0.1);
+                config.getPersonaObservation() != null;
 
         if (hashChanged && !bootstrapMode) {
             config.setStyleVersion(config.getStyleVersion() + 1);
@@ -521,19 +509,14 @@ public class StyleLearningService {
             SceneProfile profile = sceneRepo.findBySceneType(sceneType)
                     .orElse(SceneProfile.builder().sceneType(sceneType).build());
 
-            // 增量融合（70% 旧值 + 30% 新值）
-            double alpha = profile.getSampleCount() > 0 ? 0.7 : 0.0;
-            profile.setHumorScore(alpha * profile.getHumorScore() + (1 - alpha) * sceneStyle.getHumorAvg());
-            profile.setSarcasmScore(alpha * profile.getSarcasmScore() + (1 - alpha) * sceneStyle.getSarcasmAvg());
-            profile.setWarmthScore(alpha * profile.getWarmthScore() + (1 - alpha) * sceneStyle.getWarmthAvg());
-            profile.setCasualScore(alpha * profile.getCasualScore() + (1 - alpha) * sceneStyle.getDirectnessAvg());
+            // 只更新客观统计维度（formal/slang），主观 persona 分数保留旧值不更新
             profile.setFormalScore(sceneStyle.getFormalAvg());
             profile.setSampleCount(profile.getSampleCount() + sceneStyle.getSampleCount());
 
             sceneRepo.save(profile);
-            log.debug("[Learning] SceneProfile {}: humor={}, sarcasm={}, warmth={}, samples={}",
-                    sceneType, fmt(profile.getHumorScore()), fmt(profile.getSarcasmScore()),
-                    fmt(profile.getWarmthScore()), profile.getSampleCount());
+            log.debug("[Learning] SceneProfile {}: formal={}, slang={}, samples={}",
+                    sceneType, fmt(profile.getFormalScore()),
+                    fmt(sceneStyle.getSlangAvg()), profile.getSampleCount());
         }
     }
 
@@ -544,10 +527,10 @@ public class StyleLearningService {
     private void updateRelationshipProfiles(List<BotChatRecord> selfMessages,
                                              Map<String, List<StyleFeature>> featuresByRoom,
                                              Map<String, List<BotChatRecord>> byRoom) {
-        // 简化：对每个 roomId，用本人消息特征 + 群名推断关系
+        // 简化：对每个 roomId，用本人消息客观特征 + 群名推断关系
         for (var entry : byRoom.entrySet()) {
             String roomId = entry.getKey();
-            if ("private".equals(roomId)) continue; // 私聊暂不处理
+            if ("private".equals(roomId)) continue;
 
             List<StyleFeature> roomFeatures = featuresByRoom.get(roomId);
             if (roomFeatures == null || roomFeatures.isEmpty()) continue;
@@ -555,7 +538,6 @@ public class StyleLearningService {
             AggregatedStyle roomStyle = styleAggregator.aggregate(roomFeatures);
             if (roomStyle == null) continue;
 
-            // 用 roomId 作为 contactName 的简化 key（后续可改为真实联系人）
             String contactName = roomId;
             List<BotChatRecord> roomRecords = entry.getValue();
             if (!roomRecords.isEmpty() && roomRecords.get(0).getRoomName() != null) {
@@ -569,99 +551,226 @@ public class StyleLearningService {
                             .intimacyLevel(5)
                             .build());
 
-            double alpha = profile.getSampleCount() > 0 ? 0.7 : 0.0;
-            profile.setHumorScore(alpha * profile.getHumorScore() + (1 - alpha) * roomStyle.getHumorAvg());
-            profile.setSarcasmScore(alpha * profile.getSarcasmScore() + (1 - alpha) * roomStyle.getSarcasmAvg());
-            profile.setWarmthScore(alpha * profile.getWarmthScore() + (1 - alpha) * roomStyle.getWarmthAvg());
+            // 只更新客观统计维度，主观 persona 分数保留旧值
             profile.setFormalScore(roomStyle.getFormalAvg());
             profile.setSampleCount(profile.getSampleCount() + roomStyle.getSampleCount());
 
-            // 推断 communicationStyle
-            if (roomStyle.getHumorAvg() > 0.6 && roomStyle.getSarcasmAvg() > 0.5) {
-                profile.setCommunicationStyle("互相调侃");
-            } else if (roomStyle.getWarmthAvg() > 0.6) {
-                profile.setCommunicationStyle("温暖关心");
-            } else if (roomStyle.getFormalAvg() > 0.5) {
+            // 推断 communicationStyle（基于客观特征）
+            if (roomStyle.getFormalAvg() > 0.5) {
                 profile.setCommunicationStyle("正式交流");
-            } else {
+            } else if (roomStyle.getSlangAvg() > 0.4) {
                 profile.setCommunicationStyle("自然随意");
+            } else {
+                profile.setCommunicationStyle("自然交流");
             }
 
             relationshipRepo.save(profile);
         }
     }
 
+    // ========================================================================
+    //  LLM Observation 生成（核心新方法）
+    // ========================================================================
+
     /**
-     * LLM 风格提炼（从聚合特征生成观察式描述）
+     * LLM 生成 Persona Observation（核心方法，替代旧的正则打分）
+     * <p>
+     * 从 200 条消息中抽样 30-40 条（分层抽样），连同客观统计数据发给 LLM，
+     * 输出结构化观察文本，直接注入 Prompt。
+     * </p>
      */
-    private String extractStyleDescription(List<StyleFeature> features, AggregatedStyle style) {
+    private String generatePersonaObservation(List<BotChatRecord> messages, AggregatedStyle stats) {
         try {
-            String prompt = buildStyleExtractionPrompt(features, style);
-            List<LlmMessage> messages = List.of(
-                    LlmMessage.system("你是一个语言风格分析专家。根据聊天统计数据，用观察性描述总结说话风格。不要使用'幽默''吐槽''调侃'等词，用'轻松''随意''简短'等自然词汇。输出 3-5 行简短描述。"),
+            // 分层抽样：按 roomId 比例分配，最多取 35 条
+            List<String> sampledMessages = sampleMessages(messages, 35);
+
+            String prompt = buildObservationPrompt(sampledMessages, stats);
+            List<LlmMessage> llmMessages = List.of(
+                    LlmMessage.system("""
+                            你是一个聊天风格分析专家。你的任务是观察一个人的真实聊天消息，总结出他的交流风格和行为模式。
+
+                            输出要求：
+                            1. 用观察性语言，不要使用"幽默""吐槽""温暖"等主观评价词
+                            2. 描述行为规律，不是给分数
+                            3. 分三个层次：通常/偶尔/几乎没有
+                            4. 每条观察简短一行
+                            5. 总共 8-12 条观察
+
+                            输出格式：
+                            通常：
+                            - （高频行为特征）
+
+                            偶尔：
+                            - （中频行为特征）
+
+                            几乎没有：
+                            - （极低频或不出现的行为）
+                            """),
                     LlmMessage.user(prompt)
             );
-            String result = llmClient.chat(messages, 0.3, 300);
+
+            String result = llmClient.chat(llmMessages, 0.3, 500);
             if (result != null && !result.isBlank()) {
-                log.debug("[Learning] LLM 风格提炼成功: {}",
-                        result.length() > 80 ? result.substring(0, 80) + "..." : result);
+                log.info("[Learning] Persona Observation 生成成功 ({} chars)", result.length());
+                return result.trim();
+            }
+        } catch (Exception e) {
+            log.warn("[Learning] Persona Observation 生成失败: {}", e.getMessage());
+        }
+
+        // Fallback：基于客观统计生成简单观察
+        return generateFallbackObservation(stats);
+    }
+
+    /**
+     * 分层抽样消息（按 roomId 比例分配）
+     */
+    private List<String> sampleMessages(List<BotChatRecord> messages, int maxCount) {
+        if (messages.size() <= maxCount) {
+            return messages.stream()
+                    .filter(r -> r.getContent() != null && !r.getContent().isBlank())
+                    .map(BotChatRecord::getContent)
+                    .collect(Collectors.toList());
+        }
+
+        // 按 roomId 分组
+        Map<String, List<BotChatRecord>> byRoom = messages.stream()
+                .filter(r -> r.getContent() != null && !r.getContent().isBlank())
+                .collect(Collectors.groupingBy(r -> r.getRoomId() != null ? r.getRoomId() : "private"));
+
+        List<String> result = new ArrayList<>();
+        double ratio = (double) maxCount / messages.size();
+
+        for (var entry : byRoom.entrySet()) {
+            List<BotChatRecord> roomMsgs = entry.getValue();
+            int take = Math.max(1, (int) (roomMsgs.size() * ratio));
+
+            // 随机打乱后取前 take 条
+            List<BotChatRecord> shuffled = new ArrayList<>(roomMsgs);
+            Collections.shuffle(shuffled);
+
+            for (int i = 0; i < Math.min(take, shuffled.size()); i++) {
+                result.add(shuffled.get(i).getContent());
+            }
+        }
+
+        // 如果抽样超过 maxCount，截断
+        if (result.size() > maxCount) {
+            Collections.shuffle(result);
+            result = result.subList(0, maxCount);
+        }
+
+        return result;
+    }
+
+    /**
+     * 构建 Observation 生成的 LLM Prompt
+     */
+    private String buildObservationPrompt(List<String> sampledMessages, AggregatedStyle stats) {
+        StringBuilder sb = new StringBuilder();
+
+        // 客观统计
+        sb.append("## 客观统计数据\n");
+        sb.append(String.format("- 消息总数：%d 条\n", stats.getSampleCount()));
+        sb.append(String.format("- 平均长度：%d 字\n", stats.getLengthAvg()));
+        sb.append(String.format("- 长度波动：%s\n", stats.getLengthVariance() > 500 ? "较大（长短不一）" : "较小（长度稳定）"));
+        sb.append(String.format("- 正式词密度：%.2f\n", stats.getFormalAvg()));
+        sb.append(String.format("- 俚语/网络用语密度：%.2f\n", stats.getSlangAvg()));
+        sb.append(String.format("- Emoji 使用密度：%.3f\n", stats.getEmojiAvg()));
+        sb.append(String.format("- 标点密度：%.3f\n", stats.getPunctuationAvg()));
+        sb.append("\n");
+
+        // 抽样消息
+        sb.append("## 真实聊天消息样本\n");
+        for (int i = 0; i < sampledMessages.size(); i++) {
+            String msg = sampledMessages.get(i);
+            // 截断过长消息
+            if (msg.length() > 200) {
+                msg = msg.substring(0, 200) + "...";
+            }
+            sb.append(String.format("%d. %s\n", i + 1, msg));
+        }
+        sb.append("\n请根据以上统计和消息样本，输出这个人的交流风格观察。");
+
+        return sb.toString();
+    }
+
+    /**
+     * Fallback：基于客观统计生成简单观察（LLM 失败时兜底）
+     */
+    private String generateFallbackObservation(AggregatedStyle stats) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("通常：\n");
+        if (stats.getLengthAvg() < 30) {
+            sb.append("- 回复很短，一两句话结束\n");
+        } else if (stats.getLengthAvg() < 80) {
+            sb.append("- 回复长度中等\n");
+        } else {
+            sb.append("- 回复通常比较长\n");
+        }
+
+        if (stats.getFormalAvg() < 0.2) {
+            sb.append("- 几乎不用书面表达\n");
+        } else if (stats.getFormalAvg() > 0.4) {
+            sb.append("- 偶尔使用正式表达\n");
+        }
+
+        if (stats.getSlangAvg() > 0.3) {
+            sb.append("- 经常使用网络用语\n");
+        }
+
+        if (stats.getLengthVariance() > 500) {
+            sb.append("- 表达长度波动较大，多数很短，偶尔长篇\n");
+        }
+
+        sb.append("\n偶尔：\n");
+        sb.append("- 使用口头禅或特色表达\n");
+
+        sb.append("\n几乎没有：\n");
+        sb.append("- 长篇分析或系统性输出\n");
+
+        return sb.toString().trim();
+    }
+
+    // ========================================================================
+    //  风格描述（保留作为兜底，observation 已是核心）
+    // ========================================================================
+
+    /**
+     * LLM 风格描述提炼（简化版，作为 styleDescription 的兜底）
+     */
+    private String extractStyleDescription(List<BotChatRecord> messages, AggregatedStyle style) {
+        try {
+            String prompt = String.format("""
+                    聊天统计数据：
+                    - 消息数：%d
+                    - 平均长度：%d 字，长度波动：%s
+                    - 正式表达占比：%s
+                    - 网络用语密度：%s
+
+                    请用观察性语言描述这个人的说话风格，3-5 行简短描述。
+                    不要使用'幽默''吐槽''调侃'等词，用'轻松''随意''简短'等自然词汇。
+                    """,
+                    style.getSampleCount(),
+                    style.getLengthAvg(),
+                    style.getLengthVariance() > 500 ? "较大" : "较小",
+                    fmt(style.getFormalAvg()),
+                    fmt(style.getSlangAvg()));
+
+            List<LlmMessage> llmMessages = List.of(
+                    LlmMessage.system("你是一个语言风格分析专家。"),
+                    LlmMessage.user(prompt)
+            );
+            String result = llmClient.chat(llmMessages, 0.3, 300);
+            if (result != null && !result.isBlank()) {
                 return result.trim();
             }
         } catch (Exception e) {
             log.warn("[Learning] LLM 风格提炼失败: {}", e.getMessage());
         }
 
-        // Fallback：规则生成
-        return generateRuleBasedDescription(style);
-    }
-
-    private String buildStyleExtractionPrompt(List<StyleFeature> features, AggregatedStyle style) {
-        return String.format("""
-                聊天统计数据：
-                - 消息数：%d
-                - 平均长度：%d 字，长度波动：%s
-                - 轻松表达占比：%s，正式表达占比：%s
-                - 网络用语密度：%s
-                - 温暖表达占比：%s，直接表达占比：%s
-                
-                请用观察性语言描述这个人的说话风格。
-                """,
-                style.getSampleCount(),
-                style.getLengthAvg(),
-                style.getLengthVariance() > 500 ? "较大" : "较小",
-                fmt(style.getHumorAvg()),
-                fmt(style.getFormalAvg()),
-                fmt(style.getSlangAvg()),
-                fmt(style.getWarmthAvg()),
-                fmt(style.getDirectnessAvg()));
-    }
-
-    /**
-     * 规则生成风格描述（LLM fallback）
-     */
-    private String generateRuleBasedDescription(AggregatedStyle style) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("- 交流风格偏");
-        if (style.getHumorAvg() > 0.5) sb.append("轻松活泼");
-        else if (style.getFormalAvg() > 0.5) sb.append("正式稳重");
-        else sb.append("自然随和");
-        sb.append("\n");
-
-        sb.append("- 消息通常");
-        if (style.getLengthAvg() < 30) sb.append("很简短");
-        else if (style.getLengthAvg() < 80) sb.append("中等长度");
-        else sb.append("比较长");
-        sb.append("\n");
-
-        if (style.getSlangAvg() > 0.3) {
-            sb.append("- 经常使用网络用语和非正式表达\n");
-        }
-
-        if (style.getLengthVariance() > 500) {
-            sb.append("- 表达长度波动较大，多数很短，偶尔长篇\n");
-        }
-
-        return sb.toString().trim();
+        return generateFallbackObservation(style);
     }
 
     /**

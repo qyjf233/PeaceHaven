@@ -55,7 +55,7 @@ public class PromptBuilder {
      * 后续可在记忆提取时记录 generated_by_prompt=v3.2，分析哪个版本效果最好。
      * </p>
      */
-    public static final String PROMPT_VERSION = "v4.2";
+    public static final String PROMPT_VERSION = "v4.3-obs";
 
     private final AiProperties aiProps;
     private final SpeakingStyleExtractor styleExtractor;
@@ -174,11 +174,11 @@ public class PromptBuilder {
         sb.append("6. 群聊已切换主题时，自然跟随新主题\n");
         sb.append("7. 根据上下文关系调整表达\n\n");
 
-        // ── 历史聊天统计（观察描述，非人格指令）──
+        // ── 历史聊天观察（LLM Observation 或分数 fallback）──
         sb.append("# 历史聊天统计\n");
         sb.append("以下来自长期聊天数据统计，是观察事实而非行为指令：\n");
 
-        // 从 persona scores 生成观察描述（不暴露数字）
+        // 优先使用 LLM Observation，否则 fallback 到分数转描述
         sb.append(describeAsObservation(persona));
 
         // 追加手动 style description（如果有）
@@ -187,12 +187,14 @@ public class PromptBuilder {
         }
         sb.append("\n");
 
-        // ── 表达特征（从真实聊天统计）──
-        sb.append("# 表达特征\n");
-        sb.append("- 句子通常很短，口语化\n");
-        sb.append("- 正式程度很低，几乎不用书面表达\n");
-        sb.append("- 表达长度波动较大——多数很短，偶尔长篇\n");
-        sb.append("- 个别习惯性表达偶尔出现，不刻意使用\n\n");
+        // ── 表达特征（仅在没有 Observation 时作为兜底）──
+        boolean hasObservation = persona.getPersonaObservation() != null && !persona.getPersonaObservation().isBlank();
+        if (!hasObservation) {
+            sb.append("# 表达特征\n");
+            sb.append("- 口语化表达\n");
+            sb.append("- 表达长度和形式根据上下文自然变化\n");
+            sb.append("- 习惯性表达偶尔出现，不刻意使用\n\n");
+        }
 
         // ── 社交模式 ──
         sb.append("# 社交模式\n");
@@ -277,12 +279,21 @@ public class PromptBuilder {
     }
 
     /**
-     * 将 persona scores 转化为观察描述（不暴露数字、不使用任务词）
+     * 生成人格观察描述（注入到 System Prompt）
+     * <p>
+     * 优先使用 LLM 生成的 Persona Observation（核心驱动），
+     * 否则 fallback 到分数转描述逻辑（兜底）。
+     * </p>
      */
     private String describeAsObservation(EffectivePersonaProfile persona) {
+        // 核心：使用 LLM 生成的观察
+        if (persona.getPersonaObservation() != null && !persona.getPersonaObservation().isBlank()) {
+            return persona.getPersonaObservation() + "\n";
+        }
+
+        // Fallback：基于分数生成简单观察（向后兼容）
         StringBuilder sb = new StringBuilder(200);
 
-        // 交流风格观察
         if (persona.getHumorScore() > 0.6) {
             sb.append("- 历史聊天中，大部分交流偏轻松简短\n");
         } else if (persona.getHumorScore() > 0.3) {
@@ -291,12 +302,10 @@ public class PromptBuilder {
             sb.append("- 历史聊天中，交流风格偏稳重\n");
         }
 
-        // 关系间差异
         if (persona.getSarcasmScore() > 0.4) {
             sb.append("- 部分熟悉关系中，回复会更随意，偶尔出现非正式表达\n");
         }
 
-        // 表达直接度
         if (persona.getCasualScore() > 0.6) {
             sb.append("- 普通情况下保持自然，不会刻意修饰\n");
         }

@@ -43,6 +43,11 @@ public class LearnedStyleConfig {
     @Comment("LLM 提炼的风格描述")
     private String styleDescription;
 
+    /** LLM 生成的人格观察（Persona Observation，核心驱动） */
+    @Column(name = "persona_observation", columnDefinition = "TEXT")
+    @Comment("LLM 生成的人格观察（核心驱动，替代分数）")
+    private String personaObservation;
+
     /** 源数据 hash（消息 id 列表 hash，相同则跳过 LLM） */
     @Column(name = "style_source_hash", length = 64)
     @Comment("源数据 hash")

@@ -74,6 +74,7 @@ public class PersonaProfileService {
         double teasingAllowed = 0.0;
         int styleVersion = 0;
         int personaVersion = 0;
+        String personaObservation = null;
         String source = "yaml_base";
 
         // ===== 2. LearnedStyleConfig (DB) — confidence 加权融合 =====
@@ -99,6 +100,10 @@ public class PersonaProfileService {
                 // DB 有风格描述时覆盖 YAML
                 if (lsc.getStyleDescription() != null && !lsc.getStyleDescription().isBlank()) {
                     styleDesc = lsc.getStyleDescription();
+                }
+                // LLM 生成的人格观察（核心驱动）
+                if (lsc.getPersonaObservation() != null && !lsc.getPersonaObservation().isBlank()) {
+                    personaObservation = lsc.getPersonaObservation();
                 }
                 source = "yaml+" + String.format("%.0f%%db", w * 100);
             }
@@ -195,6 +200,7 @@ public class PersonaProfileService {
 
         EffectivePersonaProfile profile = EffectivePersonaProfile.builder()
                 .styleDescription(styleDesc)
+                .personaObservation(personaObservation)
                 // Core Persona
                 .humorScore(coreHumor)
                 .sarcasmScore(coreSarcasm)

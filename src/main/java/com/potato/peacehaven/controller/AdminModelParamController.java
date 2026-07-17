@@ -1,5 +1,6 @@
 package com.potato.peacehaven.controller;
 
+import com.potato.peacehaven.ai.learning.StyleLearningService;
 import com.potato.peacehaven.ai.memory.MemoryEntry;
 import com.potato.peacehaven.ai.prompt.PromptBuilder;
 import com.potato.peacehaven.entity.*;
@@ -39,6 +40,7 @@ public class AdminModelParamController {
     private final PersonaStyleSnapshotRepository snapshotRepo;
     private final AdminOperationLogService logService;
     private final PromptBuilder promptBuilder;
+    private final StyleLearningService styleLearningService;
 
     // ===== 页面渲染 =====
 
@@ -178,6 +180,7 @@ public class AdminModelParamController {
         map.put("styleVersion", c.getStyleVersion());
         map.put("personaVersion", c.getPersonaVersion());
         map.put("styleDescription", c.getStyleDescription());
+        map.put("personaObservation", c.getPersonaObservation());
         map.put("styleSourceHash", c.getStyleSourceHash());
         map.put("updatedAt", c.getUpdatedAt());
         return map;
@@ -201,12 +204,47 @@ public class AdminModelParamController {
         if (body.containsKey("empathyHidden")) c.setEmpathyHidden(toDouble(body.get("empathyHidden")));
         if (body.containsKey("teasingAllowed")) c.setTeasingAllowed(toDouble(body.get("teasingAllowed")));
         if (body.containsKey("styleDescription")) c.setStyleDescription((String) body.get("styleDescription"));
+        if (body.containsKey("personaObservation")) c.setPersonaObservation((String) body.get("personaObservation"));
         if (body.containsKey("styleVersion")) c.setStyleVersion(toInt(body.get("styleVersion")));
         if (body.containsKey("personaVersion")) c.setPersonaVersion(toInt(body.get("personaVersion")));
         styleConfigRepo.save(c);
         promptBuilder.invalidateCache();
         logService.record("模型参数", "更新人格维度", "", request);
         return Map.of("success", true);
+    }
+
+    /**
+     * 手动触发学习（强制重新生成 Persona Observation）
+     * <p>清除 styleSourceHash 使 hash 一定变化，然后调用 learn()</p>
+     */
+    @PostMapping("/api/model-params/style-config/retrain")
+    @ResponseBody
+    @Transactional
+    public Map<String, Object> retrain(HttpServletRequest request) {
+        // 清除 hash，强制重新学习
+        LearnedStyleConfig c = styleConfigRepo.findById(1L).orElse(LearnedStyleConfig.builder().id(1L).build());
+        c.setStyleSourceHash("");
+        styleConfigRepo.save(c);
+
+        // 触发学习
+        try {
+            styleLearningService.learn();
+            promptBuilder.invalidateCache();
+            logService.record("模型参数", "手动触发重新学习", "force retrain", request);
+
+            // 重新读取学习结果
+            c = styleConfigRepo.findById(1L).orElse(null);
+            boolean hasObservation = c != null && c.getPersonaObservation() != null && !c.getPersonaObservation().isBlank();
+            return Map.of(
+                    "success", true,
+                    "hasObservation", hasObservation,
+                    "observationLength", hasObservation ? c.getPersonaObservation().length() : 0,
+                    "message", hasObservation ? "Observation 生成成功" : "Observation 未生成（可能消息不足或 LLM 调用失败）"
+            );
+        } catch (Exception e) {
+            log.error("[Retrain] 学习失败", e);
+            return Map.of("success", false, "error", e.getMessage());
+        }
     }
 
     // ========================================================================
@@ -573,5 +611,163 @@ public class AdminModelParamController {
     /** 安全删除：先检查是否存在再删除 */
     private void safeDelete(org.springframework.data.jpa.repository.JpaRepository<?, Long> repo, Long id) {
         if (repo.existsById(id)) repo.deleteById(id);
+    }
+
+    // ========================================================================
+    //  一键导出所有人格相关数据（JSON）
+    // ========================================================================
+
+    @GetMapping("/api/model-params/export-all")
+    @ResponseBody
+    public Map<String, Object> exportAll() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("exportTime", java.time.LocalDateTime.now().toString());
+
+        // 1. LearnedStyleConfig
+        data.put("learnedStyleConfig", styleConfigRepo.findById(1L).map(c -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("styleDescription", c.getStyleDescription());
+            m.put("personaObservation", c.getPersonaObservation());
+            m.put("humorScore", c.getHumorScore());
+            m.put("sarcasmScore", c.getSarcasmScore());
+            m.put("casualScore", c.getCasualScore());
+            m.put("warmthScore", c.getWarmthScore());
+            m.put("formalScore", c.getFormalScore());
+            m.put("slangScore", c.getSlangScore());
+            m.put("avgLength", c.getAvgLength());
+            m.put("lengthVariance", c.getLengthVariance());
+            m.put("expressionVariance", c.getExpressionVariance());
+            m.put("intimacyHumor", c.getIntimacyHumor());
+            m.put("empathyHidden", c.getEmpathyHidden());
+            m.put("teasingAllowed", c.getTeasingAllowed());
+            m.put("learningConfidence", c.getLearningConfidence());
+            m.put("sampleFactor", c.getSampleFactor());
+            m.put("timeSpanFactor", c.getTimeSpanFactor());
+            m.put("sceneFactor", c.getSceneFactor());
+            m.put("distributionFactor", c.getDistributionFactor());
+            m.put("sampleCount", c.getSampleCount());
+            m.put("sceneCount", c.getSceneCount());
+            m.put("styleVersion", c.getStyleVersion());
+            m.put("personaVersion", c.getPersonaVersion());
+            m.put("styleSourceHash", c.getStyleSourceHash());
+            m.put("updatedAt", c.getUpdatedAt());
+            return m;
+        }).orElse(null));
+
+        // 2. Expressions + Scene Usage
+        List<ExpressionProfile> expressions = expressionRepo.findAll();
+        data.put("expressions", expressions.stream().map(e -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", e.getId());
+            m.put("phrase", e.getPhrase());
+            m.put("frequency", e.getFrequency());
+            m.put("confidence", e.getConfidence());
+            m.put("intent", e.getIntent());
+            m.put("triggerPattern", e.getTriggerPattern());
+            m.put("allowedScene", e.getAllowedScene());
+            m.put("fatigueScore", e.getFatigueScore());
+            m.put("consecutiveUsed", e.getConsecutiveUsed());
+            // 场景使用计数
+            List<ExpressionSceneUsage> scenes = expressionSceneRepo.findByExpressionId(e.getId());
+            m.put("sceneUsage", scenes.stream().map(s -> {
+                Map<String, Object> sm = new LinkedHashMap<>();
+                sm.put("sceneType", s.getSceneType());
+                sm.put("usageCount", s.getUsageCount());
+                return sm;
+            }).collect(Collectors.toList()));
+            return m;
+        }).collect(Collectors.toList()));
+
+        // 3. Relationships
+        data.put("relationships", relationshipRepo.findAll().stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("contactName", r.getContactName());
+            m.put("relationshipType", r.getRelationshipType());
+            m.put("intimacyLevel", r.getIntimacyLevel());
+            m.put("humorScore", r.getHumorScore());
+            m.put("sarcasmScore", r.getSarcasmScore());
+            m.put("warmthScore", r.getWarmthScore());
+            m.put("formalScore", r.getFormalScore());
+            m.put("communicationStyle", r.getCommunicationStyle());
+            m.put("sampleCount", r.getSampleCount());
+            return m;
+        }).collect(Collectors.toList()));
+
+        // 4. Scenes
+        data.put("scenes", sceneRepo.findAll().stream().map(s -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("sceneType", s.getSceneType());
+            m.put("humorScore", s.getHumorScore());
+            m.put("sarcasmScore", s.getSarcasmScore());
+            m.put("warmthScore", s.getWarmthScore());
+            m.put("casualScore", s.getCasualScore());
+            m.put("formalScore", s.getFormalScore());
+            m.put("sampleCount", s.getSampleCount());
+            return m;
+        }).collect(Collectors.toList()));
+
+        // 5. CurrentState
+        data.put("currentState", currentStateRepo.findById(1L).map(cs -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("energy", cs.getEnergy());
+            m.put("stress", cs.getStress());
+            m.put("socialMode", cs.getSocialMode());
+            m.put("messageCount7d", cs.getMessageCount7d());
+            m.put("stateVersion", cs.getStateVersion());
+            m.put("updatedAt", cs.getUpdatedAt());
+            return m;
+        }).orElse(null));
+
+        // 6. Stability
+        data.put("stability", stabilityRepo.findById(1L).map(st -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("humorStability", st.getHumorStability());
+            m.put("sarcasmStability", st.getSarcasmStability());
+            m.put("warmthStability", st.getWarmthStability());
+            return m;
+        }).orElse(null));
+
+        // 7. Snapshots (recent 20)
+        data.put("snapshots", snapshotRepo.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(20)
+                .map(s -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("styleVersion", s.getStyleVersion());
+                    m.put("personaVersion", s.getPersonaVersion());
+                    m.put("humorScore", s.getHumorScore());
+                    m.put("sarcasmScore", s.getSarcasmScore());
+                    m.put("casualScore", s.getCasualScore());
+                    m.put("warmthScore", s.getWarmthScore());
+                    m.put("formalScore", s.getFormalScore());
+                    m.put("styleDescription", s.getStyleDescription());
+                    m.put("learningConfidence", s.getLearningConfidence());
+                    m.put("sampleCount", s.getSampleCount());
+                    m.put("sceneCount", s.getSceneCount());
+                    m.put("trigger", s.getTrigger());
+                    m.put("createdAt", s.getCreatedAt());
+                    return m;
+                }).collect(Collectors.toList()));
+
+        // 8. User Memories (summary, not full structured data)
+        List<BotUserMemory> memories = userMemoryRepo.findAll();
+        data.put("userMemorySummary", Map.of(
+                "totalCount", memories.size(),
+                "memories", memories.stream().map(um -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("wxid", um.getWxid());
+                    m.put("nickname", um.getNickname());
+                    m.put("relationshipType", um.getRelationshipType());
+                    m.put("intimacyScore", um.getIntimacyScore());
+                    m.put("communicationStyle", um.getCommunicationStyle());
+                    m.put("summary", um.getSummary());
+                    m.put("tags", um.getTags());
+                    m.put("facts", um.getFacts());
+                    m.put("structuredMemoryCount", um.getStructuredMemories() != null ? um.getStructuredMemories().size() : 0);
+                    m.put("updatedAt", um.getUpdatedAt());
+                    return m;
+                }).collect(Collectors.toList())));
+
+        return data;
     }
 }

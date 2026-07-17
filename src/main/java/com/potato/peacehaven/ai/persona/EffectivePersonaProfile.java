@@ -27,6 +27,10 @@ public class EffectivePersonaProfile {
     // ===== Core Persona（humor/sarcasm/warmth/casual）=====
 
     private String styleDescription;
+
+    /** LLM 生成的人格观察（核心驱动，直接注入 Prompt） */
+    private String personaObservation;
+
     private double humorScore;
     private double sarcasmScore;
     private double casualScore;
