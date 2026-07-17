@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConversationStateManager {
 
     private final AiProperties aiProps;
-    private final ObjectMapper objectMapper;
 
     /** chatroomId -> ConversationState */
     private final ConcurrentHashMap<String, ConversationState> states = new ConcurrentHashMap<>();
@@ -36,18 +35,32 @@ public class ConversationStateManager {
     private static final Path SNAPSHOT_DIR = Path.of("data", "cache");
     private static final File SNAPSHOT_FILE = SNAPSHOT_DIR.resolve("conversation-state.json").toFile();
 
-    public ConversationStateManager(AiProperties aiProps, ObjectMapper objectMapper) {
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public ConversationStateManager(AiProperties aiProps) {
         this.aiProps = aiProps;
-        this.objectMapper = objectMapper;
     }
 
     @PostConstruct
     public void loadFromDisk() {
         if (!SNAPSHOT_FILE.exists()) return;
         try {
-            Map<String, ConversationState> loaded = objectMapper.readValue(SNAPSHOT_FILE,
-                    new TypeReference<Map<String, ConversationState>>() {});
-            states.putAll(loaded);
+            Map<String, Map<String, Object>> loaded = objectMapper.readValue(SNAPSHOT_FILE,
+                    new TypeReference<Map<String, Map<String, Object>>>() {});
+            for (var entry : loaded.entrySet()) {
+                Map<String, Object> m = entry.getValue();
+                ConversationState state = new ConversationState();
+                state.setCurrentTopic((String) m.get("currentTopic"));
+                state.setTopicMentionCount(toInt(m.get("topicMentionCount")));
+                state.setPreviousTopic((String) m.get("previousTopic"));
+                if (m.get("topicStartEpoch") != null) {
+                    state.setTopicStartTime(Instant.ofEpochSecond(((Number) m.get("topicStartEpoch")).longValue()));
+                }
+                if (m.get("lastChangeEpoch") != null) {
+                    state.setLastTopicChangeTime(Instant.ofEpochSecond(((Number) m.get("lastChangeEpoch")).longValue()));
+                }
+                states.put(entry.getKey(), state);
+            }
             log.info("[ConvState] 从磁盘加载 {} 个对话状态", states.size());
         } catch (Exception e) {
             log.warn("[ConvState] 磁盘快照加载失败: {}", e.getMessage());
@@ -59,11 +72,26 @@ public class ConversationStateManager {
         if (states.isEmpty()) return;
         try {
             Files.createDirectories(SNAPSHOT_DIR);
-            objectMapper.writeValue(SNAPSHOT_FILE, new HashMap<>(states));
+            Map<String, Map<String, Object>> serializable = new HashMap<>();
+            for (var entry : states.entrySet()) {
+                ConversationState s = entry.getValue();
+                Map<String, Object> m = new HashMap<>();
+                m.put("currentTopic", s.getCurrentTopic());
+                m.put("topicMentionCount", s.getTopicMentionCount());
+                m.put("previousTopic", s.getPreviousTopic());
+                m.put("topicStartEpoch", s.getTopicStartTime() != null ? s.getTopicStartTime().getEpochSecond() : null);
+                m.put("lastChangeEpoch", s.getLastTopicChangeTime() != null ? s.getLastTopicChangeTime().getEpochSecond() : null);
+                serializable.put(entry.getKey(), m);
+            }
+            objectMapper.writeValue(SNAPSHOT_FILE, serializable);
             log.info("[ConvState] 快照写入磁盘: {} 个状态", states.size());
         } catch (Exception e) {
             log.error("[ConvState] 快照写入失败: {}", e.getMessage());
         }
+    }
+
+    private static int toInt(Object o) {
+        return o instanceof Number ? ((Number) o).intValue() : 0;
     }
 
     /**

@@ -77,7 +77,7 @@ public class PersonaStyleSnapshot {
     private int sceneCount;
 
     /** 触发原因（如"新增200条消息" / "humorScore变化>0.1"） */
-    @Column(length = 200)
+    @Column(name = "trigger_reason", length = 200)
     @Comment("触发原因")
     private String trigger;
 

@@ -39,7 +39,6 @@ public class LlmConversationSummaryService implements ConversationSummaryService
 
     private final LlmClient llmClient;
     private final AiProperties aiProps;
-    private final ObjectMapper objectMapper;
 
     /** chatroomId -> 缓存条目 */
     private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
@@ -47,10 +46,11 @@ public class LlmConversationSummaryService implements ConversationSummaryService
     private static final Path SNAPSHOT_DIR = Path.of("data", "cache");
     private static final File SNAPSHOT_FILE = SNAPSHOT_DIR.resolve("summary-cache.json").toFile();
 
-    public LlmConversationSummaryService(LlmClient llmClient, AiProperties aiProps, ObjectMapper objectMapper) {
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public LlmConversationSummaryService(LlmClient llmClient, AiProperties aiProps) {
         this.llmClient = llmClient;
         this.aiProps = aiProps;
-        this.objectMapper = objectMapper;
     }
 
     @PostConstruct
