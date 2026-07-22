@@ -81,4 +81,9 @@ public class HomeController {
     public String judgePanel2() {
         return "activities/judge-panel";
     }
+
+    @GetMapping("/judge/draft-battle-1")
+    public String judgeDraftBattle() {
+        return "activities/judge-panel";
+    }
 }

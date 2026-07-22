@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: common(title='第一届 · 点兵演武 · 南希对抗赛 - PeaceHaven · 长安')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+    <meta name="_csrf" th:content="${_csrf}">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="PeaceHaven · 长安">
+    <meta property="og:title" content="第一届 · 点兵演武 · 南希对抗赛 - PeaceHaven">
+    <meta property="og:description" content="双将点兵，一战定胜负。长安营地 12v12 南希市控团队竞技对抗赛">
+    <style>
+        /* ========== Draft Battle - 古风电竞视觉系统 ========== */
+        :root {
+            --db-bg: #0a0a12;
+            --db-bg2: #0e0e1a;
+            --db-card: #12121f;
+            --db-card-hover: #1a1a2e;
+            --db-gold: #c8a24e;
+            --db-gold-dim: rgba(200,162,78,0.15);
+            --db-gold-glow: rgba(200,162,78,0.3);
+            --db-red: #b83232;
+            --db-red-dim: rgba(184,50,50,0.15);
+            --db-text: #e8e0d0;
+            --db-text-dim: #8a8578;
+            --db-border: rgba(200,162,78,0.2);
+        }
+        body { background: var(--db-bg); color: var(--db-text); font-family: 'Noto Serif SC', 'Songti SC', serif; }
+
+        /* Override navbar for dark theme */
+        .navbar { background: rgba(10,10,18,0.92) !important; backdrop-filter: blur(12px); }
+        .navbar .nav-link, .navbar .nav-brand { color: var(--db-text) !important; }
+
+        /* ========== Hero Section ========== */
+        .db-hero {
+            position: relative; height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(ellipse at 50% 80%, #1a1028 0%, var(--db-bg) 70%);
+            overflow: hidden; text-align: center;
+        }
+        .db-hero::before {
+            content: ''; position: absolute; inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8a24e' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+        .db-hero-content { position: relative; z-index: 2; padding: 0 20px; }
+        .db-hero-era {
+            font-size: 0.85rem; letter-spacing: 8px; color: var(--db-gold);
+            text-transform: uppercase; margin-bottom: 12px; opacity: 0.8;
+        }
+        .db-hero-title {
+            font-size: clamp(2.2rem, 5vw, 4rem); font-weight: 900; line-height: 1.2;
+            background: linear-gradient(135deg, #f5e6b8 0%, var(--db-gold) 50%, #d4a84e 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; margin-bottom: 8px;
+            animation: db-shimmer 3s ease-in-out infinite;
+        }
+        @keyframes db-shimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+        .db-hero-subtitle {
+            font-size: clamp(1.1rem, 2.5vw, 1.6rem); color: var(--db-text-dim);
+            font-weight: 400; margin-bottom: 6px; letter-spacing: 4px;
+        }
+        .db-hero-desc {
+            font-size: 0.9rem; color: rgba(232,224,208,0.5); margin-bottom: 32px;
+        }
+        .db-hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .db-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 32px; border-radius: 4px; font-size: 0.95rem; font-weight: 700;
+            cursor: pointer; transition: all 0.3s; border: none; text-decoration: none;
+            font-family: inherit; letter-spacing: 2px;
+        }
+        .db-btn-primary {
+            background: linear-gradient(135deg, var(--db-gold) 0%, #a88530 100%);
+            color: #0a0a12; box-shadow: 0 4px 20px rgba(200,162,78,0.3);
+        }
+        .db-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(200,162,78,0.5); }
+        .db-btn-outline {
+            background: transparent; color: var(--db-gold);
+            border: 1px solid var(--db-gold); 
+        }
+        .db-btn-outline:hover { background: var(--db-gold-dim); }
+
+        /* Particles */
+        .db-particles { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+        .db-particle {
+            position: absolute; width: 2px; height: 2px; background: var(--db-gold);
+            border-radius: 50%; opacity: 0; animation: db-float 6s infinite;
+        }
+        @keyframes db-float {
+            0% { opacity: 0; transform: translateY(100vh) scale(0); }
+            20% { opacity: 0.8; }
+            100% { opacity: 0; transform: translateY(-20vh) scale(1.5); }
+        }
+
+        /* ========== Sections ========== */
+        .db-section { padding: 80px 20px; max-width: 1100px; margin: 0 auto; }
+        .db-section-title {
+            text-align: center; font-size: 1.8rem; font-weight: 800; color: var(--db-gold);
+            margin-bottom: 8px; letter-spacing: 4px;
+        }
+        .db-section-line {
+            width: 60px; height: 2px; background: var(--db-gold); margin: 0 auto 40px;
+            box-shadow: 0 0 10px var(--db-gold-glow);
+        }
+
+        /* Scroll animation */
+        .db-reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease; }
+        .db-reveal.db-visible { opacity: 1; transform: translateY(0); }
+
+        /* ========== Event Info Card ========== */
+        .db-info-card {
+            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 12px;
+            padding: 32px; position: relative; overflow: hidden;
+        }
+        .db-info-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--db-gold), transparent);
+        }
+        .db-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .db-info-item { padding: 16px; background: rgba(200,162,78,0.04); border-radius: 8px; }
+        .db-info-label { font-size: 0.75rem; color: var(--db-gold); letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase; }
+        .db-info-value { font-size: 1.05rem; font-weight: 600; color: var(--db-text); }
+        .db-status-badge {
+            display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+        }
+        .db-status-registering { background: rgba(76,175,80,0.15); color: #66BB6A; border: 1px solid rgba(76,175,80,0.3); }
+        .db-status-ongoing { background: rgba(255,152,0,0.15); color: #FFA726; border: 1px solid rgba(255,152,0,0.3); }
+        .db-status-ended { background: rgba(158,158,158,0.15); color: #9E9E9E; border: 1px solid rgba(158,158,158,0.3); }
+
+        /* ========== Introduction ========== */
+        .db-intro { text-align: center; }
+        .db-intro-quote {
+            font-size: 1.3rem; font-style: italic; color: var(--db-gold); line-height: 2;
+            margin-bottom: 24px; letter-spacing: 2px;
+        }
+        .db-intro-body { font-size: 0.95rem; line-height: 1.8; color: var(--db-text-dim); max-width: 700px; margin: 0 auto; }
+
+        /* ========== Rules ========== */
+        .db-rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+        .db-rule-card {
+            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 10px;
+            padding: 24px; text-align: center; transition: all 0.3s;
+        }
+        .db-rule-card:hover { border-color: var(--db-gold); transform: translateY(-4px); box-shadow: 0 8px 30px rgba(200,162,78,0.1); }
+        .db-rule-icon { font-size: 2rem; margin-bottom: 12px; }
+        .db-rule-title { font-size: 1rem; font-weight: 700; color: var(--db-gold); margin-bottom: 8px; }
+        .db-rule-desc { font-size: 0.85rem; color: var(--db-text-dim); line-height: 1.6; }
+
+        /* ========== Draft Pick (双将选人) ========== */
+        .db-draft { text-align: center; }
+        .db-draft-arena {
+            display: flex; align-items: stretch; gap: 0; margin-top: 20px;
+        }
+        .db-draft-side {
+            flex: 1; padding: 24px; background: var(--db-card); border: 1px solid var(--db-border);
+            border-radius: 12px; min-height: 300px;
+        }
+        .db-draft-side.team-a { border-color: rgba(184,50,50,0.3); }
+        .db-draft-side.team-b { border-color: rgba(70,130,180,0.3); }
+        .db-draft-vs {
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; font-weight: 900; color: var(--db-gold);
+            padding: 0 16px; min-width: 80px;
+        }
+        .db-draft-captain {
+            display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;
+        }
+        .db-draft-captain-avatar {
+            width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--db-gold); margin-bottom: 8px;
+            background: var(--db-bg);
+        }
+        .db-draft-captain-name { font-size: 1rem; font-weight: 700; }
+        .db-draft-captain-label { font-size: 0.72rem; color: var(--db-gold); letter-spacing: 2px; }
+        .db-draft-team-name { font-size: 1.2rem; font-weight: 800; margin-bottom: 12px; }
+        .db-draft-members { list-style: none; padding: 0; margin: 0; }
+        .db-draft-member {
+            display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+            border-bottom: 1px solid rgba(200,162,78,0.06); font-size: 0.85rem;
+        }
+        .db-draft-member-num {
+            width: 22px; height: 22px; border-radius: 50%; background: var(--db-gold-dim);
+            color: var(--db-gold); font-size: 0.7rem; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; flex-shrink: 0;
+        }
+        .db-draft-empty { color: var(--db-text-dim); font-size: 0.85rem; padding: 20px 0; }
+
+        /* Available players for draft */
+        .db-draft-available {
+            margin-top: 24px; background: var(--db-card); border: 1px solid var(--db-border);
+            border-radius: 12px; padding: 20px; text-align: left;
+        }
+        .db-draft-available-title { font-size: 0.9rem; font-weight: 700; color: var(--db-gold); margin-bottom: 12px; }
+        .db-draft-player-chip {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+            margin: 4px; border-radius: 20px; background: rgba(200,162,78,0.06);
+            border: 1px solid var(--db-border); font-size: 0.82rem; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .db-draft-player-chip:hover { border-color: var(--db-gold); background: var(--db-gold-dim); }
+
+        /* ========== Team Display (龙虎争锋) ========== */
+        .db-teams-vs {
+            display: flex; align-items: flex-start; gap: 0;
+        }
+        .db-team-panel {
+            flex: 1; padding: 24px; background: var(--db-card); border: 1px solid var(--db-border);
+            border-radius: 12px;
+        }
+        .db-team-header {
+            text-align: center; margin-bottom: 20px; padding-bottom: 16px;
+            border-bottom: 1px solid var(--db-border);
+        }
+        .db-team-name { font-size: 1.4rem; font-weight: 800; }
+        .db-team-count { font-size: 0.78rem; color: var(--db-text-dim); }
+        .db-team-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .db-player-card {
+            display: flex; align-items: center; gap: 8px; padding: 10px;
+            background: rgba(200,162,78,0.03); border-radius: 8px; border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .db-player-card:hover { border-color: var(--db-border); }
+        .db-player-avatar {
+            width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+            background: var(--db-bg); flex-shrink: 0;
+        }
+        .db-player-name { font-size: 0.82rem; font-weight: 600; }
+        .db-player-role { font-size: 0.7rem; color: var(--db-text-dim); }
+        .db-vs-divider {
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; font-weight: 900; color: var(--db-red);
+            padding: 0 12px; min-width: 70px;
+        }
+
+        /* ========== Schedule (演武赛程) ========== */
+        .db-schedule-timeline { position: relative; padding-left: 32px; }
+        .db-schedule-timeline::before {
+            content: ''; position: absolute; left: 12px; top: 0; bottom: 0;
+            width: 2px; background: var(--db-border);
+        }
+        .db-schedule-item {
+            position: relative; margin-bottom: 28px; padding: 20px;
+            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 10px;
+        }
+        .db-schedule-item::before {
+            content: ''; position: absolute; left: -26px; top: 24px;
+            width: 12px; height: 12px; border-radius: 50%; background: var(--db-gold);
+            border: 2px solid var(--db-bg); box-shadow: 0 0 8px var(--db-gold-glow);
+        }
+        .db-schedule-item.db-completed::before { background: #4CAF50; box-shadow: 0 0 8px rgba(76,175,80,0.4); }
+        .db-schedule-item.db-ongoing::before { background: #FFA726; box-shadow: 0 0 8px rgba(255,167,38,0.4); animation: db-pulse 1.5s infinite; }
+        @keyframes db-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+        .db-schedule-round { font-size: 1.05rem; font-weight: 700; color: var(--db-gold); margin-bottom: 6px; }
+        .db-schedule-date { font-size: 0.8rem; color: var(--db-text-dim); margin-bottom: 10px; }
+        .db-schedule-match {
+            display: flex; align-items: center; justify-content: center; gap: 16px;
+            padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;
+        }
+        .db-schedule-team { font-weight: 700; min-width: 80px; }
+        .db-schedule-team.team-a { text-align: right; color: var(--db-red); }
+        .db-schedule-team.team-b { text-align: left; color: #4682B4; }
+        .db-schedule-score { font-size: 1.3rem; font-weight: 900; color: var(--db-gold); letter-spacing: 4px; }
+        .db-schedule-status-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.72rem;
+            margin-top: 8px;
+        }
+        .db-badge-waiting { background: rgba(158,158,158,0.15); color: #9E9E9E; }
+        .db-badge-live { background: rgba(255,152,0,0.15); color: #FFA726; animation: db-pulse 2s infinite; }
+        .db-badge-done { background: rgba(76,175,80,0.15); color: #66BB6A; }
+
+        /* ========== Match History (战场记录) ========== */
+        .db-match-card {
+            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 12px;
+            padding: 24px; margin-bottom: 16px; transition: all 0.3s;
+        }
+        .db-match-card:hover { border-color: var(--db-gold); }
+        .db-match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .db-match-round { font-size: 0.8rem; color: var(--db-gold); font-weight: 600; letter-spacing: 2px; }
+        .db-match-date { font-size: 0.75rem; color: var(--db-text-dim); }
+        .db-match-body { display: flex; align-items: center; justify-content: center; gap: 24px; }
+        .db-match-team { text-align: center; flex: 1; }
+        .db-match-team-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+        .db-match-score-big { font-size: 2.2rem; font-weight: 900; color: var(--db-gold); letter-spacing: 6px; }
+        .db-match-winner { font-size: 0.8rem; color: #4CAF50; margin-top: 12px; font-weight: 600; }
+
+        /* ========== Rankings (演武榜) ========== */
+        .db-rank-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--db-border); }
+        .db-rank-tab {
+            padding: 10px 24px; font-size: 0.9rem; font-weight: 600; color: var(--db-text-dim);
+            cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+            background: none; border-top: none; border-left: none; border-right: none;
+            font-family: inherit;
+        }
+        .db-rank-tab.active { color: var(--db-gold); border-bottom-color: var(--db-gold); }
+        .db-rank-tab:hover { color: var(--db-text); }
+        .db-rank-table { width: 100%; border-collapse: collapse; }
+        .db-rank-table th {
+            padding: 10px 12px; text-align: left; font-size: 0.75rem; font-weight: 600;
+            color: var(--db-gold); letter-spacing: 2px; border-bottom: 1px solid var(--db-border);
+            text-transform: uppercase;
+        }
+        .db-rank-table td {
+            padding: 10px 12px; font-size: 0.88rem; border-bottom: 1px solid rgba(200,162,78,0.06);
+        }
+        .db-rank-table tr:hover td { background: rgba(200,162,78,0.03); }
+        .db-rank-medal { font-size: 1.1rem; }
+
+        /* ========== Honors (荣耀殿堂) ========== */
+        .db-honors-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .db-honor-card {
+            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 12px;
+            padding: 28px; text-align: center; transition: all 0.3s;
+        }
+        .db-honor-card:hover { border-color: var(--db-gold); transform: translateY(-4px); }
+        .db-honor-card.honor-champion { border-color: var(--db-gold); box-shadow: 0 0 20px var(--db-gold-dim); }
+        .db-honor-icon { font-size: 2.5rem; margin-bottom: 12px; }
+        .db-honor-title { font-size: 0.78rem; color: var(--db-gold); letter-spacing: 2px; margin-bottom: 8px; }
+        .db-honor-name { font-size: 1.1rem; font-weight: 700; }
+
+        /* ========== Registration (加入演武) ========== */
+        .db-register { text-align: center; }
+        .db-register-box {
+            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 12px;
+            padding: 40px; max-width: 500px; margin: 0 auto;
+        }
+        .db-register-count { font-size: 3rem; font-weight: 900; color: var(--db-gold); margin-bottom: 4px; }
+        .db-register-label { font-size: 0.85rem; color: var(--db-text-dim); margin-bottom: 24px; }
+        .db-register-btn {
+            padding: 14px 48px; font-size: 1rem; font-weight: 700; border-radius: 4px;
+            cursor: pointer; transition: all 0.3s; border: none; font-family: inherit;
+            letter-spacing: 3px;
+        }
+        .db-register-btn.join {
+            background: linear-gradient(135deg, var(--db-red) 0%, #8b1a1a 100%);
+            color: #fff; box-shadow: 0 4px 20px rgba(184,50,50,0.3);
+        }
+        .db-register-btn.join:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(184,50,50,0.5); }
+        .db-register-btn.cancel {
+            background: transparent; color: var(--db-text-dim);
+            border: 1px solid var(--db-border); margin-top: 12px; font-size: 0.85rem;
+            padding: 8px 24px;
+        }
+        .db-register-btn.cancel:hover { border-color: var(--db-red); color: var(--db-red); }
+        .db-register-btn.joined {
+            background: rgba(76,175,80,0.15); color: #66BB6A; border: 1px solid rgba(76,175,80,0.3);
+            cursor: default;
+        }
+
+        /* ========== Footer Override ========== */
+        .site-footer { background: var(--db-bg2) !important; border-top: 1px solid var(--db-border) !important; }
+
+        /* ========== Empty State ========== */
+        .db-empty { text-align: center; padding: 40px; color: var(--db-text-dim); font-size: 0.9rem; }
+
+        /* ========== Responsive ========== */
+        @media (max-width: 768px) {
+            .db-draft-arena, .db-teams-vs { flex-direction: column; }
+            .db-draft-vs, .db-vs-divider { padding: 12px 0; min-width: unset; }
+            .db-info-grid { grid-template-columns: 1fr 1fr; }
+            .db-rules-grid { grid-template-columns: 1fr; }
+            .db-honors-grid { grid-template-columns: 1fr 1fr; }
+            .db-match-score-big { font-size: 1.6rem; }
+            .db-section { padding: 48px 16px; }
+        }
+    </style>
+</head>
+<body data-theme="night">
+
+<!-- 导航栏 -->
+<div th:replace="~{fragments/navbar :: navbar(page='activities', mode='full', prefix='/#')}"></div>
+
+<div class="db-page">
+
+    <!-- ==================== 1. Hero ==================== -->
+    <section class="db-hero">
+        <div class="db-particles" id="dbParticles"></div>
+        <div class="db-hero-content">
+            <div class="db-hero-era">第一届 · 点兵演武</div>
+            <h1 class="db-hero-title">南希对抗赛</h1>
+            <p class="db-hero-subtitle">双将点兵，一战定胜负</p>
+            <p class="db-hero-desc">长安营地 12v12 南希市控团队竞技</p>
+            <div class="db-hero-actions">
+                <a href="#register" class="db-btn db-btn-primary">⚔ 加入演武</a>
+                <a href="#schedule" class="db-btn db-btn-outline">📜 查看赛程</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 2. 赛事信息卡 ==================== -->
+    <section class="db-section db-reveal" id="eventInfo">
+        <h2 class="db-section-title">赛事档案</h2>
+        <div class="db-section-line"></div>
+        <div class="db-info-card">
+            <div class="db-info-grid">
+                <div class="db-info-item">
+                    <div class="db-info-label">赛事名称</div>
+                    <div class="db-info-value">第一届 · 点兵演武 · 南希对抗赛</div>
+                </div>
+                <div class="db-info-item">
+                    <div class="db-info-label">比赛模式</div>
+                    <div class="db-info-value">南希市控团队竞技</div>
+                </div>
+                <div class="db-info-item">
+                    <div class="db-info-label">比赛规模</div>
+                    <div class="db-info-value">12 VS 12</div>
+                </div>
+                <div class="db-info-item">
+                    <div class="db-info-label">组队方式</div>
+                    <div class="db-info-value">双队长选人制</div>
+                </div>
+                <div class="db-info-item">
+                    <div class="db-info-label">举办方</div>
+                    <div class="db-info-value">长安营地</div>
+                </div>
+                <div class="db-info-item">
+                    <div class="db-info-label">赛事状态</div>
+                    <div class="db-info-value" id="eventStatusBadge">
+                        <span class="db-status-badge db-status-registering">报名中</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 3. 赛事介绍 ==================== -->
+    <section class="db-section db-reveal" id="introduction">
+        <h2 class="db-section-title">何为点兵演武</h2>
+        <div class="db-section-line"></div>
+        <div class="db-intro">
+            <p class="db-intro-quote">
+                点兵者，择良将而战。<br>演武者，以实力定乾坤。
+            </p>
+            <p class="db-intro-body">
+                本届赛事采用双将点兵机制，由两位队长轮流选拔队员，组成两支精锐战队，在南希战场展开最终对决。<br>
+                这不仅是一场操作的较量，更是战术、配合与团队精神的终极比拼。
+            </p>
+        </div>
+    </section>
+
+    <!-- ==================== 4. 比赛规则 ==================== -->
+    <section class="db-section db-reveal" id="rules">
+        <h2 class="db-section-title">演武规则</h2>
+        <div class="db-section-line"></div>
+        <div class="db-rules-grid">
+            <div class="db-rule-card">
+                <div class="db-rule-icon">⚔️</div>
+                <div class="db-rule-title">比赛模式</div>
+                <div class="db-rule-desc">南希市控团队竞技<br>占领据点、歼灭敌军</div>
+            </div>
+            <div class="db-rule-card">
+                <div class="db-rule-icon">👥</div>
+                <div class="db-rule-title">比赛人数</div>
+                <div class="db-rule-desc">12 VS 12<br>两军对垒，各领精兵</div>
+            </div>
+            <div class="db-rule-card">
+                <div class="db-rule-icon">🏴</div>
+                <div class="db-rule-title">组队方式</div>
+                <div class="db-rule-desc">裁判指定 A/B 队长<br>轮流选人组建战队</div>
+            </div>
+            <div class="db-rule-card">
+                <div class="db-rule-icon">🏆</div>
+                <div class="db-rule-title">胜负判定</div>
+                <div class="db-rule-desc">积分领先者胜<br>以团队总分定乾坤</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 5. 双将选人 ==================== -->
+    <section class="db-section db-reveal" id="draftPick">
+        <h2 class="db-section-title">双将点兵</h2>
+        <div class="db-section-line"></div>
+        <div class="db-draft">
+            <div class="db-draft-arena" id="draftArena">
+                <div class="db-draft-side team-a" id="draftSideA">
+                    <div class="db-draft-captain" id="captainA"></div>
+                    <div class="db-draft-team-name" id="teamAName">南军</div>
+                    <ul class="db-draft-members" id="membersA"></ul>
+                </div>
+                <div class="db-draft-vs">VS</div>
+                <div class="db-draft-side team-b" id="draftSideB">
+                    <div class="db-draft-captain" id="captainB"></div>
+                    <div class="db-draft-team-name" id="teamBName">北军</div>
+                    <ul class="db-draft-members" id="membersB"></ul>
+                </div>
+            </div>
+            <!-- Available players (for captains) -->
+            <div class="db-draft-available" id="draftAvailable" style="display:none;">
+                <div class="db-draft-available-title">可选选手</div>
+                <div id="availableList"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 6. 战队展示 ==================== -->
+    <section class="db-section db-reveal" id="teamsDisplay">
+        <h2 class="db-section-title">龙虎争锋</h2>
+        <div class="db-section-line"></div>
+        <div class="db-teams-vs" id="teamsVs">
+            <div class="db-team-panel" id="teamPanelA">
+                <div class="db-team-header">
+                    <div class="db-team-name" id="teamPanelAName">南军</div>
+                    <div class="db-team-count" id="teamPanelACount">0 / 12 人</div>
+                </div>
+                <div class="db-team-roster" id="teamPanelARoster"></div>
+            </div>
+            <div class="db-vs-divider">VS</div>
+            <div class="db-team-panel" id="teamPanelB">
+                <div class="db-team-header">
+                    <div class="db-team-name" id="teamPanelBName">北军</div>
+                    <div class="db-team-count" id="teamPanelBCount">0 / 12 人</div>
+                </div>
+                <div class="db-team-roster" id="teamPanelBRoster"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 7. 赛程安排 ==================== -->
+    <section class="db-section db-reveal" id="schedule">
+        <h2 class="db-section-title">演武赛程</h2>
+        <div class="db-section-line"></div>
+        <div class="db-schedule-timeline" id="scheduleTimeline"></div>
+    </section>
+
+    <!-- ==================== 8. 实时战绩 ==================== -->
+    <section class="db-section db-reveal" id="matchHistory">
+        <h2 class="db-section-title">战场记录</h2>
+        <div class="db-section-line"></div>
+        <div id="matchHistoryList"></div>
+    </section>
+
+    <!-- ==================== 9. 排行榜 ==================== -->
+    <section class="db-section db-reveal" id="rankings">
+        <h2 class="db-section-title">演武榜</h2>
+        <div class="db-section-line"></div>
+        <div class="db-rank-tabs">
+            <button class="db-rank-tab active" data-tab="personal" onclick="switchRankTab('personal')">个人排行</button>
+            <button class="db-rank-tab" data-tab="teams" onclick="switchRankTab('teams')">队伍排行</button>
+        </div>
+        <div id="rankPersonal"></div>
+        <div id="rankTeams" style="display:none;"></div>
+    </section>
+
+    <!-- ==================== 10. 赛事荣誉 ==================== -->
+    <section class="db-section db-reveal" id="honors">
+        <h2 class="db-section-title">荣耀殿堂</h2>
+        <div class="db-section-line"></div>
+        <div class="db-honors-grid" id="honorsGrid">
+            <div class="db-empty">赛事尚未结束，荣誉待揭晓</div>
+        </div>
+    </section>
+
+    <!-- ==================== 11. 报名入口 ==================== -->
+    <section class="db-section db-reveal" id="register">
+        <h2 class="db-section-title">加入演武</h2>
+        <div class="db-section-line"></div>
+        <div class="db-register">
+            <div class="db-register-box">
+                <div class="db-register-count" id="registerCount">0</div>
+                <div class="db-register-label">已报名参赛</div>
+                <div id="registerAction">
+                    <button class="db-register-btn join" id="btnRegister" onclick="doRegister()">⚔ 报名参赛</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<!-- 页尾 -->
+<div th:replace="~{fragments/footer :: footer(mode='compact')}"></div>
+<div th:replace="~{fragments/footer :: backToTop}"></div>
+<th:block th:replace="~{fragments/footer :: scripts(auth=true)}"></th:block>
+<script src="/js/ph-dialog.js"></script>
+<script>
+(function() {
+    var slug = 'draft-battle-1';
+    var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+    var eventStatus = null;
+    var myTeamSide = null;
+
+    // ==================== Init ====================
+    loadEventStatus();
+    initParticles();
+    initScrollReveal();
+
+    function loadEventStatus() {
+        fetch('/api/nancy/' + slug + '/status')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                eventStatus = data;
+                myTeamSide = data.myTeamSide;
+                renderAll(data);
+            })
+            .catch(function(e) { console.error('加载赛事失败', e); });
+    }
+
+    function renderAll(data) {
+        renderStatusBadge(data);
+        renderRegister(data);
+        renderDraft(data);
+        renderTeams(data);
+        renderSchedule(data.schedule || []);
+        renderMatchHistory(data.matchHistory || []);
+        renderRankings(data.rankings || {});
+        renderHonors(data.honors || []);
+    }
+
+    // ==================== Status Badge ====================
+    function renderStatusBadge(data) {
+        var el = document.getElementById('eventStatusBadge');
+        var teams = data.teams || [];
+        var phase = data.draftPhase || 'WAITING';
+        var cls = 'db-status-registering', txt = '报名中';
+
+        if (phase === 'COMPLETED') {
+            cls = 'db-status-ongoing'; txt = '比赛中';
+        }
+        if (teams.length > 0 && phase === 'DRAFTING') {
+            cls = 'db-status-ongoing'; txt = '选秀中';
+        }
+        el.innerHTML = '<span class="db-status-badge ' + cls + '">' + txt + '</span>';
+    }
+
+    // ==================== Registration ====================
+    function renderRegister(data) {
+        document.getElementById('registerCount').textContent = data.totalRegistered || 0;
+        var action = document.getElementById('registerAction');
+        if (data.isRegistered) {
+            action.innerHTML = '<button class="db-register-btn joined">✓ 已报名</button>'
+                + '<br><button class="db-register-btn cancel" onclick="doCancel()">取消报名</button>';
+        } else {
+            action.innerHTML = '<button class="db-register-btn join" onclick="doRegister()">⚔ 报名参赛</button>';
+        }
+    }
+
+    window.doRegister = function() {
+        fetch('/api/nancy/' + slug + '/register', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { alert(data.error); return; }
+            loadEventStatus();
+        })
+        .catch(function() { alert('报名失败，请刷新重试'); });
+    };
+
+    window.doCancel = function() {
+        if (!confirm('确定要取消报名吗？')) return;
+        fetch('/api/nancy/' + slug + '/cancel', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { alert(data.error); return; }
+            loadEventStatus();
+        })
+        .catch(function() { alert('操作失败，请刷新重试'); });
+    };
+
+    // ==================== Draft (双将选人) ====================
+    function renderDraft(data) {
+        var teams = data.teams || [];
+        var teamA = null, teamB = null;
+        for (var i = 0; i < teams.length; i++) {
+            if (teams[i].teamSide === 'A') teamA = teams[i];
+            if (teams[i].teamSide === 'B') teamB = teams[i];
+        }
+
+        if (teamA) {
+            document.getElementById('teamAName').textContent = teamA.teamName || '南军';
+            document.getElementById('captainA').innerHTML = renderCaptainHtml(teamA);
+            document.getElementById('membersA').innerHTML = renderMembersHtml(teamA.members || []);
+        }
+        if (teamB) {
+            document.getElementById('teamBName').textContent = teamB.teamName || '北军';
+            document.getElementById('captainB').innerHTML = renderCaptainHtml(teamB);
+            document.getElementById('membersB').innerHTML = renderMembersHtml(teamB.members || []);
+        }
+
+        if (teams.length === 0) {
+            document.getElementById('draftArena').innerHTML = '<div class="db-empty">选秀尚未开始</div>';
+        }
+
+        // Load available players for captains
+        if (myTeamSide) {
+            loadDraftAvailable();
+        }
+    }
+
+    function renderCaptainHtml(team) {
+        var avatar = team.captainAvatar || '/images/default-avatar.png';
+        return '<img class="db-draft-captain-avatar" src="' + escAttr(avatar) + '" alt="" onerror="this.style.display=\'none\'">'
+            + '<div class="db-draft-captain-name">' + escHtml(team.captainName || '') + '</div>'
+            + '<div class="db-draft-captain-label">队长</div>';
+    }
+
+    function renderMembersHtml(members) {
+        if (!members || members.length === 0) {
+            return '<li class="db-draft-empty">等待选人...</li>';
+        }
+        var html = '';
+        for (var i = 0; i < members.length; i++) {
+            html += '<li class="db-draft-member">'
+                + '<span class="db-draft-member-num">' + (i + 1) + '</span>'
+                + '<span>' + escHtml(members[i].nickname || '') + '</span>'
+                + '</li>';
+        }
+        return html;
+    }
+
+    function loadDraftAvailable() {
+        fetch('/api/nancy/' + slug + '/draft')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var available = data.availablePlayers || [];
+                if (available.length === 0) return;
+
+                var el = document.getElementById('draftAvailable');
+                el.style.display = '';
+                var html = '';
+                for (var i = 0; i < available.length; i++) {
+                    html += '<span class="db-draft-player-chip" data-user-id="' + available[i].userId + '" '
+                        + 'onclick="doPick(\'' + myTeamSide + '\',' + available[i].userId + ')">'
+                        + escHtml(available[i].nickname) + '</span>';
+                }
+                document.getElementById('availableList').innerHTML = html;
+            })
+            .catch(function() {});
+    }
+
+    window.doPick = function(side, userId) {
+        fetch('/api/nancy/' + slug + '/draft/pick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ teamSide: side, playerUserId: userId })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { alert(data.error); return; }
+            loadEventStatus();
+        })
+        .catch(function() { alert('选人失败'); });
+    };
+
+    // ==================== Teams Display ====================
+    function renderTeams(data) {
+        var teams = data.teams || [];
+        var teamA = null, teamB = null;
+        for (var i = 0; i < teams.length; i++) {
+            if (teams[i].teamSide === 'A') teamA = teams[i];
+            if (teams[i].teamSide === 'B') teamB = teams[i];
+        }
+
+        renderTeamPanel('A', teamA, 'teamPanelA');
+        renderTeamPanel('B', teamB, 'teamPanelB');
+    }
+
+    function renderTeamPanel(side, team, prefix) {
+        if (!team) return;
+        document.getElementById(prefix + 'Name').textContent = team.teamName || (side === 'A' ? '南军' : '北军');
+        var members = team.members || [];
+        document.getElementById(prefix + 'Count').textContent = members.length + ' / 12 人';
+
+        var html = '';
+        // Captain first
+        html += renderPlayerCard({ nickname: team.captainName, avatar: team.captainAvatar, role: '队长' });
+        for (var i = 0; i < members.length; i++) {
+            html += renderPlayerCard({ nickname: members[i].nickname, avatar: members[i].avatar, role: '队员 #' + (i + 1) });
+        }
+        document.getElementById(prefix + 'Roster').innerHTML = html || '<div class="db-empty">暂无成员</div>';
+    }
+
+    function renderPlayerCard(p) {
+        var avatar = p.avatar || '/images/default-avatar.png';
+        return '<div class="db-player-card">'
+            + '<img class="db-player-avatar" src="' + escAttr(avatar) + '" alt="" onerror="this.style.background=\'var(--db-card)\'">'
+            + '<div><div class="db-player-name">' + escHtml(p.nickname || '') + '</div>'
+            + '<div class="db-player-role">' + escHtml(p.role || '') + '</div></div>'
+            + '</div>';
+    }
+
+    // ==================== Schedule ====================
+    function renderSchedule(schedule) {
+        var el = document.getElementById('scheduleTimeline');
+        if (!schedule || schedule.length === 0) {
+            el.innerHTML = '<div class="db-empty">赛程尚未公布</div>';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < schedule.length; i++) {
+            var s = schedule[i];
+            var statusCls = s.status === 'COMPLETED' ? 'db-completed' : (s.status === 'ONGOING' ? 'db-ongoing' : '');
+            var badgeCls = s.status === 'COMPLETED' ? 'db-badge-done' : (s.status === 'ONGOING' ? 'db-badge-live' : 'db-badge-waiting');
+            var badgeTxt = s.status === 'COMPLETED' ? '已结束' : (s.status === 'ONGOING' ? '进行中' : '未开始');
+
+            html += '<div class="db-schedule-item ' + statusCls + '">'
+                + '<div class="db-schedule-round">' + escHtml(s.round || '') + '</div>'
+                + '<div class="db-schedule-date">' + escHtml(s.date || '') + ' ' + escHtml(s.time || '') + '</div>'
+                + '<div class="db-schedule-match">'
+                + '<div class="db-schedule-team team-a">' + escHtml(s.teamA || '') + '</div>'
+                + '<div class="db-schedule-score">VS</div>'
+                + '<div class="db-schedule-team team-b">' + escHtml(s.teamB || '') + '</div>'
+                + '</div>'
+                + '<div style="text-align:center"><span class="db-schedule-status-badge ' + badgeCls + '">' + badgeTxt + '</span></div>'
+                + '</div>';
+        }
+        el.innerHTML = html;
+    }
+
+    // ==================== Match History ====================
+    function renderMatchHistory(matches) {
+        var el = document.getElementById('matchHistoryList');
+        if (!matches || matches.length === 0) {
+            el.innerHTML = '<div class="db-empty">暂无比赛记录</div>';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < matches.length; i++) {
+            var m = matches[i];
+            var winnerName = '';
+            if (m.winner === 'A') winnerName = m.teamAName || 'A队';
+            else if (m.winner === 'B') winnerName = m.teamBName || 'B队';
+
+            html += '<div class="db-match-card">'
+                + '<div class="db-match-header">'
+                + '<div class="db-match-round">第' + (i + 1) + '场 · ' + escHtml(m.round || '') + '</div>'
+                + '<div class="db-match-date">' + escHtml(m.date || '') + '</div>'
+                + '</div>'
+                + '<div class="db-match-body">'
+                + '<div class="db-match-team"><div class="db-match-team-name">' + escHtml(m.teamAName || 'A队') + '</div></div>'
+                + '<div class="db-match-score-big">' + (m.scoreA || 0) + ' : ' + (m.scoreB || 0) + '</div>'
+                + '<div class="db-match-team"><div class="db-match-team-name">' + escHtml(m.teamBName || 'B队') + '</div></div>'
+                + '</div>'
+                + (winnerName ? '<div class="db-match-winner">🏆 胜者: ' + escHtml(winnerName) + '</div>' : '')
+                + '</div>';
+        }
+        el.innerHTML = html;
+    }
+
+    // ==================== Rankings ====================
+    function renderRankings(rankings) {
+        renderPersonalRankings(rankings.personal || []);
+        renderTeamRankings(rankings.teams || []);
+    }
+
+    function renderPersonalRankings(list) {
+        var el = document.getElementById('rankPersonal');
+        if (!list || list.length === 0) {
+            el.innerHTML = '<div class="db-empty">暂无排行数据</div>';
+            return;
+        }
+        var html = '<table class="db-rank-table"><thead><tr>'
+            + '<th>排名</th><th>玩家</th><th>击杀</th><th>助攻</th><th>贡献</th><th>胜率</th>'
+            + '</tr></thead><tbody>';
+        for (var i = 0; i < list.length; i++) {
+            var r = list[i];
+            var medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : (i + 1)));
+            html += '<tr><td><span class="db-rank-medal">' + medal + '</span></td>'
+                + '<td>' + escHtml(r.name || '') + '</td>'
+                + '<td>' + (r.kills || 0) + '</td>'
+                + '<td>' + (r.assists || 0) + '</td>'
+                + '<td>' + (r.contribution || 0) + '</td>'
+                + '<td>' + (r.winRate || '0%') + '</td></tr>';
+        }
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    }
+
+    function renderTeamRankings(list) {
+        var el = document.getElementById('rankTeams');
+        if (!list || list.length === 0) {
+            el.innerHTML = '<div class="db-empty">暂无排行数据</div>';
+            return;
+        }
+        var html = '<table class="db-rank-table"><thead><tr>'
+            + '<th>排名</th><th>队伍</th><th>胜场</th><th>积分</th>'
+            + '</tr></thead><tbody>';
+        for (var i = 0; i < list.length; i++) {
+            var r = list[i];
+            var medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : (i + 1)));
+            html += '<tr><td><span class="db-rank-medal">' + medal + '</span></td>'
+                + '<td>' + escHtml(r.name || '') + '</td>'
+                + '<td>' + (r.wins || 0) + '</td>'
+                + '<td>' + (r.points || 0) + '</td></tr>';
+        }
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    }
+
+    window.switchRankTab = function(tab) {
+        var tabs = document.querySelectorAll('.db-rank-tab');
+        tabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === tab); });
+        document.getElementById('rankPersonal').style.display = tab === 'personal' ? '' : 'none';
+        document.getElementById('rankTeams').style.display = tab === 'teams' ? '' : 'none';
+    };
+
+    // ==================== Honors ====================
+    function renderHonors(honors) {
+        var el = document.getElementById('honorsGrid');
+        if (!honors || honors.length === 0) {
+            el.innerHTML = '<div class="db-empty">赛事尚未结束，荣誉待揭晓</div>';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < honors.length; i++) {
+            var h = honors[i];
+            var isChamp = h.title === '冠军';
+            html += '<div class="db-honor-card' + (isChamp ? ' honor-champion' : '') + '">'
+                + '<div class="db-honor-icon">' + (h.icon || '🏅') + '</div>'
+                + '<div class="db-honor-title">' + escHtml(h.title || '') + '</div>'
+                + '<div class="db-honor-name">' + escHtml(h.name || '') + '</div>'
+                + '</div>';
+        }
+        el.innerHTML = html;
+    }
+
+    // ==================== Particles ====================
+    function initParticles() {
+        var container = document.getElementById('dbParticles');
+        for (var i = 0; i < 30; i++) {
+            var p = document.createElement('div');
+            p.className = 'db-particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 6 + 's';
+            p.style.animationDuration = (4 + Math.random() * 4) + 's';
+            container.appendChild(p);
+        }
+    }
+
+    // ==================== Scroll Reveal ====================
+    function initScrollReveal() {
+        var els = document.querySelectorAll('.db-reveal');
+        if ('IntersectionObserver' in window) {
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('db-visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+            els.forEach(function(el) { observer.observe(el); });
+        } else {
+            els.forEach(function(el) { el.classList.add('db-visible'); });
+        }
+    }
+
+    // ==================== Utils ====================
+    function escHtml(s) {
+        if (!s) return '';
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(s));
+        return d.innerHTML;
+    }
+    function escAttr(s) {
+        return escHtml(s).replace(/"/g, '&quot;');
+    }
+})();
+</script>
+</body>
+</html>

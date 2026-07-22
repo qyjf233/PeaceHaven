@@ -30,6 +30,7 @@ public class DataInitializer implements ApplicationRunner {
         initBuildingContest();
         initBuildingContest2();
         initBattleShowdown();
+        initDraftBattle();
         initBotSchedules();
     }
 
@@ -159,6 +160,63 @@ public class DataInitializer implements ApplicationRunner {
                     .build();
             configRepository.save(config);
             log.info("已创建擂台赛时间配置");
+        }
+    }
+
+    private void initDraftBattle() {
+        String slug = "draft-battle-1";
+        Activity activity = activityRepository.findBySlug(slug).orElse(null);
+        if (activity == null) {
+            activity = Activity.builder()
+                    .slug(slug)
+                    .title("第一届 · 点兵演武 · 南希对抗赛")
+                    .summary("双将点兵，一战定胜负。长安营地 12v12 南希市控团队竞技对抗赛")
+                    .startDate(LocalDateTime.of(2026, 8, 1, 0, 0))
+                    .endDate(LocalDateTime.of(2026, 8, 31, 23, 59))
+                    .build();
+            activity = activityRepository.save(activity);
+            log.info("已自动创建南希对抗赛活动记录: slug={}", slug);
+        }
+
+        if (configRepository.findByActivityId(activity.getId()).isEmpty()) {
+            // 赛程时间线
+            String timelineJson = "["
+                + "{\"label\":\"报名期\",\"icon\":\"📋\",\"phase\":\"register\",\"start\":\"2026-08-01T00:00\",\"end\":\"2026-08-10T23:59\"},"
+                + "{\"label\":\"选秀\",\"icon\":\"⚔️\",\"phase\":\"draft\",\"start\":\"2026-08-11T20:00\",\"end\":\"2026-08-11T23:59\"},"
+                + "{\"label\":\"预选赛\",\"icon\":\"🏁\",\"phase\":\"qualifier\",\"start\":\"2026-08-15T20:00\",\"end\":\"2026-08-15T23:59\"},"
+                + "{\"label\":\"决赛\",\"icon\":\"🏆\",\"phase\":\"finals\",\"start\":\"2026-08-22T20:00\",\"end\":\"2026-08-22T23:59\"}"
+                + "]";
+
+            // 比赛日程
+            String scheduleJson = "["
+                + "{\"round\":\"预选赛\",\"date\":\"2026-08-15\",\"time\":\"20:00\",\"teamA\":\"南军\",\"teamB\":\"北军\",\"status\":\"WAITING\"},"
+                + "{\"round\":\"决赛\",\"date\":\"2026-08-22\",\"time\":\"20:00\",\"teamA\":\"待定\",\"teamB\":\"待定\",\"status\":\"WAITING\"}"
+                + "]";
+
+            // 战绩记录
+            String matchHistoryJson = "["
+                + "{\"index\":0,\"round\":\"预选赛\",\"teamAName\":\"南军\",\"teamBName\":\"北军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-15\"}"
+                + "]";
+
+            // 排行榜
+            String rankingsJson = "{\"personal\":[],\"teams\":[]}";
+
+            // 荣誉殿堂
+            String honorsJson = "[]";
+
+            Map<String, String> configData = new LinkedHashMap<>();
+            configData.put("timeline", timelineJson);
+            configData.put("schedule", scheduleJson);
+            configData.put("matchHistory", matchHistoryJson);
+            configData.put("rankings", rankingsJson);
+            configData.put("honors", honorsJson);
+
+            ActivityConfig config = ActivityConfig.builder()
+                    .activityId(activity.getId())
+                    .configJson(ContestService.mapToJson(configData))
+                    .build();
+            configRepository.save(config);
+            log.info("已创建南希对抗赛配置");
         }
     }
 
