@@ -77,6 +77,9 @@
     <!-- 应用代码 INFO 级别（控制台 + SLS 都看到；需要 DEBUG 排查时改回 DEBUG 即可） -->
     <logger name="com.potato.peacehaven" level="INFO"/>
 
+    <!-- LLM 完整报文日志：改为 DEBUG 可查看每次 LLM 调用的完整输入输出 -->
+    <logger name="com.potato.peacehaven.ai.llm" level="INFO"/>
+
     <!-- 框架日志级别（减少噪音） -->
     <logger name="org.springframework" level="INFO"/>
     <logger name="org.hibernate" level="WARN"/>

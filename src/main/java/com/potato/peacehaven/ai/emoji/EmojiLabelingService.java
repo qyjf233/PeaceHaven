@@ -176,37 +176,52 @@ public class EmojiLabelingService {
 
         try {
             StringBuilder sb = new StringBuilder();
-            // 简易解析 JSON 数组中的每个样本
-            // 格式: [{"sender":"xxx","before":["a: msg1","b: msg2"]}, ...]
             String content = samplesJson.trim();
             if (content.startsWith("[")) content = content.substring(1);
             if (content.endsWith("]")) content = content.substring(0, content.length() - 1);
 
             int sampleNum = 1;
             int idx = 0;
+            int skippedDuplicates = 0;
+            java.util.Set<String> seenContexts = new java.util.HashSet<>();
+
             while (idx < content.length()) {
-                // 找下一个 {
                 int start = content.indexOf("{", idx);
                 if (start < 0) break;
                 int end = findMatchingBrace(content, start);
                 if (end < 0) break;
 
                 String sample = content.substring(start, end + 1);
+
+                // 提取 before 数组内容作为去重 key
+                String beforeKey = "";
+                int beforeStart = sample.indexOf("\"before\":[");
+                if (beforeStart >= 0) {
+                    int arrStart = sample.indexOf("[", beforeStart);
+                    int arrEnd = sample.indexOf("]", arrStart);
+                    if (arrStart >= 0 && arrEnd >= 0) {
+                        beforeKey = sample.substring(arrStart, arrEnd + 1);
+                    }
+                }
+
+                // 跳过重复上下文（同一场景发送多次无额外信息价值）
+                if (!beforeKey.isEmpty() && !seenContexts.add(beforeKey)) {
+                    skippedDuplicates++;
+                    idx = end + 1;
+                    continue;
+                }
+
                 sb.append("【场景 ").append(sampleNum++).append("】\n");
 
-                // 提取 sender
                 String sender = extractJsonField(sample, "sender");
                 if (sender != null) sb.append("发送者: ").append(sender).append("\n");
 
-                // 提取 before 数组
-                int beforeStart = sample.indexOf("\"before\":[");
                 if (beforeStart >= 0) {
                     int arrStart = sample.indexOf("[", beforeStart);
                     int arrEnd = sample.indexOf("]", arrStart);
                     if (arrStart >= 0 && arrEnd >= 0) {
                         String arr = sample.substring(arrStart + 1, arrEnd);
                         sb.append("发送前聊天:\n");
-                        // 解析数组中的每个字符串
                         String[] parts = arr.split("\",\"");
                         for (String part : parts) {
                             String cleaned = part.replace("\"", "").trim();
@@ -218,6 +233,10 @@ public class EmojiLabelingService {
                 }
                 sb.append("\n");
                 idx = end + 1;
+            }
+
+            if (skippedDuplicates > 0) {
+                log.debug("[EmojiLabel] 去重跳过 {} 条重复上下文", skippedDuplicates);
             }
 
             return sb.toString().trim();

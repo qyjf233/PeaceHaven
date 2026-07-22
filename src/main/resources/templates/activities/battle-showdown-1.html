@@ -375,6 +375,309 @@
             .prize-card { padding: 16px 8px; }
             .prize-rank { font-size: 1.4rem; }
             .prize-amount { font-size: 1.1rem; }
+            .swiss-match-card { padding: 14px; }
+            .swiss-player-name { font-size: 0.85rem; }
+            .swiss-vs-badge { font-size: 0.75rem; padding: 2px 8px; }
+        }
+
+        /* === Swiss Round Tabs === */
+        .swiss-round-tabs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+        .swiss-round-tab {
+            padding: 8px 22px;
+            border-radius: 50px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid var(--border-color, rgba(0,0,0,0.12));
+            background: var(--bg-card, #fff);
+            color: var(--text-secondary, #666);
+            transition: all 0.25s;
+        }
+        .swiss-round-tab:hover {
+            border-color: var(--accent-primary, #E8833A);
+            color: var(--accent-primary, #E8833A);
+        }
+        .swiss-round-tab.active {
+            background: var(--gradient-accent, linear-gradient(135deg,#E8833A,#E0653A));
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 3px 12px rgba(232,131,58,0.3);
+        }
+
+        /* === Swiss Match List === */
+        .swiss-match-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .swiss-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted, #aaa);
+            font-size: 0.9rem;
+        }
+
+        /* === Swiss Match Card === */
+        .swiss-match-card {
+            background: var(--bg-card, #fff);
+            border: var(--border-card, 1px solid rgba(0,0,0,0.08));
+            border-radius: 14px;
+            padding: 18px 22px;
+            box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.08));
+            transition: all 0.3s;
+        }
+        .swiss-match-card.ongoing {
+            border-color: #E8833A;
+            box-shadow: 0 0 0 2px rgba(232,131,58,0.18), 0 4px 20px rgba(232,131,58,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .swiss-match-card.ongoing::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--gradient-accent, linear-gradient(135deg,#E8833A,#E0653A));
+        }
+        .swiss-match-card.completed {
+            opacity: 0.72;
+            border-color: rgba(0,0,0,0.06);
+        }
+        .swiss-match-card.waiting {
+            border-style: dashed;
+        }
+        .swiss-match-card.bye {
+            background: linear-gradient(135deg, rgba(156,39,176,0.06), rgba(103,58,183,0.04));
+            border-color: rgba(156,39,176,0.25);
+        }
+        .swiss-match-card.bye::before {
+            background: linear-gradient(135deg, #9C27B0, #673AB7);
+        }
+
+        /* Card header row: round label + status */
+        .swiss-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .swiss-round-label {
+            font-size: 0.78rem;
+            color: var(--text-muted, #aaa);
+            font-weight: 500;
+        }
+        .swiss-status-badge {
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 50px;
+            letter-spacing: 0.5px;
+        }
+        .swiss-status-badge.ongoing {
+            background: rgba(232,131,58,0.15);
+            color: #E8833A;
+            animation: pulse-ongoing 1.8s ease-in-out infinite;
+        }
+        @keyframes pulse-ongoing {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+        .swiss-status-badge.waiting {
+            background: rgba(0,0,0,0.06);
+            color: var(--text-muted, #aaa);
+        }
+        .swiss-status-badge.completed {
+            background: rgba(76,175,80,0.13);
+            color: #4CAF50;
+        }
+        .swiss-status-badge.bye {
+            background: rgba(156,39,176,0.13);
+            color: #9C27B0;
+        }
+        .swiss-vs-badge.bye-icon {
+            font-size: 1.6rem;
+        }
+        .bye-text {
+            color: var(--text-muted, #aaa);
+            font-style: italic;
+        }
+
+        /* Player rows */
+        .swiss-players {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .swiss-player {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .swiss-player.right {
+            text-align: right;
+            align-items: flex-end;
+        }
+        .swiss-player-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary, #222);
+        }
+        .swiss-player-score {
+            font-size: 0.78rem;
+            color: var(--text-muted, #aaa);
+        }
+        .swiss-vs-badge {
+            flex-shrink: 0;
+            background: var(--gradient-accent, linear-gradient(135deg,#E8833A,#E0653A));
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 800;
+            padding: 3px 12px;
+            border-radius: 50px;
+            letter-spacing: 1px;
+        }
+
+        /* Winner highlight */
+        .swiss-player.winner .swiss-player-name {
+            color: #E8833A;
+        }
+        .swiss-player.winner .swiss-player-name::after {
+            content: ' 🏆';
+        }
+        .swiss-player.loser .swiss-player-name {
+            color: var(--text-muted, #aaa);
+            text-decoration: line-through;
+        }
+
+        /* Card footer: referee + result */
+        .swiss-card-footer {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .swiss-referee {
+            font-size: 0.78rem;
+            color: var(--text-muted, #aaa);
+        }
+        .swiss-result {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4CAF50;
+        }
+
+        /* Submit button */
+        .btn-submit-result {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 18px;
+            border-radius: 50px;
+            background: var(--gradient-accent, linear-gradient(135deg,#E8833A,#E0653A));
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 3px 10px rgba(232,131,58,0.28);
+        }
+        .btn-submit-result:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 16px rgba(232,131,58,0.4);
+        }
+        .btn-submit-result:active { transform: scale(0.97); }
+        .btn-submit-result:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Judge match card variant */
+        .judge-match-card {
+            background: var(--bg-card, #fff);
+            border: var(--border-card, 1px solid rgba(0,0,0,0.08));
+            border-radius: 14px;
+            padding: 18px 22px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 12px;
+        }
+        .judge-match-card .judge-match-status {
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .judge-match-card .judge-match-status.ongoing {
+            color: #E8833A;
+        }
+        .judge-match-card .judge-match-status.waiting {
+            color: var(--text-muted, #aaa);
+        }
+        .judge-match-card .judge-match-status.completed {
+            color: #4CAF50;
+        }
+
+        /* Score dialog player options */
+        .score-dialog-players {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 16px 0;
+        }
+        .score-player-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 2px solid rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-card, #fff);
+        }
+        .score-player-option:hover {
+            border-color: var(--accent-primary, #E8833A);
+            background: rgba(232,131,58,0.05);
+        }
+        .score-player-option.selected {
+            border-color: var(--accent-primary, #E8833A);
+            background: rgba(232,131,58,0.1);
+        }
+        .score-player-option .player-radio {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            border: 2px solid var(--text-muted, #aaa);
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .score-player-option.selected .player-radio {
+            border-color: var(--accent-primary, #E8833A);
+            background: var(--accent-primary, #E8833A);
+            box-shadow: inset 0 0 0 3px var(--bg-card, #fff);
+        }
+        .score-player-option .player-info {
+            flex: 1;
+        }
+        .score-player-option .player-info .p-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-primary, #222);
+        }
+        .score-player-option .player-info .p-score {
+            font-size: 0.78rem;
+            color: var(--text-muted, #aaa);
+            margin-top: 2px;
         }
     </style>
 </head>
@@ -507,6 +810,27 @@
     <section class="contest-section">
         <h2 class="section-title">积分排行榜</h2>
         <div id="leaderboard"></div>
+    </section>
+
+    <!-- Swiss 赛程（报名结束后展示） -->
+    <section class="contest-section" id="swissSection" style="display:none">
+        <h2 class="section-title">Swiss 赛程</h2>
+
+        <!-- 轮次标签 -->
+        <div class="swiss-round-tabs" id="swissRoundTabs"></div>
+
+        <!-- 赛程列表 -->
+        <div class="swiss-match-list" id="swissMatchList">
+            <div class="swiss-empty">赛程尚未生成，请稍候...</div>
+        </div>
+    </section>
+
+    <!-- 裁判操作区 -->
+    <section class="contest-section" id="judgeSwissPanel" style="display:none">
+        <h2 class="section-title">裁判操作</h2>
+        <div id="judgeMatchList">
+            <div class="swiss-empty">暂无您负责的比赛</div>
+        </div>
     </section>
 </div>
 
@@ -648,22 +972,448 @@
     })();
 
     // === 积分排行榜 ===
-    PHLeaderboard.create({
-        container: '#leaderboard',
-        slug: 'battle-showdown-1',
-        columns: [
-            { field: 'rank',     label: '排名', type: 'rank' },
-            { field: 'nickname', label: '选手' },
-            { field: 'wins',     label: '胜',   type: 'number' },
-            { field: 'losses',   label: '负',   type: 'number' },
-            { field: 'points',   label: '积分', type: 'number' }
-        ],
-        sort: [
-            { field: 'points', order: 'desc' },
-            { field: 'wins',   order: 'desc' }
-        ],
-        emptyText: '比赛尚未开始，排行榜将在第一轮比赛结束后更新'
-    });
+    function refreshLeaderboard() {
+        PHLeaderboard.create({
+            container: '#leaderboard',
+            slug: 'battle-showdown-1',
+            columns: [
+                { field: 'rank',     label: '排名', type: 'rank' },
+                { field: 'nickname', label: '选手' },
+                { field: 'wins',     label: '胜',   type: 'number' },
+                { field: 'losses',   label: '负',   type: 'number' },
+                { field: 'points',   label: '积分', type: 'number' }
+            ],
+            sort: [
+                { field: 'points', order: 'desc' },
+                { field: 'wins',   order: 'desc' }
+            ],
+            emptyText: '比赛尚未开始，排行榜将在第一轮比赛结束后更新'
+        });
+    }
+    refreshLeaderboard();
+
+    // === Swiss 赛程模块 ===
+    (function() {
+        var slug = 'battle-showdown-1';
+        var swissSection = document.getElementById('swissSection');
+        var judgeSwissPanel = document.getElementById('judgeSwissPanel');
+        var registerArea = document.getElementById('registerArea').closest('.contest-section');
+        var matchListEl = document.getElementById('swissMatchList');
+        var roundTabsEl = document.getElementById('swissRoundTabs');
+        var judgeMatchListEl = document.getElementById('judgeMatchList');
+
+        var currentViewRound = null;  // 当前查看的轮次
+        var allMatches = [];          // 当前轮次比赛列表
+        var isJudge = false;
+        var isLoadingStatus = false;  // 防抖标志，防止并发请求
+
+        // 等待 timeline 初始化完成
+        function waitForPhase() {
+            if (typeof window.__activePhase !== 'undefined') {
+                onPhaseChange();
+            } else {
+                setTimeout(waitForPhase, 200);
+            }
+        }
+        waitForPhase();
+
+        // 阶段切换处理
+        function onPhaseChange() {
+            var phase = window.__activePhase;
+            if (phase === 'swiss' || phase === 'elimination' || phase === 'finals') {
+                // Swiss 或后续阶段：隐藏报名区，显示赛程
+                if (registerArea) registerArea.style.display = 'none';
+                swissSection.style.display = '';
+                loadSwissStatus();
+            } else {
+                // 报名阶段：显示报名区，隐藏赛程
+                if (registerArea) registerArea.style.display = '';
+                swissSection.style.display = 'none';
+                judgeSwissPanel.style.display = 'none';
+            }
+        }
+
+        // 加载 Swiss 状态
+        function loadSwissStatus() {
+            if (isLoadingStatus) return;  // 防止并发请求
+            isLoadingStatus = true;
+
+            fetch('/api/pvp/' + slug + '/swiss/status')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    isLoadingStatus = false;
+                    isJudge = data.isJudge;
+                    currentViewRound = data.currentRound;
+                    allMatches = data.matches || [];
+
+                    renderRoundTabs(data.currentRound, data.totalRounds);
+                    renderMatchList(allMatches);
+
+                    // Swiss 阶段有比赛数据时刷新排行榜（确保轮空积分等已更新）
+                    // 延迟500ms确保后端事务完全提交后再读取最新排行数据
+                    if (data.currentRound > 0) {
+                        setTimeout(refreshLeaderboard, 500);
+                    }
+
+                    // 裁判面板
+                    if (isJudge) {
+                        judgeSwissPanel.style.display = '';
+                        loadJudgeMatches();
+                    } else {
+                        judgeSwissPanel.style.display = 'none';
+                    }
+                })
+                .catch(function(err) {
+                    isLoadingStatus = false;
+                    console.error('[Swiss] 加载状态失败:', err);
+                });
+        }
+
+        // 渲染轮次标签
+        function renderRoundTabs(currentRound, totalRounds) {
+            if (currentRound <= 0) {
+                roundTabsEl.innerHTML = '';
+                return;
+            }
+            var html = '';
+            for (var i = 1; i <= currentRound; i++) {
+                var active = (i === currentRound) ? ' active' : '';
+                html += '<button class="swiss-round-tab' + active + '" data-round="' + i + '">第' + i + '轮</button>';
+            }
+            roundTabsEl.innerHTML = html;
+
+            // 点击标签切换轮次
+            roundTabsEl.querySelectorAll('.swiss-round-tab').forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    var round = parseInt(this.getAttribute('data-round'));
+                    switchRound(round);
+                });
+            });
+        }
+
+        // 切换轮次查看
+        function switchRound(round) {
+            currentViewRound = round;
+            // 更新标签激活状态
+            roundTabsEl.querySelectorAll('.swiss-round-tab').forEach(function(tab) {
+                tab.classList.toggle('active', parseInt(tab.getAttribute('data-round')) === round);
+            });
+            // 如果是当前轮次，使用已有数据；否则加载全部赛程
+            if (round === (allMatches.length > 0 ? allMatches[0].roundNumber : -1)) {
+                renderMatchList(allMatches);
+            } else {
+                loadAllMatches(round);
+            }
+        }
+
+        // 加载所有赛程数据
+        function loadAllMatches(targetRound) {
+            fetch('/api/pvp/' + slug + '/swiss/matches')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var filtered = (data.matches || []).filter(function(m) {
+                        return m.roundNumber === targetRound;
+                    });
+                    renderMatchList(filtered);
+                });
+        }
+
+        // 渲染比赛列表
+        function renderMatchList(matches) {
+            if (!matches || matches.length === 0) {
+                matchListEl.innerHTML = '<div class="swiss-empty">赛程尚未生成，请稍候...</div>';
+                return;
+            }
+
+            // 排序: ONGOING > WAITING > BYE > COMPLETED
+            var sorted = matches.slice().sort(function(a, b) {
+                var order = { ONGOING: 0, WAITING: 1, BYE: 2, COMPLETED: 3 };
+                return (order[a.status] || 4) - (order[b.status] || 4);
+            });
+
+            var html = sorted.map(function(m) {
+                return renderMatchCard(m);
+            }).join('');
+
+            matchListEl.innerHTML = html;
+
+            // 绑定提交按钮事件
+            matchListEl.querySelectorAll('.btn-submit-result').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var matchId = parseInt(this.getAttribute('data-match-id'));
+                    var p1Id = parseInt(this.getAttribute('data-p1-id'));
+                    var p2Id = parseInt(this.getAttribute('data-p2-id'));
+                    var p1Name = this.getAttribute('data-p1-name');
+                    var p2Name = this.getAttribute('data-p2-name');
+                    openScoreDialog(matchId, p1Id, p2Id, p1Name, p2Name);
+                });
+            });
+        }
+
+        // 渲染单个比赛卡片
+        function renderMatchCard(m) {
+            // BYE 轮空卡片特殊渲染
+            if (m.status === 'BYE') {
+                return '<div class="swiss-match-card bye">'
+                    + '<div class="swiss-card-header">'
+                    +   '<span class="swiss-round-label">第' + m.roundNumber + '轮</span>'
+                    +   '<span class="swiss-status-badge bye">🎉 轮空获胜</span>'
+                    + '</div>'
+                    + '<div class="swiss-players">'
+                    +   '<div class="swiss-player winner">'
+                    +     '<span class="swiss-player-name">' + escHtml(m.player1Name) + '</span>'
+                    +     '<span class="swiss-player-score">积分 ' + m.player1Score + '</span>'
+                    +   '</div>'
+                    +   '<span class="swiss-vs-badge bye-icon">🏆</span>'
+                    +   '<div class="swiss-player right">'
+                    +     '<span class="swiss-player-name bye-text">轮空</span>'
+                    +     '<span class="swiss-player-score">-</span>'
+                    +   '</div>'
+                    + '</div>'
+                    + '<div class="swiss-card-footer">'
+                    +   '<span class="swiss-result">🏆 ' + escHtml(m.player1Name) + ' 自动获胜 (+3分)</span>'
+                    + '</div>'
+                    + '</div>';
+            }
+
+            var statusClass = m.status.toLowerCase();
+            var statusText = m.status === 'ONGOING' ? '🔥 正在进行'
+                           : m.status === 'WAITING' ? '等待中'
+                           : '已结束';
+
+            var p1Class = '';
+            var p2Class = '';
+            if (m.status === 'COMPLETED') {
+                p1Class = (m.winnerId === m.player1Id) ? 'winner' : 'loser';
+                p2Class = (m.winnerId === m.player2Id) ? 'winner' : 'loser';
+            }
+
+            var footerHtml = '';
+            if (m.status === 'COMPLETED') {
+                footerHtml = '<div class="swiss-card-footer">'
+                    + '<span class="swiss-referee">裁判: ' + (m.refereeName || '-') + '</span>'
+                    + '<span class="swiss-result">🏆 ' + (m.winnerName || '-') + ' 获胜</span>'
+                    + '</div>';
+            } else if (m.status === 'ONGOING' && m.refereeName) {
+                footerHtml = '<div class="swiss-card-footer">'
+                    + '<span class="swiss-referee">裁判: ' + m.refereeName + '</span>'
+                    + '</div>';
+            } else if (m.status === 'WAITING' && m.refereeName) {
+                footerHtml = '<div class="swiss-card-footer">'
+                    + '<span class="swiss-referee">裁判: ' + m.refereeName + '</span>'
+                    + '</div>';
+            }
+
+            return '<div class="swiss-match-card ' + statusClass + '">'
+                + '<div class="swiss-card-header">'
+                +   '<span class="swiss-round-label">第' + m.roundNumber + '轮 · 第' + m.matchOrder + '场</span>'
+                +   '<span class="swiss-status-badge ' + statusClass + '">' + statusText + '</span>'
+                + '</div>'
+                + '<div class="swiss-players">'
+                +   '<div class="swiss-player ' + p1Class + '">'
+                +     '<span class="swiss-player-name">' + escHtml(m.player1Name) + '</span>'
+                +     '<span class="swiss-player-score">积分 ' + m.player1Score + '</span>'
+                +   '</div>'
+                +   '<span class="swiss-vs-badge">VS</span>'
+                +   '<div class="swiss-player right ' + p2Class + '">'
+                +     '<span class="swiss-player-name">' + escHtml(m.player2Name) + '</span>'
+                +     '<span class="swiss-player-score">积分 ' + m.player2Score + '</span>'
+                +   '</div>'
+                + '</div>'
+                + footerHtml
+                + '</div>';
+        }
+
+        // 加载裁判自己的比赛
+        function loadJudgeMatches() {
+            fetch('/api/pvp/' + slug + '/swiss/my-matches')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    renderJudgeMatches(data.matches || []);
+                })
+                .catch(function() {
+                    judgeMatchListEl.innerHTML = '<div class="swiss-empty">加载失败，请刷新</div>';
+                });
+        }
+
+        // 渲染裁判视角比赛列表
+        function renderJudgeMatches(matches) {
+            if (!matches || matches.length === 0) {
+                judgeMatchListEl.innerHTML = '<div class="swiss-empty">暂无您负责的比赛</div>';
+                return;
+            }
+
+            // 只显示 ONGOING 和 WAITING 的比赛
+            var active = matches.filter(function(m) {
+                return m.status === 'ONGOING' || m.status === 'WAITING';
+            });
+
+            if (active.length === 0) {
+                judgeMatchListEl.innerHTML = '<div class="swiss-empty">当前没有进行中的比赛</div>';
+                return;
+            }
+
+            var html = active.map(function(m) {
+                var statusClass = m.status.toLowerCase();
+                var statusText = m.status === 'ONGOING' ? '🔥 正在进行' : '等待中';
+
+                return '<div class="judge-match-card">'
+                    + '<div class="judge-match-status ' + statusClass + '">' + statusText + ' · 第' + m.roundNumber + '轮</div>'
+                    + '<div class="swiss-players">'
+                    +   '<div class="swiss-player">'
+                    +     '<span class="swiss-player-name">' + escHtml(m.player1Name) + '</span>'
+                    +     '<span class="swiss-player-score">积分 ' + m.player1Score + '</span>'
+                    +   '</div>'
+                    +   '<span class="swiss-vs-badge">VS</span>'
+                    +   '<div class="swiss-player right">'
+                    +     '<span class="swiss-player-name">' + escHtml(m.player2Name) + '</span>'
+                    +     '<span class="swiss-player-score">积分 ' + m.player2Score + '</span>'
+                    +   '</div>'
+                    + '</div>'
+                    + '<div style="margin-top:14px;text-align:right;">'
+                    +   '<button class="btn-submit-result" '
+                    +     'data-match-id="' + m.id + '" '
+                    +     'data-p1-id="' + m.player1Id + '" data-p2-id="' + m.player2Id + '" '
+                    +     'data-p1-name="' + escAttr(m.player1Name) + '" data-p2-name="' + escAttr(m.player2Name) + '"'
+                    +     (m.status !== 'ONGOING' ? ' disabled' : '') + '>'
+                    +   '📋 上传成绩</button>'
+                    + '</div>'
+                    + '</div>';
+            }).join('');
+
+            judgeMatchListEl.innerHTML = html;
+
+            judgeMatchListEl.querySelectorAll('.btn-submit-result').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var matchId = parseInt(this.getAttribute('data-match-id'));
+                    var p1Id = parseInt(this.getAttribute('data-p1-id'));
+                    var p2Id = parseInt(this.getAttribute('data-p2-id'));
+                    var p1Name = this.getAttribute('data-p1-name');
+                    var p2Name = this.getAttribute('data-p2-name');
+                    openScoreDialog(matchId, p1Id, p2Id, p1Name, p2Name);
+                });
+            });
+        }
+
+        // 打开成绩提交弹窗
+        function openScoreDialog(matchId, p1Id, p2Id, p1Name, p2Name) {
+            var selectedWinner = null;
+
+            var overlay = document.createElement('div');
+            overlay.className = 'ph-dialog-overlay';
+
+            var dialog = document.createElement('div');
+            dialog.className = 'ph-dialog';
+            dialog.style.maxWidth = '400px';
+
+            dialog.innerHTML =
+                '<div class="ph-dialog-icon">⚔️</div>'
+                + '<div class="ph-dialog-title">提交比赛成绩</div>'
+                + '<div class="ph-dialog-message" style="font-size:0.85rem;color:var(--text-muted,#aaa);">请选择获胜选手</div>'
+                + '<div class="score-dialog-players">'
+                +   '<div class="score-player-option" data-winner-id="' + p1Id + '">'
+                +     '<div class="player-radio"></div>'
+                +     '<div class="player-info">'
+                +       '<div class="p-name">' + escHtml(p1Name) + '</div>'
+                +     '</div>'
+                +   '</div>'
+                +   '<div class="score-player-option" data-winner-id="' + p2Id + '">'
+                +     '<div class="player-radio"></div>'
+                +     '<div class="player-info">'
+                +       '<div class="p-name">' + escHtml(p2Name) + '</div>'
+                +     '</div>'
+                +   '</div>'
+                + '</div>'
+                + '<div class="ph-dialog-actions">'
+                +   '<button class="ph-dialog-btn ph-dialog-btn-secondary score-cancel-btn">取消</button>'
+                +   '<button class="ph-dialog-btn ph-dialog-btn-primary score-confirm-btn" disabled style="opacity:0.5;">确认提交</button>'
+                + '</div>';
+
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            overlay.offsetHeight;
+            requestAnimationFrame(function() {
+                overlay.classList.add('ph-visible');
+            });
+
+            // 选择胜者
+            var options = dialog.querySelectorAll('.score-player-option');
+            options.forEach(function(opt) {
+                opt.addEventListener('click', function() {
+                    options.forEach(function(o) { o.classList.remove('selected'); });
+                    this.classList.add('selected');
+                    selectedWinner = parseInt(this.getAttribute('data-winner-id'));
+                    var confirmBtn = dialog.querySelector('.score-confirm-btn');
+                    confirmBtn.disabled = false;
+                    confirmBtn.style.opacity = '1';
+                });
+            });
+
+            // 取消
+            dialog.querySelector('.score-cancel-btn').addEventListener('click', function() {
+                closeOverlay(overlay);
+            });
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) closeOverlay(overlay);
+            });
+
+            // 确认提交
+            dialog.querySelector('.score-confirm-btn').addEventListener('click', function() {
+                if (!selectedWinner) return;
+                var btn = this;
+                btn.disabled = true;
+                btn.textContent = '提交中...';
+                btn.style.opacity = '0.5';
+
+                fetch('/api/pvp/' + slug + '/swiss/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ matchId: matchId, winnerId: selectedWinner })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    closeOverlay(overlay);
+                    if (data.error) {
+                        PHDialog.show({ icon: '⚠️', title: '提交失败', message: data.error, confirmText: '知道了' });
+                    } else {
+                        PHDialog.show({
+                            icon: '✅',
+                            title: '成绩已提交',
+                            message: (data.winnerName || '选手') + ' 获胜！',
+                            confirmText: '好的'
+                        });
+                        // 刷新赛程（内部会延迟刷新排行榜）
+                        loadSwissStatus();
+                    }
+                })
+                .catch(function() {
+                    closeOverlay(overlay);
+                    PHDialog.show({ icon: '⚠️', title: '网络错误', message: '提交失败，请稍后重试', confirmText: '知道了' });
+                    btn.disabled = false;
+                    btn.textContent = '确认提交';
+                    btn.style.opacity = '1';
+                });
+            });
+        }
+
+        function closeOverlay(overlay) {
+            overlay.classList.remove('ph-visible');
+            setTimeout(function() {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            }, 250);
+        }
+
+        function escHtml(s) {
+            if (!s) return '';
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(s));
+            return div.innerHTML;
+        }
+
+        function escAttr(s) {
+            return escHtml(s).replace(/"/g, '&quot;');
+        }
+    })();
 </script>
 <script th:src="@{/js/ph-dialog.js}"></script>
 <script th:src="@{/js/activity-timeline.js}"></script>

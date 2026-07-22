@@ -360,10 +360,10 @@ public class PromptBuilder {
         String sampleText = buildStyleSamples(ragRecords);
         if (!sampleText.isBlank()) {
             ctx.append("# 本人历史回复参考\n");
-            ctx.append("以下是本人过去的真实回复，参考其中的用词、句式和语气：\n");
+            ctx.append("以下是本人过去的真实回复，仅用于参考说话语气和句式节奏：\n");
             ctx.append(sampleText).append("\n");
-            ctx.append("注意：学习说话方式，不要照搬具体话题、名词或人名。\n");
-            ctx.append("这些样本中可能包含特色表达，但它们属于低频行为，只能参考不代表默认使用。\n");
+            ctx.append("**重要：这些只是语气参考，不是回复模板。禁止直接复制、改编或重新组合这些内容作为回复。**\n");
+            ctx.append("你应该根据当前消息独立生成回复，只是语气风格可以参考。\n");
             ctx.append("如果样本中特色词较多，这是检索偏差，真实聊天中大部分回复是普通表达。\n\n");
         }
 

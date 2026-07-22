@@ -1,5 +1,6 @@
 package com.potato.peacehaven.ai.llm;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.potato.peacehaven.config.AiProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ public class OpenAiCompatibleClient implements LlmClient {
 
     private final AiProperties aiProps;
     private final RestClient restClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OpenAiCompatibleClient(AiProperties aiProps) {
         this.aiProps = aiProps;
@@ -53,6 +55,16 @@ public class OpenAiCompatibleClient implements LlmClient {
         try {
             log.info("[LLM] 请求 {} model={} msgs={} temp={}", url, cfg.getModel(), messages.size(), temp);
 
+            // DEBUG 级别记录完整请求报文
+            if (log.isDebugEnabled()) {
+                try {
+                    String reqJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(body);
+                    log.debug("[LLM] >>> 完整请求:\n{}", reqJson);
+                } catch (Exception e) {
+                    log.debug("[LLM] 请求序列化失败: {}", e.getMessage());
+                }
+            }
+
             Map<String, Object> resp = restClient.post()
                     .uri(url)
                     .header("Authorization", "Bearer " + cfg.getApiKey())
@@ -82,6 +94,12 @@ public class OpenAiCompatibleClient implements LlmClient {
             log.info("[LLM] 回复长度={} content={}", 
                     content != null ? content.length() : 0,
                     content != null && content.length() > 80 ? content.substring(0, 80) + "..." : content);
+
+            // DEBUG 级别记录完整响应
+            if (log.isDebugEnabled()) {
+                log.debug("[LLM] <<< 完整响应:\n{}", content);
+            }
+
             return content;
 
         } catch (Exception e) {

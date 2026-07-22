@@ -51,6 +51,11 @@ public class UserMemoryExtractor {
                                   List<String> recentContext) {
         if (!aiProps.isReady() || senderWxid == null || userMessage == null) return;
 
+        // senderNick 兑底：为空时用 wxid 代替，确保提取 prompt 中有用户标识
+        if (senderNick == null || senderNick.isBlank()) {
+            senderNick = senderWxid;
+        }
+
         try {
             // 1. LLM 提取候选记忆
             String extractPrompt = buildExtractPrompt(senderNick, userMessage, aiReply, recentContext);
@@ -178,7 +183,7 @@ public class UserMemoryExtractor {
         Optional<BotUserMemory> existing = userMemoryService.getUserMemory(wxid);
         BotUserMemory memory = existing.orElse(BotUserMemory.builder().wxid(wxid).build());
 
-        if (nickname != null) memory.setNickname(nickname);
+        if (nickname != null && !nickname.isBlank()) memory.setNickname(nickname);
 
         // 获取现有结构化记忆（可变列表）
         List<MemoryEntry> memories = new ArrayList<>(

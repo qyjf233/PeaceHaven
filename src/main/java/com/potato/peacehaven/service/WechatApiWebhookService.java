@@ -169,6 +169,9 @@ public class WechatApiWebhookService {
                 String senderWxid = event.getGroupSenderWxid();
                 if (senderWxid == null) senderWxid = event.getFromWxid();
                 String senderNick = resolveSenderNick(senderWxid);
+                if (senderNick == null || senderNick.isBlank()) {
+                    senderNick = senderWxid != null ? senderWxid : "群友";
+                }
                 String traceId = TraceContext.get();
                 log.info("[Webhook] 触发 AI Pipeline chatroom={}, sender={}, traceId={}",
                         chatroomId, senderNick, traceId);
@@ -289,6 +292,9 @@ public class WechatApiWebhookService {
         String senderWxid = event.getGroupSenderWxid();
         if (senderWxid == null) senderWxid = event.getFromWxid();
         String senderNick = resolveSenderNick(senderWxid);
+        if (senderNick == null || senderNick.isBlank()) {
+            senderNick = senderWxid != null ? senderWxid : "群友";
+        }
 
         log.info("[Webhook] 引用回复 chatroom={}, sender={}, reply={}, quoted={}",
                 chatroomId, senderNick,
@@ -413,6 +419,9 @@ public class WechatApiWebhookService {
             senderWxid = event.getFromWxid();
         }
         String senderNick = resolveSenderNick(senderWxid);
+        if (senderNick == null || senderNick.isBlank()) {
+            senderNick = senderWxid != null ? senderWxid : "群友";
+        }
 
         log.info("[Webhook] 表情包消息 from={}({}), md5={}, size={}, type={}",
                 senderNick, senderWxid, emojiMd5, emojiSize, emojiType);
@@ -858,6 +867,9 @@ public class WechatApiWebhookService {
 
         // 解析发送者昵称（优先从群成员表取）
         String senderNick = resolveSenderNick(senderWxid);
+        if (senderNick == null || senderNick.isBlank()) {
+            senderNick = senderWxid != null ? senderWxid : "群友";
+        }
 
         // 解析群名
         String roomName = resolveRoomName(chatroomId, appId);

@@ -231,6 +231,7 @@ public class SimpleMemoryRagService implements MemoryRagService {
     }
 
     private static String resolveName(BotUserMemory memory) {
-        return memory.getNickname() != null ? memory.getNickname() : memory.getWxid();
+        String nick = memory.getNickname();
+        return (nick != null && !nick.isBlank()) ? nick : memory.getWxid();
     }
 }
