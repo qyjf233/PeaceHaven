@@ -679,6 +679,282 @@
             color: var(--text-muted, #aaa);
             margin-top: 2px;
         }
+
+        /* ==================== Elimination Bracket ==================== */
+        .bracket-wrap {
+            overflow-x: auto;
+            padding: 16px 0 24px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .bracket-tournament {
+            display: flex;
+            align-items: stretch;
+            min-width: 780px;
+            gap: 0;
+            padding: 0 8px;
+        }
+        .bracket-col {
+            display: flex;
+            flex-direction: column;
+            min-width: 190px;
+            flex: 1;
+        }
+        .bracket-col-label {
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--accent-primary, #E8833A);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 8px 0;
+            margin-bottom: 8px;
+            border-bottom: 2px solid rgba(232,131,58,0.15);
+        }
+        .bracket-col-matches {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+        /* Match card */
+        .bk-match {
+            background: var(--bg-card, #fff);
+            border: 1px solid rgba(0,0,0,0.07);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 6px 0;
+            transition: all 0.2s;
+        }
+        .bk-match.bk-ongoing {
+            border-color: rgba(232,131,58,0.5);
+            box-shadow: 0 2px 12px rgba(232,131,58,0.12);
+        }
+        .bk-match.bk-waiting {
+            opacity: 0.55;
+            border-style: dashed;
+        }
+        .bk-match.bk-completed { }
+        .bk-player {
+            display: flex;
+            align-items: center;
+            padding: 7px 10px;
+            font-size: 0.82rem;
+            gap: 6px;
+        }
+        .bk-player + .bk-player {
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+        .bk-player .bk-name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--text-primary, #333);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .bk-player.bk-winner .bk-name {
+            color: var(--accent-primary, #E8833A);
+        }
+        .bk-player.bk-tbd .bk-name {
+            color: #ccc;
+            font-style: italic;
+            font-weight: 400;
+        }
+        .bk-player .bk-pts {
+            font-size: 0.72rem;
+            color: var(--text-muted, #bbb);
+            white-space: nowrap;
+        }
+        .bk-player .bk-gw {
+            font-weight: 800;
+            font-size: 0.88rem;
+            min-width: 16px;
+            text-align: center;
+            color: var(--text-muted, #bbb);
+        }
+        .bk-player.bk-winner .bk-gw {
+            color: var(--accent-primary, #E8833A);
+        }
+        .bk-player.bk-loser .bk-gw {
+            color: #ccc;
+        }
+        .bk-bo-line {
+            text-align: center;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--accent-primary, #E8833A);
+            padding: 2px 0;
+            background: rgba(232,131,58,0.04);
+            letter-spacing: 0.5px;
+        }
+        .bk-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 3px 10px 5px;
+            font-size: 0.68rem;
+            color: var(--text-muted, #bbb);
+            border-top: 1px solid rgba(0,0,0,0.03);
+        }
+        .bk-badge {
+            font-size: 0.62rem;
+            font-weight: 700;
+            padding: 1px 7px;
+            border-radius: 50px;
+        }
+        .bk-badge.bk-ongoing { background: rgba(232,131,58,0.12); color: #E8833A; }
+        .bk-badge.bk-waiting { background: rgba(0,0,0,0.05); color: #aaa; }
+        .bk-badge.bk-completed { background: rgba(76,175,80,0.1); color: #4CAF50; }
+        /* Connector pipes */
+        .bk-pipes {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 28px;
+            flex-shrink: 0;
+            padding-top: 32px; /* offset for column label */
+        }
+        .bk-pipe-pair {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+        .bk-pipe-pair::before,
+        .bk-pipe-pair::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 50%;
+            border-top: 2px solid rgba(0,0,0,0.1);
+        }
+        .bk-pipe-pair::before { top: 25%; }
+        .bk-pipe-pair::after { bottom: 25%; }
+        .bk-pipe-pair .bk-pipe-vert {
+            position: absolute;
+            left: 50%;
+            top: 25%;
+            bottom: 25%;
+            width: 2px;
+            background: rgba(0,0,0,0.1);
+        }
+        .bk-pipe-pair .bk-pipe-out {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            width: 50%;
+            border-top: 2px solid rgba(0,0,0,0.1);
+        }
+        /* Champion podium */
+        .bk-podium {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 16px;
+            padding: 28px 16px 20px;
+            margin-top: 20px;
+            background: linear-gradient(180deg, rgba(232,131,58,0.04) 0%, transparent 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(232,131,58,0.1);
+        }
+        .bk-podium-spot {
+            text-align: center;
+            padding: 12px 16px;
+            min-width: 90px;
+        }
+        .bk-podium-spot .podium-icon { font-size: 1.6rem; margin-bottom: 6px; }
+        .bk-podium-spot .podium-name {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-primary, #333);
+            margin-bottom: 2px;
+        }
+        .bk-podium-spot .podium-label {
+            font-size: 0.7rem;
+            color: var(--text-muted, #aaa);
+        }
+        .bk-podium-spot.podium-champion {
+            padding-bottom: 20px;
+        }
+        .bk-podium-spot.podium-champion .podium-icon { font-size: 2.2rem; }
+        .bk-podium-spot.podium-champion .podium-name {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--accent-primary, #E8833A);
+        }
+        /* Lucky participation award */
+        .bk-lucky {
+            margin-top: 16px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(255,215,0,0.06) 0%, rgba(255,182,193,0.06) 100%);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 12px;
+            text-align: center;
+        }
+        .bk-lucky-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #d4a017;
+            margin-bottom: 10px;
+        }
+        .bk-lucky-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+        .bk-lucky-item {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(255,215,0,0.08);
+            border: 1px solid rgba(255,215,0,0.15);
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #b8860b;
+        }
+        /* Third place section */
+        .bk-third-section {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(0,0,0,0.08);
+        }
+        .bk-third-section .bracket-col-label {
+            color: #CD7F32;
+            border-bottom-color: rgba(205,127,50,0.15);
+        }
+        .bracket-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted, #aaa);
+            font-size: 0.9rem;
+        }
+        /* Elimination judge panel */
+        .elim-judge-card {
+            background: var(--bg-card, #fff);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 14px;
+            padding: 18px 22px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 12px;
+        }
+        .elim-judge-card.ongoing {
+            border-color: rgba(232,131,58,0.3);
+        }
+        .elim-bo-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+            font-size: 0.82rem;
+            color: var(--text-muted, #aaa);
+        }
+        .elim-bo-info .bo-score-highlight {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--accent-primary, #E8833A);
+        }
     </style>
 </head>
 <body data-theme="day">
@@ -736,7 +1012,7 @@
                     <li>8强赛（BO1）</li>
                     <li>半决赛（BO3）</li>
                     <li>决赛（BO3）</li>
-                    <li>败者不再复活，一局定胜负</li>
+                    <li>季军赛（BO1）</li>
                 </ul>
             </div>
         </div>
@@ -794,7 +1070,7 @@
             <div class="prize-card">
                 <div class="prize-rank">🥉</div>
                 <div class="prize-place">季军</div>
-                <div class="prize-desc">半决赛败者</div>
+                <div class="prize-desc">季军赛胜者</div>
                 <div class="prize-amount">¥28.88</div>
             </div>
             <div class="prize-card">
@@ -812,9 +1088,27 @@
         <div id="leaderboard"></div>
     </section>
 
+    <!-- 淘汰赛赛程 -->
+    <section class="contest-section" id="eliminationSection" style="display:none">
+        <h2 class="section-title">淘汰赛 Bracket</h2>
+        <div class="bracket-wrap" id="bracketWrap">
+            <div class="bracket-empty">淘汰赛尚未开始</div>
+        </div>
+        <!-- 冠军展示 -->
+        <div id="championDisplay" style="display:none"></div>
+    </section>
+
+    <!-- 淘汰赛裁判操作区 -->
+    <section class="contest-section" id="judgeElimPanel" style="display:none">
+        <h2 class="section-title">淘汰赛裁判操作</h2>
+        <div id="judgeElimMatchList">
+            <div class="bracket-empty">暂无您负责的淘汰赛比赛</div>
+        </div>
+    </section>
+
     <!-- Swiss 赛程（报名结束后展示） -->
     <section class="contest-section" id="swissSection" style="display:none">
-        <h2 class="section-title">Swiss 赛程</h2>
+        <h2 class="section-title">瑞士轮赛程</h2>
 
         <!-- 轮次标签 -->
         <div class="swiss-round-tabs" id="swissRoundTabs"></div>
@@ -1020,8 +1314,15 @@
         // 阶段切换处理
         function onPhaseChange() {
             var phase = window.__activePhase;
-            if (phase === 'swiss' || phase === 'elimination' || phase === 'finals') {
-                // Swiss 或后续阶段：隐藏报名区，显示赛程
+            if (phase === 'elimination' || phase === 'finals') {
+                // 淘汰赛阶段：显示Swiss历史 + 淘汰赛Bracket
+                if (registerArea) registerArea.style.display = 'none';
+                swissSection.style.display = '';
+                loadSwissStatus();
+                // 触发淘汰赛模块加载
+                window.__loadElimination && window.__loadElimination();
+            } else if (phase === 'swiss') {
+                // Swiss 阶段：隐藏报名区，显示赛程
                 if (registerArea) registerArea.style.display = 'none';
                 swissSection.style.display = '';
                 loadSwissStatus();
@@ -1412,6 +1713,390 @@
 
         function escAttr(s) {
             return escHtml(s).replace(/"/g, '&quot;');
+        }
+    })();
+
+    // 全局工具函数
+    function escHtml(s) {
+        if (!s) return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(s));
+        return div.innerHTML;
+    }
+
+    function escAttr(s) {
+        return escHtml(s).replace(/"/g, '&quot;');
+    }
+
+    // === Elimination 淘汰赛模块 ===
+    (function() {
+        var slug = 'battle-showdown-1';
+        var elimSection = document.getElementById('eliminationSection');
+        var judgeElimPanel = document.getElementById('judgeElimPanel');
+        var bracketWrap = document.getElementById('bracketWrap');
+        var championDisplay = document.getElementById('championDisplay');
+        var judgeElimMatchList = document.getElementById('judgeElimMatchList');
+        var isElimJudge = false;
+
+        // 暴露给 Swiss 模块调用
+        window.__loadElimination = function() {
+            elimSection.style.display = '';
+            loadEliminationStatus();
+        };
+
+        function loadEliminationStatus() {
+            fetch('/api/pvp/' + slug + '/elimination/status')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    isElimJudge = data.isJudge;
+                    renderBracket(data.bracket || {});
+
+                    if (data.allDone) {
+                        renderChampion(data.bracket, data.luckyWinners);
+                    } else {
+                        championDisplay.style.display = 'none';
+                    }
+
+                    if (isElimJudge) {
+                        judgeElimPanel.style.display = '';
+                        loadJudgeElimMatches();
+                    } else {
+                        judgeElimPanel.style.display = 'none';
+                    }
+                })
+                .catch(function(err) {
+                    console.error('[Elimination] 加载失败:', err);
+                });
+        }
+
+        var STAGE_LABELS = {
+            'QUARTER_FINAL': '八强赛 (BO1)',
+            'SEMI_FINAL': '半决赛 (BO3)',
+            'FINAL': '决赛 (BO3)',
+            'THIRD_PLACE': '季军赛 (BO1)'
+        };
+
+        var GROUP_ORDER = {
+            'QUARTER_FINAL': ['QF_A', 'QF_B', 'QF_C', 'QF_D'],
+            'SEMI_FINAL': ['SF1', 'SF2'],
+            'FINAL': ['FINAL'],
+            'THIRD_PLACE': ['THIRD']
+        };
+
+        function renderBracket(bracket) {
+            var stages = ['QUARTER_FINAL', 'SEMI_FINAL', 'FINAL'];
+            var hasAny = false;
+
+            for (var i = 0; i < stages.length; i++) {
+                var matches = bracket[stages[i]];
+                if (matches && matches.length > 0) { hasAny = true; break; }
+            }
+
+            if (!hasAny) {
+                bracketWrap.innerHTML = '<div class="bracket-empty">淘汰赛尚未开始，Swiss 全部轮次完成后自动晋级 TOP 8</div>';
+                return;
+            }
+
+            var html = '<div class="bracket-tournament">';
+
+            // QF column
+            html += renderBracketCol('八强赛 BO1', bracket.QUARTER_FINAL || []);
+
+            // Pipes QF→SF
+            if (bracket.SEMI_FINAL && bracket.SEMI_FINAL.length > 0) {
+                html += renderPipes(2);
+            }
+
+            // SF column
+            if (bracket.SEMI_FINAL && bracket.SEMI_FINAL.length > 0) {
+                html += renderBracketCol('半决赛 BO3', bracket.SEMI_FINAL);
+            }
+
+            // Pipes SF→Final
+            if (bracket.FINAL && bracket.FINAL.length > 0) {
+                html += renderPipes(1);
+            }
+
+            // Final column
+            if (bracket.FINAL && bracket.FINAL.length > 0) {
+                html += renderBracketCol('决赛 BO3', bracket.FINAL);
+            }
+
+            html += '</div>';
+
+            // Third place below bracket
+            if (bracket.THIRD_PLACE && bracket.THIRD_PLACE.length > 0) {
+                html += '<div class="bk-third-section">';
+                html += '<div style="display:flex;gap:0;align-items:stretch">';
+                html += renderBracketCol('季军赛 BO1', bracket.THIRD_PLACE);
+                html += '</div></div>';
+            }
+
+            bracketWrap.innerHTML = html;
+
+            // Bind submit buttons
+            bracketWrap.querySelectorAll('.btn-submit-result').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var matchId = parseInt(this.getAttribute('data-match-id'));
+                    var p1Id = parseInt(this.getAttribute('data-p1-id'));
+                    var p2Id = parseInt(this.getAttribute('data-p2-id'));
+                    var p1Name = this.getAttribute('data-p1-name');
+                    var p2Name = this.getAttribute('data-p2-name');
+                    var bestOf = parseInt(this.getAttribute('data-best-of')) || 1;
+                    openElimScoreDialog(matchId, p1Id, p2Id, p1Name, p2Name, bestOf);
+                });
+            });
+        }
+
+        function renderBracketCol(label, matches) {
+            var html = '<div class="bracket-col">';
+            html += '<div class="bracket-col-label">' + label + '</div>';
+            html += '<div class="bracket-col-matches">';
+            for (var i = 0; i < matches.length; i++) {
+                html += renderBracketMatch(matches[i]);
+            }
+            html += '</div></div>';
+            return html;
+        }
+
+        function renderPipes(pairs) {
+            var html = '<div class="bk-pipes">';
+            for (var i = 0; i < pairs; i++) {
+                html += '<div class="bk-pipe-pair"><div class="bk-pipe-vert"></div><div class="bk-pipe-out"></div></div>';
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function renderBracketMatch(m) {
+            var sc = (m.status || 'waiting').toLowerCase();
+            var p1Win = m.winnerId && m.winnerId === m.player1Id;
+            var p2Win = m.winnerId && m.winnerId === m.player2Id;
+            var p1Lose = m.status === 'COMPLETED' && !p1Win;
+            var p2Lose = m.status === 'COMPLETED' && !p2Win;
+            var p1Name = m.player1Name || 'TBD';
+            var p2Name = m.player2Name || 'TBD';
+            var isBo3 = m.bestOf && m.bestOf > 1;
+
+            // Determine score display
+            var p1Score, p2Score;
+            if (isBo3) {
+                p1Score = m.player1GameWin || 0;
+                p2Score = m.player2GameWin || 0;
+            } else {
+                p1Score = p1Win ? 'W' : (p1Lose ? 'L' : '-');
+                p2Score = p2Win ? 'W' : (p2Lose ? 'L' : '-');
+            }
+
+            var html = '<div class="bk-match bk-' + sc + '">';
+
+            // Player 1
+            var p1Class = 'bk-player' + (p1Win ? ' bk-winner' : '') + (p1Lose ? ' bk-loser' : '') + (!m.player1Id ? ' bk-tbd' : '');
+            html += '<div class="' + p1Class + '">';
+            html += '<span class="bk-name">' + escHtml(p1Name) + '</span>';
+            if (!isBo3 && m.player1Score !== undefined) html += '<span class="bk-pts">' + m.player1Score + 'pts</span>';
+            html += '<span class="bk-gw">' + p1Score + '</span>';
+            html += '</div>';
+
+            // Player 2
+            var p2Class = 'bk-player' + (p2Win ? ' bk-winner' : '') + (p2Lose ? ' bk-loser' : '') + (!m.player2Id ? ' bk-tbd' : '');
+            html += '<div class="' + p2Class + '">';
+            html += '<span class="bk-name">' + escHtml(p2Name) + '</span>';
+            if (!isBo3 && m.player2Score !== undefined) html += '<span class="bk-pts">' + m.player2Score + 'pts</span>';
+            html += '<span class="bk-gw">' + p2Score + '</span>';
+            html += '</div>';
+
+            // BO3 score line
+            if (isBo3 && m.currentGameIndex > 0) {
+                html += '<div class="bk-bo-line">BO' + m.bestOf + ' | ' + (m.player1GameWin||0) + ' : ' + (m.player2GameWin||0) + ' (G' + m.currentGameIndex + ')</div>';
+            }
+
+            // Footer
+            var statusText = m.status === 'ONGOING' ? 'LIVE'
+                           : m.status === 'WAITING' ? '等待'
+                           : m.status === 'COMPLETED' ? '完' : '';
+            html += '<div class="bk-footer">';
+            html += '<span class="bk-badge bk-' + sc + '">' + statusText + '</span>';
+            if (m.status === 'COMPLETED' && m.winnerName) {
+                html += '<span style="color:#4CAF50;font-weight:600">' + escHtml(m.winnerName) + ' 胜</span>';
+            } else if (m.refereeName) {
+                html += '<span>' + escHtml(m.refereeName) + '</span>';
+            }
+            html += '</div>';
+
+            html += '</div>';
+            return html;
+        }
+
+        function renderChampion(bracket, luckyWinners) {
+            var finalMatches = bracket.FINAL || [];
+            if (finalMatches.length === 0) return;
+            var fm = finalMatches[0];
+            if (!fm.winnerName) {
+                championDisplay.style.display = 'none';
+                return;
+            }
+
+            var thirdMatches = bracket.THIRD_PLACE || [];
+            var thirdName = (thirdMatches.length > 0 && thirdMatches[0].winnerName) ? thirdMatches[0].winnerName : '';
+            var runnerUp = fm.winnerId === fm.player1Id ? fm.player2Name : fm.player1Name;
+
+            var html = '<div class="bk-podium">'
+                + '<div class="bk-podium-spot"><div class="podium-icon">🥈</div><div class="podium-name">' + escHtml(runnerUp) + '</div><div class="podium-label">亚军</div></div>'
+                + '<div class="bk-podium-spot podium-champion"><div class="podium-icon">🏆</div><div class="podium-name">' + escHtml(fm.winnerName) + '</div><div class="podium-label">冠军</div></div>'
+                + (thirdName ? '<div class="bk-podium-spot"><div class="podium-icon">🥉</div><div class="podium-name">' + escHtml(thirdName) + '</div><div class="podium-label">季军</div></div>' : '')
+                + '</div>';
+
+            // 幸运参与奖
+            if (luckyWinners && luckyWinners.length > 0) {
+                html += '<div class="bk-lucky">';
+                html += '<div class="bk-lucky-title">🎉 幸运参与奖</div>';
+                html += '<div class="bk-lucky-list">';
+                for (var i = 0; i < luckyWinners.length; i++) {
+                    html += '<span class="bk-lucky-item">🎁 ' + escHtml(luckyWinners[i].nickname) + '</span>';
+                }
+                html += '</div></div>';
+            }
+
+            championDisplay.style.display = '';
+            championDisplay.innerHTML = html;
+        }
+
+        // Judge elim matches
+        function loadJudgeElimMatches() {
+            fetch('/api/pvp/' + slug + '/elimination/my-matches')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    renderJudgeElimMatches(data.matches || []);
+                })
+                .catch(function() {
+                    judgeElimMatchList.innerHTML = '<div class="bracket-empty">加载失败</div>';
+                });
+        }
+
+        function renderJudgeElimMatches(matches) {
+            var active = matches.filter(function(m) {
+                return m.status === 'ONGOING' || m.status === 'WAITING';
+            });
+
+            if (active.length === 0) {
+                judgeElimMatchList.innerHTML = '<div class="bracket-empty">当前没有进行中的淘汰赛比赛</div>';
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < active.length; i++) {
+                var m = active[i];
+                var stageLabel = STAGE_LABELS[m.stage] || m.stage;
+                html += '<div class="elim-judge-card ' + m.status.toLowerCase() + '">';
+                html += '<div style="font-size:0.78rem;font-weight:700;color:#E8833A;margin-bottom:8px">' + stageLabel + ' · ' + (m.bracketGroup || '') + '</div>';
+                html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">';
+                html += '<span style="font-weight:700">' + escHtml(m.player1Name) + '</span>';
+                html += '<span style="color:#aaa">VS</span>';
+                html += '<span style="font-weight:700">' + escHtml(m.player2Name) + '</span>';
+                html += '</div>';
+
+                if (m.bestOf > 1) {
+                    html += '<div class="elim-bo-info">BO' + m.bestOf + ' 当前比分: <span class="bo-score-highlight">' + (m.player1GameWin || 0) + ' : ' + (m.player2GameWin || 0) + '</span></div>';
+                }
+
+                html += '<button class="btn-submit-result" data-match-id="' + m.id + '" data-p1-id="' + m.player1Id + '" data-p2-id="' + m.player2Id + '" data-p1-name="' + escHtml(m.player1Name) + '" data-p2-name="' + escHtml(m.player2Name) + '" data-best-of="' + (m.bestOf || 1) + '">上传成绩</button>';
+                html += '</div>';
+            }
+
+            judgeElimMatchList.innerHTML = html;
+
+            judgeElimMatchList.querySelectorAll('.btn-submit-result').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var matchId = parseInt(this.getAttribute('data-match-id'));
+                    var p1Id = parseInt(this.getAttribute('data-p1-id'));
+                    var p2Id = parseInt(this.getAttribute('data-p2-id'));
+                    var p1Name = this.getAttribute('data-p1-name');
+                    var p2Name = this.getAttribute('data-p2-name');
+                    var bestOf = parseInt(this.getAttribute('data-best-of')) || 1;
+                    openElimScoreDialog(matchId, p1Id, p2Id, p1Name, p2Name, bestOf);
+                });
+            });
+        }
+
+        // Score dialog for elimination
+        function openElimScoreDialog(matchId, p1Id, p2Id, p1Name, p2Name, bestOf) {
+            var title = bestOf > 1 ? '本局成绩上传 (BO' + bestOf + ')' : '成绩上传';
+
+            var overlay = document.createElement('div');
+            overlay.className = 'ph-dialog-overlay';
+            overlay.innerHTML =
+                '<div class="ph-dialog">'
+                + '<div class="ph-dialog-title">' + title + '</div>'
+                + '<div class="ph-dialog-body">'
+                + '<div class="score-player-option" data-winner="' + p1Id + '" style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid rgba(0,0,0,0.08);border-radius:12px;margin-bottom:10px;cursor:pointer">'
+                + '<div class="player-radio" style="width:20px;height:20px;border-radius:50%;border:2px solid #aaa;flex-shrink:0"></div>'
+                + '<div><div class="p-name" style="font-weight:700">' + escHtml(p1Name) + '</div><div class="p-score" style="font-size:0.78rem;color:#aaa">获胜</div></div>'
+                + '</div>'
+                + '<div class="score-player-option" data-winner="' + p2Id + '" style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid rgba(0,0,0,0.08);border-radius:12px;cursor:pointer">'
+                + '<div class="player-radio" style="width:20px;height:20px;border-radius:50%;border:2px solid #aaa;flex-shrink:0"></div>'
+                + '<div><div class="p-name" style="font-weight:700">' + escHtml(p2Name) + '</div><div class="p-score" style="font-size:0.78rem;color:#aaa">获胜</div></div>'
+                + '</div>'
+                + '</div>'
+                + '<div class="ph-dialog-actions">'
+                + '<button class="ph-dialog-btn-secondary" id="elimCancelBtn">取消</button>'
+                + '<button class="ph-dialog-btn-primary" id="elimConfirmBtn" disabled>确认提交</button>'
+                + '</div></div>';
+
+            document.body.appendChild(overlay);
+            setTimeout(function() { overlay.classList.add('ph-visible'); }, 10);
+
+            var selectedWinner = null;
+            overlay.querySelectorAll('.score-player-option').forEach(function(opt) {
+                opt.addEventListener('click', function() {
+                    overlay.querySelectorAll('.score-player-option').forEach(function(o) { o.classList.remove('selected'); });
+                    this.classList.add('selected');
+                    selectedWinner = parseInt(this.getAttribute('data-winner'));
+                    document.getElementById('elimConfirmBtn').disabled = false;
+                });
+            });
+
+            function closeOverlay() {
+                overlay.classList.remove('ph-visible');
+                setTimeout(function() { overlay.remove(); }, 300);
+            }
+
+            document.getElementById('elimCancelBtn').addEventListener('click', closeOverlay);
+
+            document.getElementById('elimConfirmBtn').addEventListener('click', function() {
+                if (!selectedWinner) return;
+                var btn = this;
+                btn.disabled = true;
+                btn.textContent = '提交中...';
+
+                fetch('/api/pvp/' + slug + '/elimination/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ matchId: matchId, winnerId: selectedWinner })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    closeOverlay();
+                    if (data.error) {
+                        PHDialog.show({ icon: '⚠️', title: '提交失败', message: data.error, confirmText: '知道了' });
+                    } else {
+                        PHDialog.show({
+                            icon: '✅',
+                            title: '成绩已提交',
+                            message: (data.winnerName || '选手') + ' - ' + (data.message || '完成'),
+                            confirmText: '好的'
+                        });
+                        loadEliminationStatus();
+                        setTimeout(refreshLeaderboard, 500);
+                    }
+                })
+                .catch(function() {
+                    closeOverlay();
+                    PHDialog.show({ icon: '⚠️', title: '网络错误', message: '提交失败，请稍后重试', confirmText: '知道了' });
+                    btn.disabled = false;
+                    btn.textContent = '确认提交';
+                });
+            });
         }
     })();
 </script>

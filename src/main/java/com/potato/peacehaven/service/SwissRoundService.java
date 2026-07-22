@@ -32,6 +32,7 @@ public class SwissRoundService {
     private final PvpRegistrationRepository registrationRepository;
     private final ActivityJudgeRepository judgeRepository;
     private final UserRepository userRepository;
+    private final EliminationService eliminationService;
 
     /** 瑞士轮总轮次数 */
     private static final int TOTAL_ROUNDS = 4;
@@ -341,7 +342,13 @@ public class SwissRoundService {
         log.info("轮次 {} 全部完成", roundNumber);
 
         if (roundNumber >= TOTAL_ROUNDS) {
-            log.info("所有 {} 轮 Swiss 比赛已完成", TOTAL_ROUNDS);
+            log.info("所有 {} 轮 Swiss 比赛已完成，进入淘汰赛阶段", TOTAL_ROUNDS);
+            // 自动初始化淘汰赛八强
+            try {
+                eliminationService.initQuarterFinals(activityId);
+            } catch (Exception e) {
+                log.warn("淘汰赛初始化异常: {}", e.getMessage());
+            }
             return;
         }
 
@@ -357,11 +364,12 @@ public class SwissRoundService {
      * 获取当前轮次号和比赛列表
      */
     public Map<String, Object> getSwissStatus(Long activityId, User currentUser) {
-        Integer maxRound = matchRepository.findMaxRoundByActivityId(activityId);
+        Integer maxRound = matchRepository.findMaxSwissRoundByActivityId(activityId);
         int currentRound = (maxRound != null) ? maxRound : 0;
 
         List<SwissMatch> currentMatches = currentRound > 0
-                ? matchRepository.findByActivityIdAndRoundNumberOrderByMatchOrderAsc(activityId, currentRound)
+                ? matchRepository.findByActivityIdAndRoundNumberAndStageOrderByMatchOrderAsc(
+                        activityId, currentRound, "SWISS")
                 : Collections.emptyList();
 
         Map<String, Object> result = new HashMap<>();
@@ -376,10 +384,12 @@ public class SwissRoundService {
 
         // 如果有比赛尚未开始，标记是否还有等待中的
         long waitingCount = currentRound > 0
-                ? matchRepository.countByActivityIdAndRoundNumberAndStatus(activityId, currentRound, "WAITING")
+                ? matchRepository.countByActivityIdAndRoundNumberAndStageAndStatus(
+                        activityId, currentRound, "SWISS", "WAITING")
                 : 0;
         long ongoingCount = currentRound > 0
-                ? matchRepository.countByActivityIdAndRoundNumberAndStatus(activityId, currentRound, "ONGOING")
+                ? matchRepository.countByActivityIdAndRoundNumberAndStageAndStatus(
+                        activityId, currentRound, "SWISS", "ONGOING")
                 : 0;
         result.put("hasWaiting", waitingCount > 0);
         result.put("hasOngoing", ongoingCount > 0);
@@ -389,20 +399,21 @@ public class SwissRoundService {
     }
 
     /**
-     * 获取完整赛程（所有轮次）
+     * 获取完整赛程（所有轮次，仅 Swiss 阶段）
      */
     public List<Map<String, Object>> getAllMatches(Long activityId) {
         List<SwissMatch> allMatches = matchRepository
-                .findByActivityIdOrderByRoundNumberAscMatchOrderAsc(activityId);
+                .findByActivityIdAndStageOrderByMatchOrderAsc(activityId, "SWISS");
         return buildMatchListData(allMatches);
     }
 
     /**
-     * 裁判查看自己负责的比赛
+     * 裁判查看自己负责的比赛（仅 Swiss 阶段）
      */
     public List<Map<String, Object>> getMyMatches(Long activityId, Long refereeId) {
         List<SwissMatch> matches = matchRepository
-                .findByActivityIdAndRefereeIdOrderByRoundNumberAscMatchOrderAsc(activityId, refereeId);
+                .findByActivityIdAndRefereeIdAndStageOrderByRoundNumberAscMatchOrderAsc(
+                        activityId, refereeId, "SWISS");
         return buildMatchListData(matches);
     }
 
@@ -435,10 +446,10 @@ public class SwissRoundService {
     }
 
     /**
-     * 获取当前最大轮次号
+     * 获取当前最大轮次号（仅 Swiss 阶段）
      */
     public int getCurrentRound(Long activityId) {
-        Integer maxRound = matchRepository.findMaxRoundByActivityId(activityId);
+        Integer maxRound = matchRepository.findMaxSwissRoundByActivityId(activityId);
         return maxRound != null ? maxRound : 0;
     }
 

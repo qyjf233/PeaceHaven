@@ -8,8 +8,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * Swiss 瑞士轮比赛记录表
+ * Swiss 瑞士轮 + Elimination 淘汰赛 比赛记录表
  * 每场比赛记录两名选手的对阵信息、裁判、状态和结果
+ * 通过 stage 字段区分瑞士轮(SWISS)和淘汰赛(QUARTER_FINAL/SEMI_FINAL/FINAL/THIRD_PLACE)
  */
 @Entity
 @Table(name = "swiss_match",
@@ -18,7 +19,8 @@ import java.time.LocalDateTime;
            columnNames = {"activity_id", "round_number", "match_order"}),
        indexes = {
            @Index(name = "idx_swiss_match_activity_round", columnList = "activity_id, round_number"),
-           @Index(name = "idx_swiss_match_activity_status", columnList = "activity_id, status")
+           @Index(name = "idx_swiss_match_activity_status", columnList = "activity_id, status"),
+           @Index(name = "idx_swiss_match_activity_stage", columnList = "activity_id, stage")
        })
 @Comment("Swiss瑞士轮比赛记录表")
 @Getter
@@ -115,6 +117,42 @@ public class SwissMatch {
     @Column(name = "end_time")
     @Comment("比赛结束时间")
     private LocalDateTime endTime;
+
+    // ==================== 淘汰赛扩展字段 ====================
+
+    /** 比赛阶段: SWISS(默认) / QUARTER_FINAL / SEMI_FINAL / FINAL / THIRD_PLACE */
+    @Column(name = "stage", length = 20)
+    @Builder.Default
+    @Comment("比赛阶段: SWISS/QUARTER_FINAL/SEMI_FINAL/FINAL/THIRD_PLACE")
+    private String stage = "SWISS";
+
+    /** BO赛制: null(Swiss) / 1(BO1) / 3(BO3) */
+    @Column(name = "best_of")
+    @Comment("BO赛制: null/1/3")
+    private Integer bestOf;
+
+    /** 选手1小局胜场(BO3) */
+    @Column(name = "player1_game_win")
+    @Builder.Default
+    @Comment("选手1小局胜场")
+    private Integer player1GameWin = 0;
+
+    /** 选手2小局胜场(BO3) */
+    @Column(name = "player2_game_win")
+    @Builder.Default
+    @Comment("选手2小局胜场")
+    private Integer player2GameWin = 0;
+
+    /** 当前BO进行到第几局 */
+    @Column(name = "current_game_index")
+    @Builder.Default
+    @Comment("当前BO第几局")
+    private Integer currentGameIndex = 0;
+
+    /** 对阵分组: QF_A/QF_B/QF_C/QF_D/SF1/SF2/FINAL/THIRD */
+    @Column(name = "bracket_group", length = 20)
+    @Comment("对阵分组标识")
+    private String bracketGroup;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

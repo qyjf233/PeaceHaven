@@ -7,6 +7,7 @@ import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.repository.ActivityJudgeRepository;
 import com.potato.peacehaven.repository.PvpRegistrationRepository;
 import com.potato.peacehaven.service.ActivityService;
+import com.potato.peacehaven.service.EliminationService;
 import com.potato.peacehaven.service.SwissRoundService;
 import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -34,6 +35,7 @@ public class PvpRegistrationController {
     private final ActivityService activityService;
     private final UserService userService;
     private final SwissRoundService swissRoundService;
+    private final EliminationService eliminationService;
     private final ActivityJudgeRepository judgeRepository;
 
     /**
@@ -294,6 +296,98 @@ public class PvpRegistrationController {
         }
 
         List<Map<String, Object>> matches = swissRoundService.getMyMatches(
+                activity.getId(), user.getId());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("matches", matches);
+        return ResponseEntity.ok(result);
+    }
+
+    // ==================== Elimination 淘汰赛 API ====================
+
+    /**
+     * 获取淘汰赛状态（含完整 bracket 数据）
+     */
+    @Transactional
+    @GetMapping("/{slug}/elimination/status")
+    public ResponseEntity<Map<String, Object>> getEliminationStatus(
+            @PathVariable String slug, HttpSession session) {
+        Activity activity = activityService.getActivityBySlug(slug);
+        User currentUser = userService.getCurrentUser(session);
+
+        Map<String, Object> status = eliminationService.getEliminationStatus(activity.getId(), currentUser);
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * 裁判提交淘汰赛成绩（BO1直接结束 / BO3小局计分）
+     * <p>
+     * body: { "matchId": 123, "winnerId": 456 }
+     * </p>
+     */
+    @PostMapping("/{slug}/elimination/submit")
+    public ResponseEntity<Map<String, Object>> submitEliminationResult(
+            @PathVariable String slug,
+            @RequestBody Map<String, Object> body,
+            HttpSession session) {
+
+        User user = userService.getCurrentUser(session);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
+        }
+
+        Activity activity = activityService.getActivityBySlug(slug);
+
+        Object matchIdObj = body.get("matchId");
+        Object winnerIdObj = body.get("winnerId");
+
+        if (matchIdObj == null || winnerIdObj == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "缺少参数 matchId 或 winnerId"));
+        }
+
+        try {
+            Long matchId = Long.valueOf(matchIdObj.toString());
+            Long winnerId = Long.valueOf(winnerIdObj.toString());
+
+            SwissMatch updatedMatch = eliminationService.submitGameResult(
+                    activity.getId(), matchId, winnerId, user);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("winnerName", updatedMatch.getWinnerName());
+            result.put("stage", updatedMatch.getStage());
+            result.put("status", updatedMatch.getStatus());
+            result.put("player1GameWin", updatedMatch.getPlayer1GameWin());
+            result.put("player2GameWin", updatedMatch.getPlayer2GameWin());
+            result.put("message", "COMPLETED".equals(updatedMatch.getStatus()) ? "比赛结束" : "本局成绩已记录");
+            return ResponseEntity.ok(result);
+
+        } catch (RuntimeException e) {
+            log.warn("淘汰赛成绩提交失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 裁判查看自己负责的淘汰赛比赛
+     */
+    @GetMapping("/{slug}/elimination/my-matches")
+    public ResponseEntity<Map<String, Object>> getMyEliminationMatches(
+            @PathVariable String slug, HttpSession session) {
+
+        User user = userService.getCurrentUser(session);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
+        }
+
+        Activity activity = activityService.getActivityBySlug(slug);
+
+        if (!judgeRepository.existsByActivityIdAndUserId(activity.getId(), user.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "您不是本次活动的裁判"));
+        }
+
+        List<Map<String, Object>> matches = eliminationService.getMyEliminationMatches(
                 activity.getId(), user.getId());
 
         Map<String, Object> result = new HashMap<>();
