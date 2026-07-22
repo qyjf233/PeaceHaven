@@ -76,4 +76,9 @@ public class HomeController {
     public String judgePanel() {
         return "activities/judge-panel";
     }
+
+    @GetMapping("/judge/building-master-2")
+    public String judgePanel2() {
+        return "activities/judge-panel";
+    }
 }

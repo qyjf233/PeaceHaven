@@ -312,9 +312,10 @@
 (function() {
     var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
     var contentEl = document.getElementById('judgeContent');
+    var slug = window.location.pathname.split('/').pop();
 
     function loadJudgeWorks() {
-        fetch('/api/contest/judge/works?slug=building-master-1', { credentials: 'same-origin' })
+        fetch('/api/contest/judge/works?slug=' + slug, { credentials: 'same-origin' })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (!data.success) {

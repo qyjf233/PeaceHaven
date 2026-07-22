@@ -101,7 +101,7 @@ public class ActivityController {
         }
 
         // 建筑大赛专用：始终显示3个裁判位置（不足用占位填充）
-        if ("building-master-1".equals(slug)) {
+        if ("building-master-1".equals(slug) || "building-master-2".equals(slug)) {
             List<Map<String, Object>> judgeList = model.containsAttribute("judges")
                     ? new ArrayList<>((List<Map<String, Object>>) model.asMap().get("judges"))
                     : new ArrayList<>();

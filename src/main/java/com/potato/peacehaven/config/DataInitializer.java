@@ -28,6 +28,7 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         initBuildingContest();
+        initBuildingContest2();
         initBattleShowdown();
         initBotSchedules();
     }
@@ -88,6 +89,41 @@ public class DataInitializer implements ApplicationRunner {
 
         // 初始化裁判（按手机号指定）
         // initJudges(activity.getId());
+    }
+
+    private void initBuildingContest2() {
+        String slug = "building-master-2";
+        Activity activity = activityRepository.findBySlug(slug).orElse(null);
+        if (activity == null) {
+            activity = Activity.builder()
+                    .slug(slug)
+                    .title("长安建筑大赛·第二届")
+                    .summary("展示建筑创意，交流建造技巧，评选最具创意与观赏性的庄园作品")
+                    .startDate(LocalDateTime.of(2026, 7, 25, 0, 0))
+                    .endDate(LocalDateTime.of(2026, 8, 15, 23, 59))
+                    .hasWorkSubmission(true)
+                    .build();
+            activity = activityRepository.save(activity);
+            log.info("已自动创建第二届建筑大赛活动记录: slug={}", slug);
+        }
+
+        // 初始化时间配置（如果不存在）
+        if (configRepository.findByActivityId(activity.getId()).isEmpty()) {
+            Map<String, String> configData = new LinkedHashMap<>();
+            configData.put("submitStart", "2026-07-25T00:00");
+            configData.put("submitEnd", "2026-08-08T23:30");
+            configData.put("judgeStart", "2026-08-09T00:00");
+            configData.put("judgeEnd", "2026-08-09T23:59");
+            configData.put("voteStart", "2026-08-10T00:00");
+            configData.put("voteEnd", "2026-08-15T23:30");
+
+            ActivityConfig config = ActivityConfig.builder()
+                    .activityId(activity.getId())
+                    .configJson(ContestService.mapToJson(configData))
+                    .build();
+            configRepository.save(config);
+            log.info("已创建第二届建筑大赛时间配置");
+        }
     }
 
     private void initBattleShowdown() {

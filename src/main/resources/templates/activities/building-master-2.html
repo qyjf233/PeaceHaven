@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: common(title='第二届 · 长安建筑大赛 - PeaceHaven · 长安')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+    <meta name="_csrf" th:content="${_csrf}">
+    <!-- 微信/社交平台分享卡片 -->
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="PeaceHaven · 长安">
+    <meta property="og:title" content="第二届 · 长安建筑大赛 - PeaceHaven">
+    <meta property="og:description" content="展示你的建筑才华，赢取丰厚奖励！">
+    <meta property="og:image" th:content="@{/images/banner_building-master-1.png}">
+    <style>
+        /* === Contest Page Styles === */
+        .contest-page { min-height: 100vh; padding-top: 64px; }
+
+        /* Hero Banner */
+        .contest-hero {
+            position: relative;
+            height: 520px;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
+        }
+        .contest-hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 120px;
+            background: linear-gradient(to top, var(--bg-primary), transparent);
+        }
+        .contest-hero-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 0 20px;
+        }
+        .contest-badge {
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 50px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            backdrop-filter: blur(6px);
+        }
+        .contest-hero h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 2.8rem;
+            color: #fff;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.3);
+        }
+        .contest-hero p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            max-width: 500px;
+            margin: 0 auto;
+            text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+        }
+        .contest-view-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(6px);
+            color: rgba(255,255,255,0.9);
+            font-size: 0.85rem;
+        }
+
+        /* Sections */
+        .contest-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+        .section-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.6rem;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 36px;
+            position: relative;
+        }
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 3px;
+            background: var(--gradient-accent);
+            margin: 12px auto 0;
+            border-radius: 2px;
+        }
+
+        /* Info Cards */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .info-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+        .info-card h3 {
+            font-size: 1.05rem;
+            color: var(--accent-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-card p {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Rules */
+        .rules-list {
+            list-style: none;
+            padding: 0;
+        }
+        .rules-list li {
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .rules-list li .rule-num {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--gradient-accent);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Judge Panel */
+        .judge-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .judge-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            padding: 24px 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        .judge-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 1.4rem;
+            color: #fff;
+            overflow: hidden;
+            background: var(--gradient-accent);
+        }
+        .judge-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .judge-name {
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--text-primary);
+        }
+        .judge-title {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .judge-live-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 4px 14px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #fff;
+            background: var(--gradient-accent);
+            border-radius: 20px;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .judge-live-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        /* Prize */
+        .prize-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .prize-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            padding: 32px 20px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.3s;
+        }
+        .prize-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .prize-rank {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        .prize-place {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .prize-amount {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+        .prize-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        /* Contest Timeline */
+        .timeline { position: relative; }
+
+        /* === PC: 水平步进器 === */
+        .tl-h { display: flex; align-items: flex-start; position: relative; padding: 8px 0 0; }
+        .tl-h-step {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            position: relative; min-width: 0;
+        }
+        /* 连接轨道 - 始终可见 */
+        .tl-h-step:not(:last-child)::after {
+            content: ''; position: absolute;
+            top: 18px; left: calc(50% + 20px); right: calc(-50% + 20px);
+            height: 2px; border-radius: 1px;
+            background: repeating-linear-gradient(90deg, var(--text-muted) 0 6px, transparent 6px 12px);
+            opacity: 0.45;
+            z-index: 0; transition: background 0.5s;
+        }
+        .tl-h-step.passed:not(:last-child)::after {
+            background: var(--accent-primary); opacity: 1;
+        }
+        .tl-h-step.active:not(:last-child)::after {
+            background: linear-gradient(90deg, var(--accent-primary) 0%, rgba(138,122,106,0.45) 100%);
+        }
+        /* 节点圆 */
+        .tl-h-dot {
+            width: 36px; height: 36px; border-radius: 50%; z-index: 1;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; position: relative;
+            background: var(--bg-card); border: 2px solid var(--border-color);
+            color: var(--text-muted); transition: all 0.4s ease;
+        }
+        .tl-h-step.passed .tl-h-dot {
+            background: var(--accent-primary); border-color: var(--accent-primary);
+            color: #fff; box-shadow: 0 2px 10px rgba(232,131,58,0.3);
+        }
+        .tl-h-step.active .tl-h-dot {
+            background: linear-gradient(135deg, #e8833a, #f5c842);
+            border-color: transparent; color: #fff;
+            box-shadow: 0 0 0 4px rgba(232,131,58,0.15), 0 4px 14px rgba(232,131,58,0.35);
+            animation: tl-pulse 2s ease-in-out infinite;
+        }
+        @keyframes tl-pulse {
+            0%,100% { box-shadow: 0 0 0 4px rgba(232,131,58,0.15), 0 4px 14px rgba(232,131,58,0.35); }
+            50% { box-shadow: 0 0 0 8px rgba(232,131,58,0.05), 0 4px 14px rgba(232,131,58,0.35); }
+        }
+        .tl-h-check { display: none; }
+        .tl-h-step.passed .tl-h-check { display: inline; }
+        .tl-h-step.passed .tl-h-icon { display: none; }
+        /* 信息卡片 */
+        .tl-h-info {
+            margin-top: 10px; text-align: center; padding: 6px 4px;
+            border-radius: 8px; min-width: 0; width: 100%;
+        }
+        .tl-h-step.active .tl-h-info {
+            background: rgba(232,131,58,0.08);
+        }
+        .tl-h-label {
+            font-size: 0.78rem; font-weight: 600; color: var(--text-muted);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: block; max-width: 100px; margin: 0 auto;
+        }
+        .tl-h-step.passed .tl-h-label { color: var(--accent-primary); }
+        .tl-h-step.active .tl-h-label { color: #f5c842; font-weight: 700; }
+        .tl-h-time {
+            font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; opacity: 0.65;
+        }
+        .tl-h-step.active .tl-h-time { opacity: 1; color: rgba(245,200,66,0.6); }
+
+        /* === 移动端: 垂直时间线 === */
+        .tl-v { display: none; }
+
+        @media (max-width: 768px) {
+            .tl-h { display: none; }
+            .tl-v { display: block; padding: 4px 0 4px 60px; }
+            .tl-v-item {
+                display: flex; align-items: stretch; position: relative;
+                min-height: 64px;
+            }
+            /* 左侧轨道列 */
+            .tl-v-rail {
+                width: 40px; display: flex; flex-direction: column;
+                align-items: center; flex-shrink: 0;
+            }
+            .tl-v-dot {
+                width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 0.75rem; z-index: 1;
+                background: var(--bg-card); border: 2px solid var(--border-color);
+                color: var(--text-muted); transition: all 0.3s;
+            }
+            .tl-v-item.passed .tl-v-dot {
+                background: var(--accent-primary); border-color: var(--accent-primary);
+                color: #fff; box-shadow: 0 2px 8px rgba(232,131,58,0.25);
+            }
+            .tl-v-item.active .tl-v-dot {
+                background: linear-gradient(135deg, #e8833a, #f5c842);
+                border-color: transparent; color: #fff;
+                box-shadow: 0 0 0 3px rgba(232,131,58,0.15), 0 3px 10px rgba(232,131,58,0.3);
+                animation: tl-pulse 2s ease-in-out infinite;
+            }
+            .tl-v-check { display: none; }
+            .tl-v-item.passed .tl-v-check { display: inline; }
+            .tl-v-item.passed .tl-v-icon { display: none; }
+            /* 连接线 - 始终可见 */
+            .tl-v-line {
+                flex: 1; width: 2px; margin: 4px 0;
+                background: repeating-linear-gradient(180deg, var(--text-muted) 0 5px, transparent 5px 10px);
+                opacity: 0.45;
+                border-radius: 1px;
+            }
+            .tl-v-item.passed .tl-v-line { background: var(--accent-primary); opacity: 1; }
+            .tl-v-item.active .tl-v-line {
+                background: linear-gradient(180deg, var(--accent-primary) 0%, rgba(138,122,106,0.45) 100%);
+            }
+            .tl-v-item:last-child .tl-v-line { display: none; }
+            /* 右侧内容 */
+            .tl-v-body {
+                flex: 1; padding: 2px 0 16px 12px; min-width: 0;
+            }
+            .tl-v-label {
+                font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+            }
+            .tl-v-item.passed .tl-v-label { color: var(--accent-primary); }
+            .tl-v-item.active .tl-v-label { color: #f5c842; font-weight: 700; }
+            .tl-v-time {
+                font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;
+            }
+            .tl-v-item.active .tl-v-time { color: rgba(245,200,66,0.6); }
+            /* 当前阶段标签 */
+            .tl-v-now {
+                display: none; margin-top: 4px;
+                font-size: 0.68rem; color: #f5c842; font-weight: 600;
+                background: rgba(232,131,58,0.1); padding: 2px 8px;
+                border-radius: 4px; width: fit-content;
+            }
+            .tl-v-item.active .tl-v-now { display: inline-block; }
+        }
+
+        /* Scoring Table */
+        .score-table {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .score-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(232,131,58,0.05);
+            border: 1px solid rgba(232,131,58,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .score-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        .score-rank {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 48px;
+            white-space: nowrap;
+        }
+        .score-pts {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--accent-primary);
+            line-height: 1;
+        }
+        .score-pts small {
+            font-size: 0.65rem;
+            font-weight: 600;
+            opacity: 0.7;
+        }
+        .score-item.top3 {
+            background: linear-gradient(135deg, rgba(232,131,58,0.12), rgba(245,200,66,0.08));
+            border-color: rgba(232,131,58,0.2);
+        }
+        .score-item.top3 .score-rank { color: var(--accent-primary); }
+        .score-item.top3 .score-pts { color: #e8833a; }
+        .score-medal {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        /* Submit Button */
+        .submit-area {
+            text-align: center;
+            padding: 40px 24px;
+        }
+        .btn-submit-work {
+            display: inline-block;
+            padding: 14px 48px;
+            border-radius: 50px;
+            border: none;
+            background: var(--gradient-accent);
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(232, 131, 58, 0.3);
+        }
+        .btn-submit-work:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(232, 131, 58, 0.45);
+        }
+        .btn-submit-work:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .submit-status {
+            margin-top: 12px;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .btn-delete-work {
+            margin-left: 10px;
+            padding: 4px 14px;
+            border-radius: 16px;
+            border: 1px solid var(--danger, #e74c3c);
+            background: transparent;
+            color: var(--danger, #e74c3c);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-delete-work:hover {
+            background: var(--danger, #e74c3c);
+            color: #fff;
+        }
+
+        /* Works Gallery - 瀑布流布局 */
+        .works-grid {
+            columns: 3;
+            column-gap: 24px;
+        }
+        .work-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s;
+            break-inside: avoid;
+            margin-bottom: 24px;
+        }
+        .work-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .work-card-img {
+            height: 200px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+        }
+        .work-card-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s;
+        }
+        .work-card-number {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            z-index: 2;
+            line-height: 1;
+        }
+        .work-card:hover .work-card-img img { transform: scale(1.05); }
+        .work-card-body {
+            padding: 20px;
+        }
+        .work-card-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .work-card-author {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .work-card-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+        .work-card-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .work-card-footer .work-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .work-card-footer .work-card-actions .btn-vote,
+        .work-card-footer .work-card-actions .btn-abstract {
+            flex: 1;
+            text-align: center;
+        }
+        .work-scores {
+            display: flex;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .work-vote-count {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .btn-vote {
+            padding: 6px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--accent-primary);
+            background: transparent;
+            color: var(--accent-primary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-vote:hover {
+            background: var(--accent-primary);
+            color: #fff;
+        }
+        .btn-vote.voted {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .btn-vote.voted:hover {
+            background: var(--danger, #e74c3c);
+            border-color: var(--danger, #e74c3c);
+            color: #fff;
+        }
+        .btn-abstract {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid #ff6b6b;
+            background: transparent;
+            color: #ff6b6b;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-abstract:hover {
+            background: #ff6b6b;
+            color: #fff;
+        }
+        .btn-abstract.voted {
+            background: #ff6b6b;
+            border-color: #ff6b6b;
+            color: #fff;
+        }
+        .btn-abstract.voted:hover {
+            background: var(--danger, #e74c3c);
+            border-color: var(--danger, #e74c3c);
+        }
+
+        /* Vote Info Bar */
+        .vote-info-bar {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .phase-label {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 16px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            background: var(--accent-primary);
+            color: #fff;
+        }
+        .vote-info-text {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+        }
+        .vote-info-text strong {
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+        }
+
+        /* Submit Modal */
+        .submit-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .submit-modal-overlay.show { opacity: 1; }
+        .submit-modal {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 32px;
+            width: 90%;
+            max-width: 440px;
+            box-shadow: var(--shadow-lg);
+        }
+        .submit-modal h2 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin: 0 0 20px;
+        }
+        .submit-modal label {
+            display: block;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .submit-modal input[type="text"],
+        .submit-modal textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.92rem;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+        .submit-modal input:focus,
+        .submit-modal textarea:focus { border-color: var(--accent-primary); }
+        .submit-modal textarea { resize: vertical; min-height: 60px; }
+        .submit-modal .readonly-field {
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+        }
+        .image-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .image-upload-area:hover { border-color: var(--accent-primary); }
+        .image-upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .image-upload-area .upload-text {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .image-upload-area .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            display: none;
+        }
+        .submit-modal .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .submit-modal .btn-row button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .submit-modal .btn-cancel {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .submit-modal .btn-confirm {
+            background: var(--gradient-accent);
+            color: #fff;
+        }
+        .submit-modal .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+        .submit-modal .modal-message {
+            text-align: center;
+            font-size: 0.85rem;
+            margin-top: 12px;
+            min-height: 1.2em;
+        }
+        .submit-modal .modal-message.msg-error { color: #e74c3c; }
+        .submit-modal .modal-message.msg-success { color: var(--accent-primary); }
+
+        /* Image Lightbox */
+        .lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .lightbox-overlay.show { opacity: 1; }
+        .lightbox-overlay img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+        }
+
+        /* Notice */
+        .notice-box {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+        .notice-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .notice-box li {
+            padding: 8px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .notice-box li:last-child { border-bottom: none; }
+        .notice-box li::before {
+            content: '•';
+            color: var(--accent-primary);
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        /* Empty State */
+        .empty-works {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+        }
+        .empty-works .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+
+        /* Podium */
+        .podium-top3 {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 12px;
+            margin-bottom: 36px;
+            padding: 0 10px;
+        }
+        .podium-spot {
+            flex: 1;
+            max-width: 220px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .podium-spot .podium-medal {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+        .podium-spot .podium-img {
+            width: 100%;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 10px;
+        }
+        .podium-spot .podium-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+            word-break: break-word;
+        }
+        .podium-spot .podium-author {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .podium-spot .podium-score {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+        .podium-spot .podium-bar {
+            width: 100%;
+            border-radius: 8px 8px 0 0;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: rgba(255,255,255,0.8);
+        }
+        /* Gold center tallest */
+        .podium-spot.gold .podium-bar { height: 100px; background: linear-gradient(180deg, #f5c842, #e8a317); }
+        .podium-spot.gold .podium-medal { font-size: 2.8rem; }
+        .podium-spot.gold .podium-img { max-width: 180px; }
+        /* Silver left */
+        .podium-spot.silver .podium-bar { height: 72px; background: linear-gradient(180deg, #c0c0c0, #8a8a8a); }
+        /* Bronze right */
+        .podium-spot.bronze .podium-bar { height: 52px; background: linear-gradient(180deg, #cd7f32, #8b4513); }
+
+        .podium-awards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .podium-award-card {
+            background: var(--bg-card);
+            border: var(--border-card);
+            border-radius: 12px;
+            padding: 20px 14px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+        }
+        .podium-award-card .award-icon { font-size: 2rem; margin-bottom: 6px; }
+        .podium-award-card .award-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .podium-award-card .award-stat {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .podium-award-card .award-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin: 0 auto 8px;
+            display: block;
+        }
+        .podium-award-card .award-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+        .podium-award-card .award-author {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .contest-hero { height: 280px; }
+            .contest-hero h1 { font-size: 1.6rem; }
+            .contest-hero p { font-size: 0.9rem; }
+            .contest-section { padding: 28px 16px; }
+            .section-title { font-size: 1.3rem; margin-bottom: 20px; }
+            .info-grid { grid-template-columns: 1fr; gap: 12px; }
+            .info-card { padding: 16px; }
+            .info-card h3 { font-size: 0.95rem; margin-bottom: 8px; }
+            .info-card p { font-size: 0.85rem; line-height: 1.5; }
+            .rules-list li { padding: 10px 14px; margin-bottom: 8px; font-size: 0.85rem; }
+            .judge-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .judge-card { padding: 14px 8px; }
+            .judge-avatar { width: 42px; height: 42px; font-size: 1.1rem; margin-bottom: 8px; }
+            .judge-name { font-size: 0.82rem; }
+            .judge-title { font-size: 0.72rem; }
+            .prize-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .prize-card { padding: 16px 8px; border-radius: 10px; }
+            .prize-rank { font-size: 1.4rem; margin-bottom: 4px; }
+            .prize-place { font-size: 0.85rem; margin-bottom: 4px; }
+            .prize-desc { font-size: 0.72rem; }
+            .prize-amount { font-size: 1.1rem; }
+            .works-grid { columns: 1; column-gap: 16px; }
+            .submit-area { padding: 28px 16px; }
+            .score-table { gap: 6px; }
+            .score-item { padding: 8px; gap: 6px; flex-direction: column; text-align: center; }
+            .score-rank { min-width: auto; font-size: 0.7rem; }
+            .score-pts { font-size: 1rem; }
+            .podium-top3 { flex-direction: column; align-items: center; gap: 20px; }
+            .podium-spot { max-width: 260px; }
+            .podium-spot.gold .podium-bar { height: 60px; }
+            .podium-spot.silver .podium-bar { height: 48px; }
+            .podium-spot.bronze .podium-bar { height: 40px; }
+            .podium-awards { grid-template-columns: 1fr; gap: 12px; }
+        }
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .works-grid { columns: 2; }
+            .judge-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body data-theme="day">
+
+<!-- 导航栏 -->
+<div th:replace="~{fragments/navbar :: navbar(page='activities', mode='full', prefix='/#')}"></div>
+
+<div class="contest-page">
+    <!-- Hero Banner -->
+    <section class="contest-hero" th:style="'background-image: url(' + @{/images/banner_building-master-1.png} + ')'">
+        <div class="contest-hero-content">
+            <div class="contest-badge">🏗️ 第二届 · 建筑大赛</div>
+            <h1>第二届 · 长安建筑大赛</h1>
+            <p>展示建筑创意，交流建造技巧，评选最具创意与观赏性的庄园作品</p>
+            <div class="contest-view-count">
+                <span>👁️</span>
+                <span th:text="${activity.viewCount != null ? activity.viewCount : 0}">0</span>
+                <span>次浏览</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 活动进程条 -->
+    <section class="contest-section">
+        <h2 class="section-title">活动进程</h2>
+        <div class="timeline" id="timeline">
+            <div class="tl-h" id="timelineH"></div>
+            <div class="tl-v" id="timelineV"></div>
+        </div>
+    </section>
+
+    <!-- 活动目的 -->
+    <section class="contest-section">
+        <h2 class="section-title">活动目的</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>💡 展示创意</h3>
+                <p>展示建筑创意，让每一位建造者的才华被看见</p>
+            </div>
+            <div class="info-card">
+                <h3>🤝 交流技巧</h3>
+                <p>交流建造技巧，相互学习，共同提升建筑水平</p>
+            </div>
+            <div class="info-card">
+                <h3>🏆 评选佳作</h3>
+                <p>评选出本期最具创意的庄园作品</p>
+            </div>
+            <div class="info-card">
+                <h3>🎁 赢取奖励</h3>
+                <p>前三名可获得现金红包奖励，第一名66.66元</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 评选规则 -->
+    <section class="contest-section">
+        <h2 class="section-title">评选方式</h2>
+        <div class="info-card" style="margin-bottom: 20px;">
+            <h3>📊 最终成绩计算</h3>
+            <p><strong>最终得分 = 裁判评分（70%）+ 网络投票（30%）</strong></p>
+            <p style="margin-top: 8px;">裁判评分：由3位裁判独立评分，每位裁判满分10分，取平均分后乘以7，即裁判得分最高70分。</p>
+            <div style="margin-top: 16px;">
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 10px;">🗳️ <strong>网络投票</strong>：按票数排名计分</p>
+                <div class="score-table">
+                    <div class="score-item top3"><span class="score-medal">🥇</span><span class="score-rank">第1名</span><span class="score-pts">30<small>分</small></span></div>
+                    <div class="score-item top3"><span class="score-medal">🥈</span><span class="score-rank">第2名</span><span class="score-pts">28<small>分</small></span></div>
+                    <div class="score-item top3"><span class="score-medal">🥉</span><span class="score-rank">第3名</span><span class="score-pts">26<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">第4名</span><span class="score-pts">24<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">第5名</span><span class="score-pts">22<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">6~10名</span><span class="score-pts">20<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">11~20名</span><span class="score-pts">18<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">21~30名</span><span class="score-pts">16<small>分</small></span></div>
+                    <div class="score-item"><span class="score-rank">其余</span><span class="score-pts">15<small>分</small></span></div>
+                </div>
+            </div>
+        </div>
+        <h3 style="font-size: 1rem; color: var(--text-primary); margin-bottom: 16px;">评分维度</h3>
+        <ul class="rules-list">
+            <li><span class="rule-num">1</span><span><strong>建筑美观</strong> — 整体视觉效果，色彩搭配与建筑风格协调性</span></li>
+            <li><span class="rule-num">2</span><span><strong>创意设计</strong> — 独特的设计理念，创新性与想象力</span></li>
+            <li><span class="rule-num">3</span><span><strong>整体布局</strong> — 空间规划合理，功能分区明确，动线流畅</span></li>
+            <li><span class="rule-num">4</span><span><strong>细节完成度</strong> — 装饰精细，灯光/家具等细节处理到位</span></li>
+        </ul>
+    </section>
+
+    <!-- 裁判组 -->
+    <section class="contest-section">
+        <h2 class="section-title">裁判组</h2>
+        <div class="judge-grid">
+            <div class="judge-card" th:each="judge : ${judges}">
+                <div class="judge-avatar">
+                    <img th:src="${judge.avatar}" th:alt="${judge.name}"
+                         th:if="${judge.avatar != null and judge.avatar != ''}">
+                    <span th:if="${judge.avatar == null or judge.avatar == ''}">👷</span>
+                </div>
+                <div class="judge-name" th:text="${judge.name}">裁判昵称</div>
+                <div class="judge-title" th:text="${judge.roleTitle ?: ''}">头衔</div>
+                <a class="judge-live-btn"
+                   th:if="${judge.liveRoomUrl != null and judge.liveRoomUrl != ''}"
+                   th:href="${judge.liveRoomUrl}"
+                   target="_blank" rel="noopener">🎙 前往直播间</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 奖项设置 -->
+    <section class="contest-section">
+        <h2 class="section-title">奖项设置</h2>
+        <div class="prize-grid">
+            <div class="prize-card">
+                <div class="prize-rank">🥇</div>
+                <div class="prize-place">第一名</div>
+                <div class="prize-amount">¥66.66</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">🥈</div>
+                <div class="prize-place">第二名</div>
+                <div class="prize-amount">¥38.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">🥉</div>
+                <div class="prize-place">第三名</div>
+                <div class="prize-amount">¥18.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">🔥</div>
+                <div class="prize-place">最佳人气奖</div>
+                <div class="prize-desc">票数最多</div>
+                <div class="prize-amount">¥8.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">💡</div>
+                <div class="prize-place">最佳创意奖</div>
+                <div class="prize-desc">评委评定</div>
+                <div class="prize-amount">¥8.88</div>
+            </div>
+            <div class="prize-card">
+                <div class="prize-rank">🤡</div>
+                <div class="prize-place">抽象达人奖</div>
+                <div class="prize-desc">票数最多</div>
+                <div class="prize-amount">¥8.88</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 投稿区域 -->
+    <section class="contest-section submit-area">
+        <h2 class="section-title">我要投稿</h2>
+        <button class="btn-submit-work" id="submitWorkBtn">投稿我的作品</button>
+        <div class="submit-status" id="submitStatus">登录后可投稿，每人仅限一次</div>
+    </section>
+
+    <!-- 颁奖台（仅 RESULTS 阶段显示） -->
+    <section class="contest-section podium-section" id="podiumSection" style="display:none;">
+        <h2 class="section-title">🏆 颁奖台</h2>
+        <div class="podium-top3" id="podiumTop3"></div>
+        <div class="podium-awards" id="podiumAwards"></div>
+    </section>
+
+    <!-- 作品集锦 -->
+    <section class="contest-section">
+        <h2 class="section-title">作品集锦</h2>
+        <div class="vote-info-bar" id="voteInfoBar" style="display:none;">
+            <span class="phase-label" id="phaseLabel"></span>
+            <span class="vote-info-text" id="voteInfoText" style="display:none;">🗳 我的剩余票数：<strong id="remainingVotesCount">-</strong> / <span id="maxVotesCount">3</span></span>
+            <span class="vote-info-text" id="abstractVoteInfoText" style="display:none;">🤡 抽象票：<strong id="abstractVoteStatus">未使用</strong></span>
+        </div>
+        <div class="works-grid" id="worksGrid">
+            <div class="empty-works">
+                <div class="empty-icon">🏗️</div>
+                <p>暂无作品，快来投稿吧！</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 活动须知 -->
+    <section class="contest-section">
+        <h2 class="section-title">活动须知</h2>
+        <div class="notice-box">
+            <ul>
+                <li>投稿作品须为 会员服 投稿人本人庄园</li>
+                <li>不得盗用、冒用他人作品</li>
+                <li>不得恶意拉票、刷票或使用作弊行为</li>
+                <li>主办方有权取消违规作品参赛资格</li>
+                <li>投稿即视为同意活动期间展示作品</li>
+                <li>本活动最终解释权归主办方所有</li>
+            </ul>
+        </div>
+    </section>
+</div>
+
+<!-- 页尾 -->
+<div th:replace="~{fragments/footer :: footer(mode='compact')}"></div>
+
+<div th:replace="~{fragments/footer :: backToTop}"></div>
+<th:block th:replace="~{fragments/footer :: scripts(auth=true)}"></th:block>
+<script>
+(function() {
+    var worksGrid = document.getElementById('worksGrid');
+    var submitBtn = document.getElementById('submitWorkBtn');
+    var submitStatus = document.getElementById('submitStatus');
+    var myWorkStatus = null;
+    var remainingVotes = null;
+    var currentPhase = 'BEFORE_START';
+    var canVote = false;
+    var canDelete = false;
+    var canSubmit = false;
+    var isJudge = false;
+    var showVoteCount = false;
+    var showJudgeScore = false;
+
+    // === 更新阶段信息和票数显示 ===
+    function updateVoteInfoBar(data) {
+        var bar = document.getElementById('voteInfoBar');
+        var phaseLabel = document.getElementById('phaseLabel');
+        var voteInfoText = document.getElementById('voteInfoText');
+
+        currentPhase = data.phase || 'BEFORE_START';
+        canVote = data.canVote || false;
+        canDelete = data.canDelete || false;
+        canSubmit = data.canSubmit || false;
+        isJudge = data.isJudge || false;
+        showVoteCount = data.showVoteCount || false;
+        showJudgeScore = data.showJudgeScore || false;
+
+        // 显示阶段标签
+        if (data.phaseLabel) {
+            phaseLabel.textContent = data.phaseLabel;
+            bar.style.display = 'flex';
+        }
+
+        // 仅在投票阶段和结果阶段显示剩余票数
+        if (data.remainingVotes !== undefined && (canVote || currentPhase === 'RESULTS')) {
+            remainingVotes = data.remainingVotes;
+            document.getElementById('remainingVotesCount').textContent = remainingVotes;
+            document.getElementById('maxVotesCount').textContent = data.maxVotes || 3;
+            voteInfoText.style.display = 'inline';
+        } else {
+            voteInfoText.style.display = 'none';
+        }
+
+        // 显示抽象票状态（投票/结果阶段）
+        var abstractInfoText = document.getElementById('abstractVoteInfoText');
+        var abstractStatus = document.getElementById('abstractVoteStatus');
+        if (data.hasAbstractVoted !== undefined && (canVote || currentPhase === 'RESULTS')) {
+            abstractStatus.textContent = data.hasAbstractVoted ? '已使用' : '未使用';
+            abstractStatus.style.color = data.hasAbstractVoted ? 'var(--text-muted, #999)' : 'var(--accent-primary)';
+            abstractInfoText.style.display = 'inline';
+        } else {
+            abstractInfoText.style.display = 'none';
+        }
+    }
+
+    // === 渲染颁奖台 ===
+    function renderPodium(podium) {
+        var section = document.getElementById('podiumSection');
+        var top3El = document.getElementById('podiumTop3');
+        var awardsEl = document.getElementById('podiumAwards');
+        if (!podium || !podium.top3 || !podium.top3.length) {
+            section.style.display = 'none';
+            return;
+        }
+        section.style.display = '';
+
+        // 颁奖台排序: silver(左) -> gold(中) -> bronze(右)
+        var medals = ['🥇', '🥈', '🥉'];
+        var classes = ['gold', 'silver', 'bronze'];
+        var barNums = ['1', '2', '3'];
+        // 渲染顺序: 亚军(左) -> 冠军(中) -> 季军(右)
+        var order = podium.top3.length >= 3 ? [1, 0, 2] : (podium.top3.length === 2 ? [1, 0] : [0]);
+
+        var top3Html = '';
+        order.forEach(function(idx) {
+            var w = podium.top3[idx];
+            if (!w) return;
+            var authorText = w.authorName + (w.authorCampName ? ' · ' + w.authorCampName : '');
+            top3Html += '<div class="podium-spot ' + classes[idx] + '">' +
+                '<div class="podium-medal">' + medals[idx] + '</div>' +
+                '<img class="podium-img" src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy">' +
+                '<div class="podium-title">' + w.title + '</div>' +
+                '<div class="podium-author">' + authorText + '</div>' +
+                '<div class="podium-score">🏆 ' + (w.finalScore != null ? w.finalScore.toFixed(1) : '?') + ' 分</div>' +
+                '<div class="podium-bar">' + barNums[idx] + '</div>' +
+                '</div>';
+        });
+        top3El.innerHTML = top3Html;
+
+        // 特别奖项
+        var awardsHtml = '';
+        if (podium.popularityAward) {
+            var p = podium.popularityAward;
+            awardsHtml += '<div class="podium-award-card">' +
+                '<div class="award-icon">🔥</div>' +
+                '<div class="award-label">最佳人气奖</div>' +
+                '<div class="award-stat">🗳 ' + p.voteCount + ' 票</div>' +
+                '<img class="award-img" src="' + p.imageUrl + '" alt="' + p.title + '" loading="lazy">' +
+                '<div class="award-title">' + p.title + '</div>' +
+                '<div class="award-author">' + p.authorName + (p.authorCampName ? ' · ' + p.authorCampName : '') + '</div>' +
+                '</div>';
+        }
+        if (podium.creativityAward) {
+            var c = podium.creativityAward;
+            awardsHtml += '<div class="podium-award-card">' +
+                '<div class="award-icon">💡</div>' +
+                '<div class="award-label">最佳创意奖</div>' +
+                '<div class="award-stat">🏅 评委分 ' + (c.judgeScore != null ? c.judgeScore.toFixed(1) : '?') + '</div>' +
+                '<img class="award-img" src="' + c.imageUrl + '" alt="' + c.title + '" loading="lazy">' +
+                '<div class="award-title">' + c.title + '</div>' +
+                '<div class="award-author">' + c.authorName + (c.authorCampName ? ' · ' + c.authorCampName : '') + '</div>' +
+                '</div>';
+        }
+        if (podium.abstractAward) {
+            var a = podium.abstractAward;
+            awardsHtml += '<div class="podium-award-card">' +
+                '<div class="award-icon">🤡</div>' +
+                '<div class="award-label">抽象达人奖</div>' +
+                '<div class="award-stat">🤡 ' + a.abstractVoteCount + ' 抽象票</div>' +
+                '<img class="award-img" src="' + a.imageUrl + '" alt="' + a.title + '" loading="lazy">' +
+                '<div class="award-title">' + a.title + '</div>' +
+                '<div class="award-author">' + a.authorName + (a.authorCampName ? ' · ' + a.authorCampName : '') + '</div>' +
+                '</div>';
+        }
+        awardsEl.innerHTML = awardsHtml;
+    }
+
+    // === 加载作品列表 ===
+    function loadWorks() {
+        fetch('/api/contest/works?slug=building-master-2')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                myWorkStatus = data.myWorkStatus || null;
+                updateVoteInfoBar(data);
+                updateSubmitArea();
+                renderWorks(data.works || []);
+                renderTimeline(data.milestones, data.phase);
+                renderPodium(data.podium);
+            })
+            .catch(function() {
+                worksGrid.innerHTML = '<div class="empty-works"><div class="empty-icon">⚠️</div><p>加载失败，请刷新</p></div>';
+            });
+    }
+
+    // === 渲染作品卡片 ===
+    function renderWorks(works) {
+        if (!works.length) {
+            worksGrid.innerHTML = '<div class="empty-works"><div class="empty-icon">🏗️</div><p>暂无作品，快来投稿吧！</p></div>';
+            return;
+        }
+        worksGrid.innerHTML = works.map(function(w) {
+            // 根据阶段控制投票按钮
+            var voteBtnHtml = '';
+            if (canVote) {
+                var voteBtnClass = w.hasVoted ? 'btn-vote voted' : 'btn-vote';
+                var voteBtnText = w.hasVoted ? '🗳 已投票' : '🗳 投票';
+                voteBtnHtml = '<button class="' + voteBtnClass + '" data-work-id="' + w.id + '">' + voteBtnText + '</button>';
+            } else if (w.hasVoted) {
+                voteBtnHtml = '<span class="btn-vote voted" style="cursor:default; flex:1; text-align:center">🗳 已投票</span>';
+            }
+
+            // 抽象票按钮
+            var abstractBtnHtml = '';
+            if (canVote) {
+                var abstractBtnClass = w.hasAbstractVoted ? 'btn-abstract voted' : 'btn-abstract';
+                var abstractBtnText = w.hasAbstractVoted ? '已抽象 ✓' : '🤡 抽象';
+                abstractBtnHtml = '<button class="' + abstractBtnClass + '" data-abstract-work-id="' + w.id + '">' + abstractBtnText + '</button>';
+            } else if (w.hasAbstractVoted) {
+                abstractBtnHtml = '<span class="btn-abstract voted" style="cursor:default">已抽象 ✓</span>';
+            }
+
+            // 根据阶段控制票数显示
+            var voteCountText = showVoteCount
+                ? '🗳 ' + w.voteCount + ' 票'
+                : '🗳 投票未开始';
+            var abstractCountText = showVoteCount
+                ? (w.abstractVoteCount >= 0 ? ' · 🤡 ' + w.abstractVoteCount + ' 抽象' : '')
+                : '';
+
+            // 评委分数仅在 RESULTS 阶段显示
+            var scoreHtml = '';
+            if (showJudgeScore && w.judgeScore != null) {
+                scoreHtml = '<div class="work-scores">' +
+                    '<span>🏅 评委分: ' + w.judgeScore.toFixed(1) + '</span>' +
+                    (w.popularityScore != null ? '<span>🎫 人气分: ' + w.popularityScore + '</span>' : '') +
+                    (w.finalScore != null ? '<span>🏆 最终: ' + w.finalScore.toFixed(1) + ' 分</span>' : '') +
+                    '</div>';
+            } else if (showJudgeScore && w.finalScore != null) {
+                // judgeScore 为 null（无人评分），但有 finalScore
+                scoreHtml = '<div class="work-scores">' +
+                    '<span>🏅 评委分: ?.?</span>' +
+                    (w.popularityScore != null ? '<span>🎫 人气分: ' + w.popularityScore + '</span>' : '') +
+                    '<span>🏆 最终: ' + w.finalScore.toFixed(1) + ' 分</span>' +
+                    '</div>';
+            } else if (currentPhase === 'JUDGING' || currentPhase === 'PRE_VOTE') {
+                scoreHtml = '<div class="work-scores"><span>🏅 评委分: ?.?</span></div>';
+            }
+
+            return '<div class="work-card">' +
+                '<div class="work-card-img" onclick="openLightbox(\'' + w.imageUrl + '\')">' +
+                    '<span class="work-card-number">NO.' + w.workNumber + '</span>' +
+                    '<img src="' + w.imageUrl + '" alt="' + w.title + '" loading="lazy">' +
+                '</div>' +
+                '<div class="work-card-body">' +
+                    '<div class="work-card-title">' + w.title + '</div>' +
+                    '<div class="work-card-author">作者: ' + w.authorName + '</div>' +
+                    (w.description ? '<div class="work-card-desc">' + w.description + '</div>' : '') +
+                    scoreHtml +
+                    '<div class="work-card-footer">' +
+                        '<span class="work-vote-count">' + voteCountText + abstractCountText + '</span>' +
+                        '<div class="work-card-actions">' + voteBtnHtml + abstractBtnHtml + '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        // 绑定投票事件（仅在 canVote 时）
+        if (canVote) {
+            worksGrid.querySelectorAll('.btn-vote').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var workId = parseInt(this.dataset.workId);
+                    if (this.classList.contains('voted')) {
+                        handleUnvote(workId, this);
+                    } else {
+                        handleVote(workId, this);
+                    }
+                });
+            });
+
+            // 绑定抽象票事件
+            worksGrid.querySelectorAll('.btn-abstract').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var workId = parseInt(this.dataset.abstractWorkId);
+                    if (this.classList.contains('voted')) {
+                        handleAbstractUnvote(workId, this);
+                    } else {
+                        handleAbstractVote(workId, this);
+                    }
+                });
+            });
+        }
+    }
+
+    // === 渲染活动进程条 ===
+    function renderTimeline(milestones, phase) {
+        var hContainer = document.getElementById('timelineH');
+        var vContainer = document.getElementById('timelineV');
+        if (!milestones || !milestones.length) {
+            document.getElementById('timeline').style.display = 'none';
+            return;
+        }
+
+        var phaseOrder = ['BEFORE_START', 'SUBMISSION', 'REVIEW', 'JUDGING', 'PRE_VOTE', 'VOTING', 'RESULTS'];
+        var currentIdx = phaseOrder.indexOf(phase);
+        var icons = ['📝', '📮', '🔍', '⚖️', '🗳️', '🏁'];
+
+        // PC 水平布局
+        hContainer.innerHTML = milestones.map(function(m, i) {
+            var state = i < currentIdx ? 'passed' : (i === currentIdx ? 'active' : '');
+            var icon = icons[i] || '📌';
+            return '<div class="tl-h-step ' + state + '">' +
+                '<div class="tl-h-dot">' +
+                    '<span class="tl-h-check">✓</span>' +
+                    '<span class="tl-h-icon">' + icon + '</span>' +
+                '</div>' +
+                '<div class="tl-h-info">' +
+                    '<span class="tl-h-label">' + m.label + '</span>' +
+                    (m.time ? '<div class="tl-h-time">' + m.time + '</div>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        // 移动端垂直布局
+        vContainer.innerHTML = milestones.map(function(m, i) {
+            var state = i < currentIdx ? 'passed' : (i === currentIdx ? 'active' : '');
+            var icon = icons[i] || '📌';
+            return '<div class="tl-v-item ' + state + '">' +
+                '<div class="tl-v-rail">' +
+                    '<div class="tl-v-dot">' +
+                        '<span class="tl-v-check">✓</span>' +
+                        '<span class="tl-v-icon">' + icon + '</span>' +
+                    '</div>' +
+                    '<div class="tl-v-line"></div>' +
+                '</div>' +
+                '<div class="tl-v-body">' +
+                    '<div class="tl-v-label">' + m.label + '</div>' +
+                    (m.time ? '<div class="tl-v-time">' + m.time + '</div>' : '') +
+                    (state === 'active' ? '<div class="tl-v-now">当前阶段</div>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    // === 投票 ===
+    // 统一处理登录态失效（未登录/CSRF过期）→ 弹出登录框
+    function handleAuthError(data) {
+        if (!data.success && (data.message && (data.message.includes('登录') || data.message.includes('CSRF')))) {
+            var loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) loginBtn.click();
+            return true;
+        }
+        return false;
+    }
+
+    function handleVote(workId, btn) {
+        btn.disabled = true;
+        btn.textContent = '投票中...';
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/vote/' + workId, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    btn.classList.add('voted');
+                    btn.textContent = '🗳 已投票';
+                    // 更新剩余票数
+                    if (data.remainingVotes !== undefined) {
+                        remainingVotes = data.remainingVotes;
+                        document.getElementById('remainingVotesCount').textContent = remainingVotes;
+                    }
+                    // 刷新作品列表以更新票数
+                    loadWorks();
+                } else {
+                    if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '投票失败', message: data.message, confirmText: '知道了' });
+                    btn.disabled = false;
+                    btn.textContent = '🗳 投票';
+                }
+            })
+            .catch(function() {
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
+                btn.disabled = false;
+                btn.textContent = '🗳 投票';
+            });
+    }
+
+    // === 撤回投票 ===
+    function handleUnvote(workId, btn) {
+        PHDialog.confirm({
+            title: '撤回投票',
+            message: '确定要撤回对这个作品的投票吗？',
+            icon: '🤔',
+            confirmText: '确认撤回',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: function() { doUnvote(workId, btn); }
+        });
+    }
+
+    function doUnvote(workId, btn) {
+        btn.disabled = true;
+        btn.textContent = '撤回中...';
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/unvote/' + workId, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    btn.classList.remove('voted');
+                    btn.textContent = '🗳 投票';
+                    // 更新剩余票数
+                    if (data.remainingVotes !== undefined) {
+                        remainingVotes = data.remainingVotes;
+                        document.getElementById('remainingVotesCount').textContent = remainingVotes;
+                    }
+                    // 刷新作品列表以更新票数
+                    loadWorks();
+                } else {
+                    if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '撤回失败', message: data.message, confirmText: '知道了' });
+                    btn.disabled = false;
+                    btn.textContent = '🗳 已投票';
+                }
+            })
+            .catch(function() {
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
+                btn.disabled = false;
+                btn.textContent = '🗳 已投票';
+            });
+    }
+
+    // === 投抽象票 ===
+    function handleAbstractVote(workId, btn) {
+        btn.disabled = true;
+        btn.textContent = '抽象中...';
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/abstract-vote/' + workId, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    // 先把所有抽象票按钮重置为未投状态
+                    worksGrid.querySelectorAll('.btn-abstract').forEach(function(b) {
+                        b.classList.remove('voted');
+                        b.textContent = '🤡 抽象';
+                    });
+                    // 标记当前按钮为已投
+                    btn.classList.add('voted');
+                    btn.textContent = '已抽象 ✓';
+                    // 刷新作品列表以更新抽象票数
+                    loadWorks();
+                } else {
+                    if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '抽象失败', message: data.message, confirmText: '知道了' });
+                    btn.disabled = false;
+                    btn.textContent = '🤡 抽象';
+                }
+            })
+            .catch(function() {
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
+                btn.disabled = false;
+                btn.textContent = '🤡 抽象';
+            });
+    }
+
+    // === 撤回抽象票 ===
+    function handleAbstractUnvote(workId, btn) {
+        PHDialog.confirm({
+            title: '撤回抽象票',
+            message: '确定要撤回对这个作品的抽象票吗？',
+            icon: '🤔',
+            confirmText: '确认撤回',
+            cancelText: '取消',
+            confirmStyle: 'danger',
+            onConfirm: function() { doAbstractUnvote(workId, btn); }
+        });
+    }
+
+    function doAbstractUnvote(workId, btn) {
+        btn.disabled = true;
+        btn.textContent = '撤回中...';
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/abstract-unvote/' + workId, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    btn.classList.remove('voted');
+                    btn.textContent = '🤡 抽象';
+                    // 刷新作品列表以更新抽象票数
+                    loadWorks();
+                } else {
+                    if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '撤回失败', message: data.message, confirmText: '知道了' });
+                    btn.disabled = false;
+                    btn.textContent = '已抽象 ✓';
+                }
+            })
+            .catch(function() {
+                PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' });
+                btn.disabled = false;
+                btn.textContent = '已抽象 ✓';
+            });
+    }
+
+    // === 更新投稿区域状态 ===
+    function updateSubmitArea() {
+        fetch('/api/auth/me')
+            .then(function(r) { return r.json(); })
+            .then(function(user) {
+                if (!user.loggedIn) {
+                    if (currentPhase === 'SUBMISSION') {
+                        submitStatus.textContent = '登录后可投稿，每人仅限1份作品';
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '投稿我的作品';
+                        submitBtn.onclick = function() {
+                            var loginBtn = document.getElementById('loginBtn');
+                            if (loginBtn) loginBtn.click();
+                        };
+                    } else {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '投稿已关闭';
+                        submitStatus.textContent = '当前不在投稿阶段';
+                    }
+                } else if (myWorkStatus === 'APPROVED') {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已投稿';
+                    var deleteBtn = canDelete ? ' <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>' : '';
+                    submitStatus.innerHTML = '你的作品已通过审核 ✅' + deleteBtn;
+                    if (canDelete) bindDeleteWork('APPROVED');
+                } else if (myWorkStatus === 'PENDING') {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已投稿';
+                    var deleteBtn = canDelete ? ' <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>' : '';
+                    submitStatus.innerHTML = '你的作品正在审核中，请耐心等待 ⏳' + deleteBtn;
+                    if (canDelete) bindDeleteWork('PENDING');
+                } else if (myWorkStatus === 'REJECTED') {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已投稿';
+                    var deleteBtn = canDelete ? ' <button class="btn-delete-work" id="deleteWorkBtn">删除作品</button>' : '';
+                    submitStatus.innerHTML = '你的作品未通过审核，请联系管理员 ❌' + deleteBtn;
+                    if (canDelete) bindDeleteWork('REJECTED');
+                } else {
+                    // 未投稿
+                    if (isJudge) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '裁判不可投稿';
+                        submitStatus.textContent = '您作为裁判，不可提交作品';
+                    } else if (currentPhase === 'SUBMISSION') {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '投稿我的作品';
+                        submitStatus.textContent = '登录后可投稿，每人仅限1份作品';
+                        submitBtn.onclick = openSubmitModal;
+                    } else {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '投稿已关闭';
+                        submitStatus.textContent = '当前不在投稿阶段';
+                    }
+                }
+            });
+    }
+    
+    // === 删除作品绑定 ===
+    function bindDeleteWork(status) {
+        document.getElementById('deleteWorkBtn').addEventListener('click', function() {
+            var msg = status === 'APPROVED'
+                ? '确定要删除这个作品吗？\n\n⚠️ 该作品已审核通过，删除后所有投票记录也会一并清除，且不可恢复！'
+                : '确定要删除这个作品吗？此操作不可恢复。';
+            PHDialog.confirm({
+                title: '删除作品',
+                message: msg,
+                icon: '⚠️',
+                confirmText: '确认删除',
+                cancelText: '取消',
+                confirmStyle: 'danger',
+                onConfirm: function() { doDeleteWork(); }
+            });
+        });
+    }
+
+    function doDeleteWork() {
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        fetch('/api/contest/delete-work?slug=building-master-2', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                myWorkStatus = null;
+                submitBtn.disabled = false;
+                submitBtn.textContent = '投稿我的作品';
+                submitStatus.textContent = data.message;
+                submitBtn.onclick = openSubmitModal;
+                loadWorks();
+            } else {
+                if (!handleAuthError(data)) PHDialog.show({ icon: '⚠️', title: '删除失败', message: data.message, confirmText: '知道了' });
+            }
+        })
+        .catch(function() { PHDialog.show({ icon: '⚠️', title: '网络错误', message: '操作失败，请稍后重试', confirmText: '知道了' }); });
+    }
+
+    // === 投稿弹窗 ===
+    function openSubmitModal() {
+        if (document.getElementById('submitModalOverlay')) return;
+
+        var overlay = document.createElement('div');
+        overlay.id = 'submitModalOverlay';
+        overlay.className = 'submit-modal-overlay show';
+        overlay.innerHTML =
+            '<div class="submit-modal">' +
+                '<h2>投稿作品</h2>' +
+                '<label>投稿人</label>' +
+                '<div class="readonly-field" id="modalNickname">加载中...</div>' +
+                '<label>作品图片 *</label>' +
+                '<div class="image-upload-area" id="imageUploadArea">' +
+                    '<div class="upload-icon">📷</div>' +
+                    '<div class="upload-text">点击或拖拽上传图片（最大10MB）</div>' +
+                    '<img class="image-preview" id="imagePreview">' +
+                    '<input type="file" id="imageInput" accept="image/*">' +
+                '</div>' +
+                '<label>作品标题 *</label>' +
+                '<input type="text" id="workTitle" maxlength="50" placeholder="给你的作品取个名字">' +
+                '<label>作品简介（选填）</label>' +
+                '<textarea id="workDesc" rows="2" maxlength="200" placeholder="介绍一下你的建筑理念..."></textarea>' +
+                '<div class="btn-row">' +
+                    '<button class="btn-cancel" id="modalCancelBtn">取消</button>' +
+                    '<button class="btn-confirm" id="modalConfirmBtn" disabled>提交投稿</button>' +
+                '</div>' +
+                '<div class="modal-message" id="modalMessage"></div>' +
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        // 获取昵称
+        fetch('/api/auth/me')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('modalNickname').textContent = data.nickname || '未知';
+            });
+
+        var selectedFile = null;
+        var imageInput = document.getElementById('imageInput');
+        var imagePreview = document.getElementById('imagePreview');
+        var uploadArea = document.getElementById('imageUploadArea');
+        var confirmBtn = document.getElementById('modalConfirmBtn');
+
+        // 图片选择
+        imageInput.addEventListener('change', function() {
+            var file = this.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showModalMessage('请选择图片文件', false);
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showModalMessage('图片不能超过10MB', false);
+                return;
+            }
+            selectedFile = file;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                uploadArea.querySelector('.upload-icon').style.display = 'none';
+                uploadArea.querySelector('.upload-text').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+            checkSubmitReady();
+        });
+
+        // 标题输入监听
+        document.getElementById('workTitle').addEventListener('input', checkSubmitReady);
+
+        function checkSubmitReady() {
+            var title = document.getElementById('workTitle').value.trim();
+            confirmBtn.disabled = !selectedFile || !title;
+        }
+
+        // 取消
+        document.getElementById('modalCancelBtn').addEventListener('click', closeSubmitModal);
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closeSubmitModal();
+        });
+
+        // 提交
+        confirmBtn.addEventListener('click', function() {
+            var title = document.getElementById('workTitle').value.trim();
+            var desc = document.getElementById('workDesc').value.trim();
+
+            if (!title) { showModalMessage('请输入作品标题', false); return; }
+            if (!selectedFile) { showModalMessage('请上传图片', false); return; }
+
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '上传中...';
+
+            var formData = new FormData();
+            formData.append('image', selectedFile);
+            formData.append('title', title);
+            formData.append('description', desc);
+            formData.append('slug', 'building-master-2');
+
+            fetch('/api/contest/submit', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content') }
+            })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        showModalMessage('投稿成功！等待审核', true);
+                        setTimeout(function() {
+                            closeSubmitModal();
+                            loadWorks();
+                        }, 1500);
+                    } else {
+                        showModalMessage(data.message, false);
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = '提交投稿';
+                    }
+                })
+                .catch(function() {
+                    showModalMessage('网络错误，请重试', false);
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '提交投稿';
+                });
+        });
+    }
+
+    function closeSubmitModal() {
+        var overlay = document.getElementById('submitModalOverlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+            setTimeout(function() { overlay.remove(); }, 300);
+        }
+    }
+
+    function showModalMessage(msg, success) {
+        var el = document.getElementById('modalMessage');
+        if (!el) return;
+        el.textContent = msg;
+        el.className = 'modal-message ' + (success ? 'msg-success' : 'msg-error');
+    }
+
+    // === 图片灯箱 ===
+    window.openLightbox = function(src) {
+        var overlay = document.createElement('div');
+        overlay.className = 'lightbox-overlay show';
+        overlay.innerHTML = '<img src="' + src + '" alt="作品大图">';
+        overlay.addEventListener('click', function() {
+            overlay.classList.remove('show');
+            setTimeout(function() { overlay.remove(); }, 300);
+        });
+        document.body.appendChild(overlay);
+    };
+
+    // === 初始化 ===
+    // === 监听登录/退出事件，自动刷新数据 ===
+    window.addEventListener('auth:login', function() {
+        loadWorks();
+    });
+    window.addEventListener('auth:logout', function() {
+        remainingVotes = null;
+        document.getElementById('voteInfoBar').style.display = 'none';
+        loadWorks();
+    });
+
+    loadWorks();
+})();
+</script>
+<script th:src="@{/js/ph-dialog.js}"></script>
+</body>
+</html>
