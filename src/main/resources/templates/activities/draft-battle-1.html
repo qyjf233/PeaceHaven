@@ -9,31 +9,43 @@
     <meta property="og:title" content="第一届 · 点兵演武 · 南希对抗赛 - PeaceHaven">
     <meta property="og:description" content="双将点兵，一战定胜负。长安营地 12v12 南希市控团队竞技对抗赛">
     <style>
-        /* ========== Draft Battle - 古风电竞视觉系统 ========== */
-        :root {
-            --db-bg: #0a0a12;
-            --db-bg2: #0e0e1a;
-            --db-card: #12121f;
-            --db-card-hover: #1a1a2e;
+        /* ========== Draft Battle - 主题感知视觉系统 ========== */
+        /* 日间主题变量映射 */
+        :root, [data-theme="day"] {
+            --db-bg: var(--bg-primary);
+            --db-bg2: var(--bg-secondary);
+            --db-card: var(--bg-card);
+            --db-card-hover: var(--bg-card-hover);
             --db-gold: #c8a24e;
             --db-gold-dim: rgba(200,162,78,0.15);
             --db-gold-glow: rgba(200,162,78,0.3);
             --db-red: #b83232;
             --db-red-dim: rgba(184,50,50,0.15);
-            --db-text: #e8e0d0;
-            --db-text-dim: #8a8578;
+            --db-text: var(--text-primary);
+            --db-text-dim: var(--text-muted);
             --db-border: rgba(200,162,78,0.2);
         }
-        body { background: var(--db-bg); color: var(--db-text); font-family: 'Noto Serif SC', 'Songti SC', serif; }
-
-        /* Override navbar for dark theme */
-        .navbar { background: rgba(10,10,18,0.92) !important; backdrop-filter: blur(12px); }
-        .navbar .nav-link, .navbar .nav-brand { color: var(--db-text) !important; }
+        /* 夜间主题变量映射 */
+        [data-theme="night"] {
+            --db-bg: var(--bg-primary);
+            --db-bg2: var(--bg-secondary);
+            --db-card: var(--bg-card);
+            --db-card-hover: var(--bg-card-hover);
+            --db-gold: #FFD700;
+            --db-gold-dim: rgba(255,215,0,0.15);
+            --db-gold-glow: rgba(255,215,0,0.3);
+            --db-red: #e05555;
+            --db-red-dim: rgba(224,85,85,0.15);
+            --db-text: var(--text-primary);
+            --db-text-dim: var(--text-muted);
+            --db-border: rgba(255,215,0,0.2);
+        }
+        body { font-family: 'Noto Serif SC', 'Songti SC', serif; }
 
         /* ========== Hero Section ========== */
         .db-hero {
             position: relative; height: 100vh; display: flex; align-items: center; justify-content: center;
-            background: radial-gradient(ellipse at 50% 80%, #1a1028 0%, var(--db-bg) 70%);
+            background: radial-gradient(ellipse at 50% 80%, var(--bg-secondary) 0%, var(--db-bg) 70%);
             overflow: hidden; text-align: center;
         }
         .db-hero::before {
@@ -53,6 +65,15 @@
             background-clip: text; margin-bottom: 8px;
             animation: db-shimmer 3s ease-in-out infinite;
         }
+        /* 日间主题 Hero 标题用深色渐变保证可读性 */
+        :root .db-hero-title, [data-theme="day"] .db-hero-title {
+            background: linear-gradient(135deg, #8B6914 0%, var(--db-gold) 50%, #a07820 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        [data-theme="night"] .db-hero-title {
+            background: linear-gradient(135deg, #f5e6b8 0%, var(--db-gold) 50%, #d4a84e 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
         @keyframes db-shimmer {
             0%, 100% { filter: brightness(1); }
             50% { filter: brightness(1.3); }
@@ -62,7 +83,7 @@
             font-weight: 400; margin-bottom: 6px; letter-spacing: 4px;
         }
         .db-hero-desc {
-            font-size: 0.9rem; color: rgba(232,224,208,0.5); margin-bottom: 32px;
+            font-size: 0.9rem; color: var(--db-text-dim); margin-bottom: 32px;
         }
         .db-hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
         .db-btn {
@@ -348,8 +369,8 @@
             cursor: default;
         }
 
-        /* ========== Footer Override ========== */
-        .site-footer { background: var(--db-bg2) !important; border-top: 1px solid var(--db-border) !important; }
+        /* ========== Footer ========== */
+        /* 使用全局 footer 主题，无需覆盖 */
 
         /* ========== Empty State ========== */
         .db-empty { text-align: center; padding: 40px; color: var(--db-text-dim); font-size: 0.9rem; }
@@ -366,7 +387,7 @@
         }
     </style>
 </head>
-<body data-theme="night">
+<body>
 
 <!-- 导航栏 -->
 <div th:replace="~{fragments/navbar :: navbar(page='activities', mode='full', prefix='/#')}"></div>
