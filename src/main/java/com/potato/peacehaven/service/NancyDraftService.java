@@ -277,6 +277,18 @@ public class NancyDraftService {
         result.put("honors", configMap.getOrDefault("honors", Collections.emptyList()));
         result.put("timeline", configMap.getOrDefault("timeline", Collections.emptyList()));
 
+        // 裁判/队长信息（用于报名区展示）
+        var judges = judgeRepository.findByActivityIdOrderBySortOrderAsc(activityId);
+        List<Map<String, Object>> judgeList = new ArrayList<>();
+        for (var j : judges) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", j.getUser().getNickname());
+            m.put("roleTitle", j.getRoleTitle() != null ? j.getRoleTitle() : "队长");
+            m.put("avatar", j.getUser().getAvatar());
+            judgeList.add(m);
+        }
+        result.put("judges", judgeList);
+
         return result;
     }
 

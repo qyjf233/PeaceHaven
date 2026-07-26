@@ -2,106 +2,58 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{fragments/head :: common(title='第一届 · 点兵演武 · 南希对抗赛 - PeaceHaven · 长安')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/activity-timeline.css}">
     <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
     <meta name="_csrf" th:content="${_csrf}">
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="PeaceHaven · 长安">
     <meta property="og:title" content="第一届 · 点兵演武 · 南希对抗赛 - PeaceHaven">
     <meta property="og:description" content="双将点兵，一战定胜负。长安营地 12v12 南希市控团队竞技对抗赛">
+    <meta property="og:image" th:content="@{/images/banner_draft-battle-1.png}">
     <style>
-        /* ========== Draft Battle - 古风电竞视觉系统 ========== */
-        :root {
-            --db-bg: #0a0a12;
-            --db-bg2: #0e0e1a;
-            --db-card: #12121f;
-            --db-card-hover: #1a1a2e;
-            --db-gold: #c8a24e;
+        /* ========== Draft Battle - 主题适配视觉系统 ========== */
+        /* Day theme page-specific overrides */
+        :root, [data-theme="day"] {
+            --db-gold-dim: rgba(232,131,58,0.12);
+            --db-gold-glow: rgba(232,131,58,0.25);
+            --db-red: #c0392b;
+            --db-red-dim: rgba(192,57,43,0.1);
+            --db-overlay-bg: rgba(0,0,0,0.06);
+            --db-border-subtle: rgba(232,131,58,0.08);
+            --db-border: rgba(232,131,58,0.15);
+        }
+        /* Night theme page-specific overrides */
+        [data-theme="night"] {
             --db-gold-dim: rgba(200,162,78,0.15);
             --db-gold-glow: rgba(200,162,78,0.3);
-            --db-red: #b83232;
-            --db-red-dim: rgba(184,50,50,0.15);
-            --db-text: #e8e0d0;
-            --db-text-dim: #8a8578;
-            --db-border: rgba(200,162,78,0.2);
+            --db-red: #e74c3c;
+            --db-red-dim: rgba(231,76,60,0.1);
+            --db-overlay-bg: rgba(0,0,0,0.2);
+            --db-border-subtle: rgba(200,162,78,0.06);
+            --db-border: rgba(200,162,78,0.18);
         }
-        body { background: var(--db-bg); color: var(--db-text); font-family: 'Noto Serif SC', 'Songti SC', serif; }
-
-        /* Override navbar for dark theme */
-        .navbar { background: rgba(10,10,18,0.92) !important; backdrop-filter: blur(12px); }
-        .navbar .nav-link, .navbar .nav-brand { color: var(--db-text) !important; }
 
         /* ========== Hero Section ========== */
         .db-hero {
-            position: relative; height: 100vh; display: flex; align-items: center; justify-content: center;
-            background: radial-gradient(ellipse at 50% 80%, #1a1028 0%, var(--db-bg) 70%);
-            overflow: hidden; text-align: center;
+            position: relative; overflow: hidden; text-align: center;
         }
-        .db-hero::before {
-            content: ''; position: absolute; inset: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8a24e' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            opacity: 0.5;
+        .db-hero-img {
+            display: block; width: 100%; height: auto;
         }
-        .db-hero-content { position: relative; z-index: 2; padding: 0 20px; }
-        .db-hero-era {
-            font-size: 0.85rem; letter-spacing: 8px; color: var(--db-gold);
-            text-transform: uppercase; margin-bottom: 12px; opacity: 0.8;
-        }
-        .db-hero-title {
-            font-size: clamp(2.2rem, 5vw, 4rem); font-weight: 900; line-height: 1.2;
-            background: linear-gradient(135deg, #f5e6b8 0%, var(--db-gold) 50%, #d4a84e 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            background-clip: text; margin-bottom: 8px;
-            animation: db-shimmer 3s ease-in-out infinite;
-        }
-        @keyframes db-shimmer {
-            0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(1.3); }
-        }
-        .db-hero-subtitle {
-            font-size: clamp(1.1rem, 2.5vw, 1.6rem); color: var(--db-text-dim);
-            font-weight: 400; margin-bottom: 6px; letter-spacing: 4px;
-        }
-        .db-hero-desc {
-            font-size: 0.9rem; color: rgba(232,224,208,0.5); margin-bottom: 32px;
-        }
-        .db-hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-        .db-btn {
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 12px 32px; border-radius: 4px; font-size: 0.95rem; font-weight: 700;
-            cursor: pointer; transition: all 0.3s; border: none; text-decoration: none;
-            font-family: inherit; letter-spacing: 2px;
-        }
-        .db-btn-primary {
-            background: linear-gradient(135deg, var(--db-gold) 0%, #a88530 100%);
-            color: #0a0a12; box-shadow: 0 4px 20px rgba(200,162,78,0.3);
-        }
-        .db-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(200,162,78,0.5); }
-        .db-btn-outline {
-            background: transparent; color: var(--db-gold);
-            border: 1px solid var(--db-gold); 
-        }
-        .db-btn-outline:hover { background: var(--db-gold-dim); }
-
-        /* Particles */
-        .db-particles { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-        .db-particle {
-            position: absolute; width: 2px; height: 2px; background: var(--db-gold);
-            border-radius: 50%; opacity: 0; animation: db-float 6s infinite;
-        }
-        @keyframes db-float {
-            0% { opacity: 0; transform: translateY(100vh) scale(0); }
-            20% { opacity: 0.8; }
-            100% { opacity: 0; transform: translateY(-20vh) scale(1.5); }
+        .db-hero::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+            background: linear-gradient(to top, var(--bg-primary), transparent);
+            z-index: 1; pointer-events: none;
         }
 
         /* ========== Sections ========== */
         .db-section { padding: 80px 20px; max-width: 1100px; margin: 0 auto; }
         .db-section-title {
-            text-align: center; font-size: 1.8rem; font-weight: 800; color: var(--db-gold);
+            text-align: center; font-size: 1.8rem; font-weight: 800; color: var(--accent-gold);
             margin-bottom: 8px; letter-spacing: 4px;
         }
         .db-section-line {
-            width: 60px; height: 2px; background: var(--db-gold); margin: 0 auto 40px;
+            width: 60px; height: 2px; background: var(--accent-gold); margin: 0 auto 40px;
             box-shadow: 0 0 10px var(--db-gold-glow);
         }
 
@@ -109,44 +61,24 @@
         .db-reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease; }
         .db-reveal.db-visible { opacity: 1; transform: translateY(0); }
 
-        /* ========== Event Info Card ========== */
-        .db-info-card {
-            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 12px;
-            padding: 32px; position: relative; overflow: hidden;
-        }
-        .db-info-card::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, transparent, var(--db-gold), transparent);
-        }
-        .db-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .db-info-item { padding: 16px; background: rgba(200,162,78,0.04); border-radius: 8px; }
-        .db-info-label { font-size: 0.75rem; color: var(--db-gold); letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase; }
-        .db-info-value { font-size: 1.05rem; font-weight: 600; color: var(--db-text); }
-        .db-status-badge {
-            display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
-        }
-        .db-status-registering { background: rgba(76,175,80,0.15); color: #66BB6A; border: 1px solid rgba(76,175,80,0.3); }
-        .db-status-ongoing { background: rgba(255,152,0,0.15); color: #FFA726; border: 1px solid rgba(255,152,0,0.3); }
-        .db-status-ended { background: rgba(158,158,158,0.15); color: #9E9E9E; border: 1px solid rgba(158,158,158,0.3); }
-
         /* ========== Introduction ========== */
         .db-intro { text-align: center; }
         .db-intro-quote {
-            font-size: 1.3rem; font-style: italic; color: var(--db-gold); line-height: 2;
+            font-size: 1.3rem; font-style: italic; color: var(--accent-gold); line-height: 2;
             margin-bottom: 24px; letter-spacing: 2px;
         }
-        .db-intro-body { font-size: 0.95rem; line-height: 1.8; color: var(--db-text-dim); max-width: 700px; margin: 0 auto; }
+        .db-intro-body { font-size: 0.95rem; line-height: 1.8; color: var(--text-muted); max-width: 700px; margin: 0 auto; }
 
         /* ========== Rules ========== */
         .db-rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
         .db-rule-card {
-            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 10px;
+            background: var(--bg-card); border: 1px solid var(--db-border); border-radius: 10px;
             padding: 24px; text-align: center; transition: all 0.3s;
         }
-        .db-rule-card:hover { border-color: var(--db-gold); transform: translateY(-4px); box-shadow: 0 8px 30px rgba(200,162,78,0.1); }
+        .db-rule-card:hover { border-color: var(--accent-gold); transform: translateY(-4px); box-shadow: 0 8px 30px var(--db-gold-dim); }
         .db-rule-icon { font-size: 2rem; margin-bottom: 12px; }
-        .db-rule-title { font-size: 1rem; font-weight: 700; color: var(--db-gold); margin-bottom: 8px; }
-        .db-rule-desc { font-size: 0.85rem; color: var(--db-text-dim); line-height: 1.6; }
+        .db-rule-title { font-size: 1rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 8px; }
+        .db-rule-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
 
         /* ========== Draft Pick (双将选人) ========== */
         .db-draft { text-align: center; }
@@ -154,14 +86,14 @@
             display: flex; align-items: stretch; gap: 0; margin-top: 20px;
         }
         .db-draft-side {
-            flex: 1; padding: 24px; background: var(--db-card); border: 1px solid var(--db-border);
+            flex: 1; padding: 24px; background: var(--bg-card); border: 1px solid var(--db-border);
             border-radius: 12px; min-height: 300px;
         }
         .db-draft-side.team-a { border-color: rgba(184,50,50,0.3); }
         .db-draft-side.team-b { border-color: rgba(70,130,180,0.3); }
         .db-draft-vs {
             display: flex; align-items: center; justify-content: center;
-            font-size: 2rem; font-weight: 900; color: var(--db-gold);
+            font-size: 2rem; font-weight: 900; color: var(--accent-gold);
             padding: 0 16px; min-width: 80px;
         }
         .db-draft-captain {
@@ -169,70 +101,37 @@
         }
         .db-draft-captain-avatar {
             width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
-            border: 2px solid var(--db-gold); margin-bottom: 8px;
-            background: var(--db-bg);
+            border: 2px solid var(--accent-gold); margin-bottom: 8px;
+            background: var(--bg-primary);
         }
         .db-draft-captain-name { font-size: 1rem; font-weight: 700; }
-        .db-draft-captain-label { font-size: 0.72rem; color: var(--db-gold); letter-spacing: 2px; }
+        .db-draft-captain-label { font-size: 0.72rem; color: var(--accent-gold); letter-spacing: 2px; }
         .db-draft-team-name { font-size: 1.2rem; font-weight: 800; margin-bottom: 12px; }
         .db-draft-members { list-style: none; padding: 0; margin: 0; }
         .db-draft-member {
             display: flex; align-items: center; gap: 8px; padding: 6px 12px;
-            border-bottom: 1px solid rgba(200,162,78,0.06); font-size: 0.85rem;
+            border-bottom: 1px solid var(--db-border-subtle); font-size: 0.85rem;
         }
         .db-draft-member-num {
             width: 22px; height: 22px; border-radius: 50%; background: var(--db-gold-dim);
-            color: var(--db-gold); font-size: 0.7rem; display: flex; align-items: center;
+            color: var(--accent-gold); font-size: 0.7rem; display: flex; align-items: center;
             justify-content: center; font-weight: 700; flex-shrink: 0;
         }
-        .db-draft-empty { color: var(--db-text-dim); font-size: 0.85rem; padding: 20px 0; }
+        .db-draft-empty { color: var(--text-muted); font-size: 0.85rem; padding: 20px 0; }
 
         /* Available players for draft */
         .db-draft-available {
-            margin-top: 24px; background: var(--db-card); border: 1px solid var(--db-border);
+            margin-top: 24px; background: var(--bg-card); border: 1px solid var(--db-border);
             border-radius: 12px; padding: 20px; text-align: left;
         }
-        .db-draft-available-title { font-size: 0.9rem; font-weight: 700; color: var(--db-gold); margin-bottom: 12px; }
+        .db-draft-available-title { font-size: 0.9rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 12px; }
         .db-draft-player-chip {
             display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
-            margin: 4px; border-radius: 20px; background: rgba(200,162,78,0.06);
+            margin: 4px; border-radius: 20px; background: var(--db-gold-dim);
             border: 1px solid var(--db-border); font-size: 0.82rem; cursor: pointer;
             transition: all 0.2s;
         }
-        .db-draft-player-chip:hover { border-color: var(--db-gold); background: var(--db-gold-dim); }
-
-        /* ========== Team Display (龙虎争锋) ========== */
-        .db-teams-vs {
-            display: flex; align-items: flex-start; gap: 0;
-        }
-        .db-team-panel {
-            flex: 1; padding: 24px; background: var(--db-card); border: 1px solid var(--db-border);
-            border-radius: 12px;
-        }
-        .db-team-header {
-            text-align: center; margin-bottom: 20px; padding-bottom: 16px;
-            border-bottom: 1px solid var(--db-border);
-        }
-        .db-team-name { font-size: 1.4rem; font-weight: 800; }
-        .db-team-count { font-size: 0.78rem; color: var(--db-text-dim); }
-        .db-team-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-        .db-player-card {
-            display: flex; align-items: center; gap: 8px; padding: 10px;
-            background: rgba(200,162,78,0.03); border-radius: 8px; border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-        .db-player-card:hover { border-color: var(--db-border); }
-        .db-player-avatar {
-            width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
-            background: var(--db-bg); flex-shrink: 0;
-        }
-        .db-player-name { font-size: 0.82rem; font-weight: 600; }
-        .db-player-role { font-size: 0.7rem; color: var(--db-text-dim); }
-        .db-vs-divider {
-            display: flex; align-items: center; justify-content: center;
-            font-size: 2.5rem; font-weight: 900; color: var(--db-red);
-            padding: 0 12px; min-width: 70px;
-        }
+        .db-draft-player-chip:hover { border-color: var(--accent-gold); background: var(--db-gold-dim); }
 
         /* ========== Schedule (演武赛程) ========== */
         .db-schedule-timeline { position: relative; padding-left: 32px; }
@@ -242,26 +141,26 @@
         }
         .db-schedule-item {
             position: relative; margin-bottom: 28px; padding: 20px;
-            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 10px;
+            background: var(--bg-card); border: 1px solid var(--db-border); border-radius: 10px;
         }
         .db-schedule-item::before {
             content: ''; position: absolute; left: -26px; top: 24px;
-            width: 12px; height: 12px; border-radius: 50%; background: var(--db-gold);
-            border: 2px solid var(--db-bg); box-shadow: 0 0 8px var(--db-gold-glow);
+            width: 12px; height: 12px; border-radius: 50%; background: var(--accent-gold);
+            border: 2px solid var(--bg-primary); box-shadow: 0 0 8px var(--db-gold-glow);
         }
         .db-schedule-item.db-completed::before { background: #4CAF50; box-shadow: 0 0 8px rgba(76,175,80,0.4); }
         .db-schedule-item.db-ongoing::before { background: #FFA726; box-shadow: 0 0 8px rgba(255,167,38,0.4); animation: db-pulse 1.5s infinite; }
         @keyframes db-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
-        .db-schedule-round { font-size: 1.05rem; font-weight: 700; color: var(--db-gold); margin-bottom: 6px; }
-        .db-schedule-date { font-size: 0.8rem; color: var(--db-text-dim); margin-bottom: 10px; }
+        .db-schedule-round { font-size: 1.05rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 6px; }
+        .db-schedule-date { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; }
         .db-schedule-match {
             display: flex; align-items: center; justify-content: center; gap: 16px;
-            padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;
+            padding: 10px; background: var(--db-overlay-bg); border-radius: 8px;
         }
         .db-schedule-team { font-weight: 700; min-width: 80px; }
         .db-schedule-team.team-a { text-align: right; color: var(--db-red); }
         .db-schedule-team.team-b { text-align: left; color: #4682B4; }
-        .db-schedule-score { font-size: 1.3rem; font-weight: 900; color: var(--db-gold); letter-spacing: 4px; }
+        .db-schedule-score { font-size: 1.3rem; font-weight: 900; color: var(--accent-gold); letter-spacing: 4px; }
         .db-schedule-status-badge {
             display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.72rem;
             margin-top: 8px;
@@ -272,61 +171,87 @@
 
         /* ========== Match History (战场记录) ========== */
         .db-match-card {
-            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 12px;
+            background: var(--bg-card); border: 1px solid var(--db-border); border-radius: 12px;
             padding: 24px; margin-bottom: 16px; transition: all 0.3s;
         }
-        .db-match-card:hover { border-color: var(--db-gold); }
+        .db-match-card:hover { border-color: var(--accent-gold); }
         .db-match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .db-match-round { font-size: 0.8rem; color: var(--db-gold); font-weight: 600; letter-spacing: 2px; }
-        .db-match-date { font-size: 0.75rem; color: var(--db-text-dim); }
+        .db-match-round { font-size: 0.8rem; color: var(--accent-gold); font-weight: 600; letter-spacing: 2px; }
+        .db-match-date { font-size: 0.75rem; color: var(--text-muted); }
         .db-match-body { display: flex; align-items: center; justify-content: center; gap: 24px; }
         .db-match-team { text-align: center; flex: 1; }
         .db-match-team-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
-        .db-match-score-big { font-size: 2.2rem; font-weight: 900; color: var(--db-gold); letter-spacing: 6px; }
+        .db-match-score-big { font-size: 2.2rem; font-weight: 900; color: var(--accent-gold); letter-spacing: 6px; }
         .db-match-winner { font-size: 0.8rem; color: #4CAF50; margin-top: 12px; font-weight: 600; }
 
         /* ========== Rankings (演武榜) ========== */
         .db-rank-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--db-border); }
         .db-rank-tab {
-            padding: 10px 24px; font-size: 0.9rem; font-weight: 600; color: var(--db-text-dim);
+            padding: 10px 24px; font-size: 0.9rem; font-weight: 600; color: var(--text-muted);
             cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
             background: none; border-top: none; border-left: none; border-right: none;
             font-family: inherit;
         }
-        .db-rank-tab.active { color: var(--db-gold); border-bottom-color: var(--db-gold); }
-        .db-rank-tab:hover { color: var(--db-text); }
+        .db-rank-tab.active { color: var(--accent-gold); border-bottom-color: var(--accent-gold); }
+        .db-rank-tab:hover { color: var(--text-primary); }
         .db-rank-table { width: 100%; border-collapse: collapse; }
         .db-rank-table th {
             padding: 10px 12px; text-align: left; font-size: 0.75rem; font-weight: 600;
-            color: var(--db-gold); letter-spacing: 2px; border-bottom: 1px solid var(--db-border);
+            color: var(--accent-gold); letter-spacing: 2px; border-bottom: 1px solid var(--db-border);
             text-transform: uppercase;
         }
         .db-rank-table td {
-            padding: 10px 12px; font-size: 0.88rem; border-bottom: 1px solid rgba(200,162,78,0.06);
+            padding: 10px 12px; font-size: 0.88rem; border-bottom: 1px solid var(--db-border-subtle);
         }
-        .db-rank-table tr:hover td { background: rgba(200,162,78,0.03); }
+        .db-rank-table tr:hover td { background: var(--db-gold-dim); }
         .db-rank-medal { font-size: 1.1rem; }
 
         /* ========== Honors (荣耀殿堂) ========== */
         .db-honors-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .db-honor-card {
-            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 12px;
+            background: var(--bg-card); border: 1px solid var(--db-border); border-radius: 12px;
             padding: 28px; text-align: center; transition: all 0.3s;
         }
-        .db-honor-card:hover { border-color: var(--db-gold); transform: translateY(-4px); }
-        .db-honor-card.honor-champion { border-color: var(--db-gold); box-shadow: 0 0 20px var(--db-gold-dim); }
+        .db-honor-card:hover { border-color: var(--accent-gold); transform: translateY(-4px); }
+        .db-honor-card.honor-champion { border-color: var(--accent-gold); box-shadow: 0 0 20px var(--db-gold-dim); }
         .db-honor-icon { font-size: 2.5rem; margin-bottom: 12px; }
-        .db-honor-title { font-size: 0.78rem; color: var(--db-gold); letter-spacing: 2px; margin-bottom: 8px; }
+        .db-honor-title { font-size: 0.78rem; color: var(--accent-gold); letter-spacing: 2px; margin-bottom: 8px; }
         .db-honor-name { font-size: 1.1rem; font-weight: 700; }
 
         /* ========== Registration (加入演武) ========== */
         .db-register { text-align: center; }
         .db-register-box {
-            background: var(--db-card); border: 1px solid var(--db-border); border-radius: 12px;
-            padding: 40px; max-width: 500px; margin: 0 auto;
+            background: var(--bg-card); border: 1px solid var(--db-border); border-radius: 12px;
+            padding: 40px; max-width: 560px; margin: 0 auto;
         }
-        .db-register-count { font-size: 3rem; font-weight: 900; color: var(--db-gold); margin-bottom: 4px; }
-        .db-register-label { font-size: 0.85rem; color: var(--db-text-dim); margin-bottom: 24px; }
+        .db-register-progress-wrap { margin-bottom: 24px; }
+        .db-register-progress-header {
+            display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;
+        }
+        .db-register-count { font-size: 2.6rem; font-weight: 900; color: var(--accent-gold); line-height: 1; }
+        .db-register-limit { font-size: 0.85rem; color: var(--text-muted); }
+        .db-register-bar {
+            width: 100%; height: 8px; background: var(--db-gold-dim); border-radius: 4px; overflow: hidden;
+        }
+        .db-register-bar-fill {
+            height: 100%; border-radius: 4px; transition: width 0.5s ease;
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-primary));
+        }
+        .db-register-bar-fill.full { background: linear-gradient(90deg, #66BB6A, #4CAF50); }
+        .db-register-leaders {
+            display: flex; gap: 16px; justify-content: center; margin: 24px 0;
+        }
+        .db-register-leader {
+            display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+            background: var(--db-gold-dim); border-radius: 10px; border: 1px solid var(--db-border);
+        }
+        .db-register-leader-avatar {
+            width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--accent-gold); background: var(--bg-primary);
+        }
+        .db-register-leader-info { text-align: left; }
+        .db-register-leader-name { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+        .db-register-leader-role { font-size: 0.72rem; color: var(--accent-gold); letter-spacing: 1px; }
         .db-register-btn {
             padding: 14px 48px; font-size: 1rem; font-weight: 700; border-radius: 4px;
             cursor: pointer; transition: all 0.3s; border: none; font-family: inherit;
@@ -338,7 +263,7 @@
         }
         .db-register-btn.join:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(184,50,50,0.5); }
         .db-register-btn.cancel {
-            background: transparent; color: var(--db-text-dim);
+            background: transparent; color: var(--text-muted);
             border: 1px solid var(--db-border); margin-top: 12px; font-size: 0.85rem;
             padding: 8px 24px;
         }
@@ -349,82 +274,90 @@
         }
 
         /* ========== Footer Override ========== */
-        .site-footer { background: var(--db-bg2) !important; border-top: 1px solid var(--db-border) !important; }
+        .site-footer { background: var(--bg-secondary) !important; border-top: 1px solid var(--db-border) !important; }
 
         /* ========== Empty State ========== */
-        .db-empty { text-align: center; padding: 40px; color: var(--db-text-dim); font-size: 0.9rem; }
+        .db-empty { text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.9rem; }
 
         /* ========== Responsive ========== */
         @media (max-width: 768px) {
+            .db-section { padding: 48px 16px; }
+            .db-section-title { font-size: 1.4rem; letter-spacing: 2px; }
+            .db-section-line { margin: 0 auto 28px; }
+
             .db-draft-arena, .db-teams-vs { flex-direction: column; }
             .db-draft-vs, .db-vs-divider { padding: 12px 0; min-width: unset; }
-            .db-info-grid { grid-template-columns: 1fr 1fr; }
-            .db-rules-grid { grid-template-columns: 1fr; }
-            .db-honors-grid { grid-template-columns: 1fr 1fr; }
+
+            .db-rules-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .db-rule-card { padding: 16px; }
+            .db-rule-icon { font-size: 1.5rem; margin-bottom: 8px; }
+            .db-rule-title { font-size: 0.88rem; }
+            .db-rule-desc { font-size: 0.78rem; }
+
+            .db-honors-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+
             .db-match-score-big { font-size: 1.6rem; }
-            .db-section { padding: 48px 16px; }
+
+            .db-intro-quote { font-size: 1.1rem; }
+            .db-intro-body { font-size: 0.88rem; }
+
+            .db-register-box { padding: 28px 20px; }
+            .db-register-count { font-size: 2rem; }
+            .db-register-btn { padding: 12px 36px; font-size: 0.9rem; }
+            .db-register-leaders { flex-direction: column; gap: 10px; }
+            .db-register-leader { justify-content: center; }
+
+            .db-draft-side { padding: 16px; }
+            .db-draft-captain-avatar { width: 48px; height: 48px; }
+
+            .db-rank-table th, .db-rank-table td { padding: 8px 6px; font-size: 0.78rem; }
+            .db-rank-tab { padding: 8px 16px; font-size: 0.82rem; }
         }
     </style>
 </head>
-<body data-theme="night">
+<body>
 
 <!-- 导航栏 -->
 <div th:replace="~{fragments/navbar :: navbar(page='activities', mode='full', prefix='/#')}"></div>
 
-<div class="db-page">
+<div class="db-page" style="padding-top: 64px;">
 
     <!-- ==================== 1. Hero ==================== -->
     <section class="db-hero">
-        <div class="db-particles" id="dbParticles"></div>
-        <div class="db-hero-content">
-            <div class="db-hero-era">第一届 · 点兵演武</div>
-            <h1 class="db-hero-title">南希对抗赛</h1>
-            <p class="db-hero-subtitle">双将点兵，一战定胜负</p>
-            <p class="db-hero-desc">长安营地 12v12 南希市控团队竞技</p>
-            <div class="db-hero-actions">
-                <a href="#register" class="db-btn db-btn-primary">⚔ 加入演武</a>
-                <a href="#schedule" class="db-btn db-btn-outline">📜 查看赛程</a>
-            </div>
-        </div>
+        <img class="db-hero-img" src="/images/banner_draft-battle-1.png" alt="南希对抗赛">
     </section>
 
-    <!-- ==================== 2. 赛事信息卡 ==================== -->
-    <section class="db-section db-reveal" id="eventInfo">
-        <h2 class="db-section-title">赛事档案</h2>
+    <!-- ==================== 2. 活动进程 ==================== -->
+    <section class="db-section db-reveal" id="timeline">
+        <h2 class="db-section-title">活动进程</h2>
         <div class="db-section-line"></div>
-        <div class="db-info-card">
-            <div class="db-info-grid">
-                <div class="db-info-item">
-                    <div class="db-info-label">赛事名称</div>
-                    <div class="db-info-value">第一届 · 点兵演武 · 南希对抗赛</div>
-                </div>
-                <div class="db-info-item">
-                    <div class="db-info-label">比赛模式</div>
-                    <div class="db-info-value">南希市控团队竞技</div>
-                </div>
-                <div class="db-info-item">
-                    <div class="db-info-label">比赛规模</div>
-                    <div class="db-info-value">12 VS 12</div>
-                </div>
-                <div class="db-info-item">
-                    <div class="db-info-label">组队方式</div>
-                    <div class="db-info-value">双队长选人制</div>
-                </div>
-                <div class="db-info-item">
-                    <div class="db-info-label">举办方</div>
-                    <div class="db-info-value">长安营地</div>
-                </div>
-                <div class="db-info-item">
-                    <div class="db-info-label">赛事状态</div>
-                    <div class="db-info-value" id="eventStatusBadge">
-                        <span class="db-status-badge db-status-registering">报名中</span>
+        <div class="ph-timeline" id="phTimeline" th:attr="data-config=${configJson}"></div>
+    </section>
+
+    <!-- ==================== 3. 加入演武（报名） ==================== -->
+    <section class="db-section db-reveal" id="register">
+        <h2 class="db-section-title">加入演武</h2>
+        <div class="db-section-line"></div>
+        <div class="db-register">
+            <div class="db-register-box">
+                <div class="db-register-progress-wrap">
+                    <div class="db-register-progress-header">
+                        <span class="db-register-count" id="registerCount">0</span>
+                        <span class="db-register-limit">/ 22 名额</span>
+                    </div>
+                    <div class="db-register-bar">
+                        <div class="db-register-bar-fill" id="registerBar" style="width:0%"></div>
                     </div>
                 </div>
+                <div class="db-register-leaders" id="registerLeaders"></div>
+                <div id="registerAction">
+                    <button class="db-register-btn join" id="btnRegister" onclick="doRegister()">⚔ 报名参赛</button>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- ==================== 3. 赛事介绍 ==================== -->
+    <!-- ==================== 4. 赛事介绍 ==================== -->
     <section class="db-section db-reveal" id="introduction">
         <h2 class="db-section-title">何为点兵演武</h2>
         <div class="db-section-line"></div>
@@ -439,7 +372,7 @@
         </div>
     </section>
 
-    <!-- ==================== 4. 比赛规则 ==================== -->
+    <!-- ==================== 5. 比赛规则 ==================== -->
     <section class="db-section db-reveal" id="rules">
         <h2 class="db-section-title">演武规则</h2>
         <div class="db-section-line"></div>
@@ -467,7 +400,7 @@
         </div>
     </section>
 
-    <!-- ==================== 5. 双将选人 ==================== -->
+    <!-- ==================== 6. 双将选人 ==================== -->
     <section class="db-section db-reveal" id="draftPick">
         <h2 class="db-section-title">双将点兵</h2>
         <div class="db-section-line"></div>
@@ -489,29 +422,6 @@
             <div class="db-draft-available" id="draftAvailable" style="display:none;">
                 <div class="db-draft-available-title">可选选手</div>
                 <div id="availableList"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== 6. 战队展示 ==================== -->
-    <section class="db-section db-reveal" id="teamsDisplay">
-        <h2 class="db-section-title">龙虎争锋</h2>
-        <div class="db-section-line"></div>
-        <div class="db-teams-vs" id="teamsVs">
-            <div class="db-team-panel" id="teamPanelA">
-                <div class="db-team-header">
-                    <div class="db-team-name" id="teamPanelAName">南军</div>
-                    <div class="db-team-count" id="teamPanelACount">0 / 12 人</div>
-                </div>
-                <div class="db-team-roster" id="teamPanelARoster"></div>
-            </div>
-            <div class="db-vs-divider">VS</div>
-            <div class="db-team-panel" id="teamPanelB">
-                <div class="db-team-header">
-                    <div class="db-team-name" id="teamPanelBName">北军</div>
-                    <div class="db-team-count" id="teamPanelBCount">0 / 12 人</div>
-                </div>
-                <div class="db-team-roster" id="teamPanelBRoster"></div>
             </div>
         </div>
     </section>
@@ -551,21 +461,6 @@
         </div>
     </section>
 
-    <!-- ==================== 11. 报名入口 ==================== -->
-    <section class="db-section db-reveal" id="register">
-        <h2 class="db-section-title">加入演武</h2>
-        <div class="db-section-line"></div>
-        <div class="db-register">
-            <div class="db-register-box">
-                <div class="db-register-count" id="registerCount">0</div>
-                <div class="db-register-label">已报名参赛</div>
-                <div id="registerAction">
-                    <button class="db-register-btn join" id="btnRegister" onclick="doRegister()">⚔ 报名参赛</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
 </div>
 
 <!-- 页尾 -->
@@ -573,6 +468,7 @@
 <div th:replace="~{fragments/footer :: backToTop}"></div>
 <th:block th:replace="~{fragments/footer :: scripts(auth=true)}"></th:block>
 <script src="/js/ph-dialog.js"></script>
+<script th:src="@{/js/activity-timeline.js}"></script>
 <script>
 (function() {
     var slug = 'draft-battle-1';
@@ -582,7 +478,6 @@
 
     // ==================== Init ====================
     loadEventStatus();
-    initParticles();
     initScrollReveal();
 
     function loadEventStatus() {
@@ -597,39 +492,48 @@
     }
 
     function renderAll(data) {
-        renderStatusBadge(data);
         renderRegister(data);
         renderDraft(data);
-        renderTeams(data);
         renderSchedule(data.schedule || []);
         renderMatchHistory(data.matchHistory || []);
         renderRankings(data.rankings || {});
         renderHonors(data.honors || []);
     }
 
-    // ==================== Status Badge ====================
-    function renderStatusBadge(data) {
-        var el = document.getElementById('eventStatusBadge');
-        var teams = data.teams || [];
-        var phase = data.draftPhase || 'WAITING';
-        var cls = 'db-status-registering', txt = '报名中';
-
-        if (phase === 'COMPLETED') {
-            cls = 'db-status-ongoing'; txt = '比赛中';
-        }
-        if (teams.length > 0 && phase === 'DRAFTING') {
-            cls = 'db-status-ongoing'; txt = '选秀中';
-        }
-        el.innerHTML = '<span class="db-status-badge ' + cls + '">' + txt + '</span>';
-    }
-
     // ==================== Registration ====================
+    var REGISTER_LIMIT = 22;
     function renderRegister(data) {
-        document.getElementById('registerCount').textContent = data.totalRegistered || 0;
+        var count = data.totalRegistered || 0;
+        var pct = Math.min(100, Math.round(count / REGISTER_LIMIT * 100));
+        document.getElementById('registerCount').textContent = count;
+        var bar = document.getElementById('registerBar');
+        bar.style.width = pct + '%';
+        if (pct >= 100) bar.classList.add('full');
+
+        // Render leaders from judges data
+        var leadersEl = document.getElementById('registerLeaders');
+        var judges = data.judges || [];
+        if (judges.length > 0) {
+            var html = '';
+            for (var i = 0; i < judges.length; i++) {
+                var j = judges[i];
+                var avatar = j.avatar || '/images/default-avatar.png';
+                html += '<div class="db-register-leader">'
+                    + '<img class="db-register-leader-avatar" src="' + escAttr(avatar) + '" alt="" onerror="this.style.display=\'none\'">'
+                    + '<div class="db-register-leader-info">'
+                    + '<div class="db-register-leader-name">' + escHtml(j.name || '') + '</div>'
+                    + '<div class="db-register-leader-role">' + escHtml(j.roleTitle || '队长') + '</div>'
+                    + '</div></div>';
+            }
+            leadersEl.innerHTML = html;
+        }
+
         var action = document.getElementById('registerAction');
         if (data.isRegistered) {
             action.innerHTML = '<button class="db-register-btn joined">✓ 已报名</button>'
                 + '<br><button class="db-register-btn cancel" onclick="doCancel()">取消报名</button>';
+        } else if (count >= REGISTER_LIMIT) {
+            action.innerHTML = '<button class="db-register-btn cancel" disabled>名额已满</button>';
         } else {
             action.innerHTML = '<button class="db-register-btn join" onclick="doRegister()">⚔ 报名参赛</button>';
         }
@@ -746,43 +650,6 @@
         })
         .catch(function() { alert('选人失败'); });
     };
-
-    // ==================== Teams Display ====================
-    function renderTeams(data) {
-        var teams = data.teams || [];
-        var teamA = null, teamB = null;
-        for (var i = 0; i < teams.length; i++) {
-            if (teams[i].teamSide === 'A') teamA = teams[i];
-            if (teams[i].teamSide === 'B') teamB = teams[i];
-        }
-
-        renderTeamPanel('A', teamA, 'teamPanelA');
-        renderTeamPanel('B', teamB, 'teamPanelB');
-    }
-
-    function renderTeamPanel(side, team, prefix) {
-        if (!team) return;
-        document.getElementById(prefix + 'Name').textContent = team.teamName || (side === 'A' ? '南军' : '北军');
-        var members = team.members || [];
-        document.getElementById(prefix + 'Count').textContent = members.length + ' / 12 人';
-
-        var html = '';
-        // Captain first
-        html += renderPlayerCard({ nickname: team.captainName, avatar: team.captainAvatar, role: '队长' });
-        for (var i = 0; i < members.length; i++) {
-            html += renderPlayerCard({ nickname: members[i].nickname, avatar: members[i].avatar, role: '队员 #' + (i + 1) });
-        }
-        document.getElementById(prefix + 'Roster').innerHTML = html || '<div class="db-empty">暂无成员</div>';
-    }
-
-    function renderPlayerCard(p) {
-        var avatar = p.avatar || '/images/default-avatar.png';
-        return '<div class="db-player-card">'
-            + '<img class="db-player-avatar" src="' + escAttr(avatar) + '" alt="" onerror="this.style.background=\'var(--db-card)\'">'
-            + '<div><div class="db-player-name">' + escHtml(p.nickname || '') + '</div>'
-            + '<div class="db-player-role">' + escHtml(p.role || '') + '</div></div>'
-            + '</div>';
-    }
 
     // ==================== Schedule ====================
     function renderSchedule(schedule) {
@@ -917,19 +784,6 @@
                 + '</div>';
         }
         el.innerHTML = html;
-    }
-
-    // ==================== Particles ====================
-    function initParticles() {
-        var container = document.getElementById('dbParticles');
-        for (var i = 0; i < 30; i++) {
-            var p = document.createElement('div');
-            p.className = 'db-particle';
-            p.style.left = Math.random() * 100 + '%';
-            p.style.animationDelay = Math.random() * 6 + 's';
-            p.style.animationDuration = (4 + Math.random() * 4) + 's';
-            container.appendChild(p);
-        }
     }
 
     // ==================== Scroll Reveal ====================

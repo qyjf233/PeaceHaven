@@ -182,20 +182,27 @@ public class DataInitializer implements ApplicationRunner {
             // 赛程时间线
             String timelineJson = "["
                 + "{\"label\":\"报名期\",\"icon\":\"📋\",\"phase\":\"register\",\"start\":\"2026-08-01T00:00\",\"end\":\"2026-08-10T23:59\"},"
-                + "{\"label\":\"选秀\",\"icon\":\"⚔️\",\"phase\":\"draft\",\"start\":\"2026-08-11T20:00\",\"end\":\"2026-08-11T23:59\"},"
-                + "{\"label\":\"预选赛\",\"icon\":\"🏁\",\"phase\":\"qualifier\",\"start\":\"2026-08-15T20:00\",\"end\":\"2026-08-15T23:59\"},"
-                + "{\"label\":\"决赛\",\"icon\":\"🏆\",\"phase\":\"finals\",\"start\":\"2026-08-22T20:00\",\"end\":\"2026-08-22T23:59\"}"
+                + "{\"label\":\"第一场\",\"icon\":\"⚔️\",\"phase\":\"firstRound\",\"start\":\"2026-08-15T20:00\",\"end\":\"2026-08-15T23:59\"},"
+                + "{\"label\":\"第二场\",\"icon\":\"⚔️\",\"phase\":\"secondRound\",\"start\":\"2026-08-18T20:00\",\"end\":\"2026-08-18T23:59\"},"
+                + "{\"label\":\"第三场\",\"icon\":\"⚔️\",\"phase\":\"thirdRound\",\"start\":\"2026-08-22T20:00\",\"end\":\"2026-08-22T23:59\"},"
+                + "{\"label\":\"第四场\",\"icon\":\"⚔️\",\"phase\":\"fourthRound\",\"start\":\"2026-08-25T20:00\",\"end\":\"2026-08-25T23:59\"},"
+                + "{\"label\":\"颁奖典礼\",\"icon\":\"🏆\",\"phase\":\"awards\",\"start\":\"2026-08-28T20:00\",\"end\":\"2026-08-28T23:59\"}"
                 + "]";
 
             // 比赛日程
             String scheduleJson = "["
-                + "{\"round\":\"预选赛\",\"date\":\"2026-08-15\",\"time\":\"20:00\",\"teamA\":\"南军\",\"teamB\":\"北军\",\"status\":\"WAITING\"},"
-                + "{\"round\":\"决赛\",\"date\":\"2026-08-22\",\"time\":\"20:00\",\"teamA\":\"待定\",\"teamB\":\"待定\",\"status\":\"WAITING\"}"
+                + "{\"round\":\"第一场\",\"date\":\"2026-08-15\",\"time\":\"20:00\",\"teamA\":\"南军\",\"teamB\":\"北军\",\"status\":\"WAITING\"},"
+                + "{\"round\":\"第二场\",\"date\":\"2026-08-18\",\"time\":\"20:00\",\"teamA\":\"南军\",\"teamB\":\"北军\",\"status\":\"WAITING\"},"
+                + "{\"round\":\"第三场\",\"date\":\"2026-08-22\",\"time\":\"20:00\",\"teamA\":\"南军\",\"teamB\":\"北军\",\"status\":\"WAITING\"},"
+                + "{\"round\":\"第四场\",\"date\":\"2026-08-25\",\"time\":\"20:00\",\"teamA\":\"南军\",\"teamB\":\"北军\",\"status\":\"WAITING\"}"
                 + "]";
 
             // 战绩记录
             String matchHistoryJson = "["
-                + "{\"index\":0,\"round\":\"预选赛\",\"teamAName\":\"南军\",\"teamBName\":\"北军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-15\"}"
+                + "{\"index\":0,\"round\":\"第一场\",\"teamAName\":\"南军\",\"teamBName\":\"北军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-15\"},"
+                + "{\"index\":1,\"round\":\"第二场\",\"teamAName\":\"南军\",\"teamBName\":\"北军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-18\"},"
+                + "{\"index\":2,\"round\":\"第三场\",\"teamAName\":\"南军\",\"teamBName\":\"北军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-22\"},"
+                + "{\"index\":3,\"round\":\"第四场\",\"teamAName\":\"南军\",\"teamBName\":\"北军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-25\"}"
                 + "]";
 
             // 排行榜
