@@ -181,29 +181,29 @@ public class DataInitializer implements ApplicationRunner {
         if (configRepository.findByActivityId(activity.getId()).isEmpty()) {
             // 赛程时间线
             String timelineJson = "["
-                + "{\"label\":\"第一轮报名\",\"icon\":\"📋\",\"phase\":\"register1\",\"start\":\"2026-07-26T08:00\",\"end\":\"2026-08-10T23:59\"},"
-                + "{\"label\":\"第一场\",\"icon\":\"⚔️\",\"phase\":\"firstRound\",\"start\":\"2026-08-15T20:00\",\"end\":\"2026-08-15T23:59\"},"
-                + "{\"label\":\"第二场\",\"icon\":\"⚔️\",\"phase\":\"secondRound\",\"start\":\"2026-08-18T20:00\",\"end\":\"2026-08-18T23:59\"},"
-                + "{\"label\":\"第二轮报名\",\"icon\":\"📋\",\"phase\":\"register2\",\"start\":\"2026-08-19T08:00\",\"end\":\"2026-08-20T23:59\"},"
-                + "{\"label\":\"第三场\",\"icon\":\"⚔️\",\"phase\":\"thirdRound\",\"start\":\"2026-08-22T20:00\",\"end\":\"2026-08-22T23:59\"},"
-                + "{\"label\":\"第四场\",\"icon\":\"⚔️\",\"phase\":\"fourthRound\",\"start\":\"2026-08-25T20:00\",\"end\":\"2026-08-25T23:59\"},"
-                + "{\"label\":\"颁奖典礼\",\"icon\":\"🏆\",\"phase\":\"awards\",\"start\":\"2026-08-28T20:00\",\"end\":\"2026-08-28T23:59\"}"
+                + "{\"label\":\"第一轮报名\",\"icon\":\"📋\",\"phase\":\"register1\",\"start\":\"2026-07-27T00:00\",\"end\":\"2026-07-31T23:30\"},"
+                + "{\"label\":\"第一场\",\"icon\":\"⚔️\",\"phase\":\"firstRound\",\"start\":\"2026-08-01T00:00\",\"end\":\"2026-08-01T23:59\"},"
+                + "{\"label\":\"第二场\",\"icon\":\"⚔️\",\"phase\":\"secondRound\",\"start\":\"2026-08-02T00:00\",\"end\":\"2026-08-02T23:59\"},"
+                + "{\"label\":\"第二轮报名\",\"icon\":\"📋\",\"phase\":\"register2\",\"start\":\"2026-08-03T00:00\",\"end\":\"2026-08-07T23:30\"},"
+                + "{\"label\":\"第三场\",\"icon\":\"⚔️\",\"phase\":\"thirdRound\",\"start\":\"2026-08-08T00:00\",\"end\":\"2026-08-08T23:59\"},"
+                + "{\"label\":\"第四场\",\"icon\":\"⚔️\",\"phase\":\"fourthRound\",\"start\":\"2026-08-09T20:00\",\"end\":\"2026-08-09T22:00\"},"
+                + "{\"label\":\"颁奖典礼\",\"icon\":\"🏆\",\"phase\":\"awards\",\"start\":\"2026-08-09T22:01\",\"end\":\"2026-08-09T23:59\"}"
                 + "]";
 
             // 比赛日程
             String scheduleJson = "["
-                + "{\"round\":\"第一场\",\"date\":\"2026-08-15\",\"time\":\"20:00\",\"teamA\":\"薯家军\",\"teamB\":\"嘟家军\",\"status\":\"WAITING\"},"
-                + "{\"round\":\"第二场\",\"date\":\"2026-08-18\",\"time\":\"20:00\",\"teamA\":\"薯家军\",\"teamB\":\"嘟家军\",\"status\":\"WAITING\"},"
-                + "{\"round\":\"第三场\",\"date\":\"2026-08-22\",\"time\":\"20:00\",\"teamA\":\"薯家军\",\"teamB\":\"嘟家军\",\"status\":\"WAITING\"},"
-                + "{\"round\":\"第四场\",\"date\":\"2026-08-25\",\"time\":\"20:00\",\"teamA\":\"薯家军\",\"teamB\":\"嘟家军\",\"status\":\"WAITING\"}"
+                + "{\"round\":\"第一场\",\"date\":\"2026-08-01\",\"time\":\"00:00\",\"teamA\":\"薯家军\",\"teamB\":\"嘟家军\",\"status\":\"WAITING\"},"
+                + "{\"round\":\"第二场\",\"date\":\"2026-08-02\",\"time\":\"00:00\",\"teamA\":\"薯家军\",\"teamB\":\"嘟家军\",\"status\":\"WAITING\"},"
+                + "{\"round\":\"第三场\",\"date\":\"2026-08-08\",\"time\":\"00:00\",\"teamA\":\"薯家军\",\"teamB\":\"嘟家军\",\"status\":\"WAITING\"},"
+                + "{\"round\":\"第四场\",\"date\":\"2026-08-09\",\"time\":\"00:00\",\"teamA\":\"薯家军\",\"teamB\":\"嘟家军\",\"status\":\"WAITING\"}"
                 + "]";
 
             // 战绩记录
             String matchHistoryJson = "["
-                + "{\"index\":0,\"round\":\"第一场\",\"teamAName\":\"薯家军\",\"teamBName\":\"嘟家军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-15\"},"
-                + "{\"index\":1,\"round\":\"第二场\",\"teamAName\":\"薯家军\",\"teamBName\":\"嘟家军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-18\"},"
-                + "{\"index\":2,\"round\":\"第三场\",\"teamAName\":\"薯家军\",\"teamBName\":\"嘟家军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-22\"},"
-                + "{\"index\":3,\"round\":\"第四场\",\"teamAName\":\"薯家军\",\"teamBName\":\"嘟家军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-25\"}"
+                + "{\"index\":0,\"round\":\"第一场\",\"teamAName\":\"薯家军\",\"teamBName\":\"嘟家军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-01\"},"
+                + "{\"index\":1,\"round\":\"第二场\",\"teamAName\":\"薯家军\",\"teamBName\":\"嘟家军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-02\"},"
+                + "{\"index\":2,\"round\":\"第三场\",\"teamAName\":\"薯家军\",\"teamBName\":\"嘟家军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-08\"},"
+                + "{\"index\":3,\"round\":\"第四场\",\"teamAName\":\"薯家军\",\"teamBName\":\"嘟家军\",\"scoreA\":0,\"scoreB\":0,\"winner\":null,\"status\":\"WAITING\",\"date\":\"2026-08-09\"}"
                 + "]";
 
             // 排行榜
