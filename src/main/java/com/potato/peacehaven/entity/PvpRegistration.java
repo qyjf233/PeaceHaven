@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "pvp_registration",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"activity_id", "user_id"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"activity_id", "user_id", "round_id"}))
 @Comment("PVP通用报名表")
 @Getter
 @Setter
@@ -32,6 +32,12 @@ public class PvpRegistration {
     @Column(name = "activity_id", nullable = false)
     @Comment("关联活动ID")
     private Long activityId;
+
+    /** 场次ID（用于区分不同轮次报名） */
+    @Column(name = "round_id", nullable = false)
+    @Builder.Default
+    @Comment("场次ID")
+    private Integer roundId = 1;
 
     /** 报名用户 */
     @ManyToOne(fetch = FetchType.LAZY)

@@ -42,19 +42,26 @@ public class NancyDraftController {
 
     /**
      * 报名参赛
+     * body: { "roundId": 1 }
      */
     @PostMapping("/{slug}/register")
     public ResponseEntity<Map<String, Object>> register(
-            @PathVariable String slug, HttpSession session) {
+            @PathVariable String slug,
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpSession session) {
         User user = userService.getCurrentUser(session);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
         }
 
         Activity activity = activityService.getActivityBySlug(slug);
+        int roundId = 1;
+        if (body != null && body.get("roundId") != null) {
+            roundId = Integer.parseInt(body.get("roundId").toString());
+        }
 
         try {
-            Map<String, Object> result = nancyDraftService.register(activity.getId(), user);
+            Map<String, Object> result = nancyDraftService.register(activity.getId(), user, roundId);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -63,19 +70,26 @@ public class NancyDraftController {
 
     /**
      * 取消报名
+     * body: { "roundId": 1 }
      */
     @PostMapping("/{slug}/cancel")
     public ResponseEntity<Map<String, Object>> cancel(
-            @PathVariable String slug, HttpSession session) {
+            @PathVariable String slug,
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpSession session) {
         User user = userService.getCurrentUser(session);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
         }
 
         Activity activity = activityService.getActivityBySlug(slug);
+        int roundId = 1;
+        if (body != null && body.get("roundId") != null) {
+            roundId = Integer.parseInt(body.get("roundId").toString());
+        }
 
         try {
-            Map<String, Object> result = nancyDraftService.cancelRegistration(activity.getId(), user);
+            Map<String, Object> result = nancyDraftService.cancelRegistration(activity.getId(), user, roundId);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

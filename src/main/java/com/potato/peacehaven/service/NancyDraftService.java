@@ -34,47 +34,51 @@ public class NancyDraftService {
     // ==================== 报名 ====================
 
     /**
-     * 报名参赛
+     * 报名参赛（按轮次）
+     * @param roundId 轮次ID（1=第1、2场，2=第3、4场）
      */
     @Transactional
-    public Map<String, Object> register(Long activityId, User user) {
-        if (registrationRepository.existsByActivityIdAndUserId(activityId, user.getId())) {
-            throw new RuntimeException("你已经报名了");
+    public Map<String, Object> register(Long activityId, User user, int roundId) {
+        if (registrationRepository.existsByActivityIdAndUserIdAndRoundId(activityId, user.getId(), roundId)) {
+            throw new RuntimeException("你已经报名了（第" + roundId + "轮）");
         }
 
         PvpRegistration reg = PvpRegistration.builder()
                 .activityId(activityId)
                 .user(user)
+                .roundId(roundId)
                 .build();
         registrationRepository.save(reg);
 
-        long total = registrationRepository.countByActivityId(activityId);
-        log.info("[南希对抗赛] 用户 {} 报名 (当前{}人)", user.getNickname(), total);
+        long total = registrationRepository.countByActivityIdAndRoundId(activityId, roundId);
+        log.info("[南希对抗赛] 用户 {} 报名第{}轮 (当前{}人)", user.getNickname(), roundId, total);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("totalRegistered", total);
+        result.put("roundId", roundId);
         return result;
     }
 
     /**
-     * 取消报名
+     * 取消报名（按轮次）
      */
     @Transactional
-    public Map<String, Object> cancelRegistration(Long activityId, User user) {
-        var reg = registrationRepository.findByActivityIdAndUserId(activityId, user.getId());
+    public Map<String, Object> cancelRegistration(Long activityId, User user, int roundId) {
+        var reg = registrationRepository.findByActivityIdAndUserIdAndRoundId(activityId, user.getId(), roundId);
         if (reg.isEmpty()) {
-            throw new RuntimeException("你还没有报名");
+            throw new RuntimeException("你还没有报名（第" + roundId + "轮）");
         }
         registrationRepository.delete(reg.get());
         registrationRepository.flush();
 
-        long total = registrationRepository.countByActivityId(activityId);
-        log.info("[南希对抗赛] 用户 {} 取消报名 (当前{}人)", user.getNickname(), total);
+        long total = registrationRepository.countByActivityIdAndRoundId(activityId, roundId);
+        log.info("[南希对抗赛] 用户 {} 取消报名第{}轮 (当前{}人)", user.getNickname(), roundId, total);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("totalRegistered", total);
+        result.put("roundId", roundId);
         return result;
     }
 
@@ -94,7 +98,7 @@ public class NancyDraftService {
         NancyDraftTeam teamA = NancyDraftTeam.builder()
                 .activityId(activityId)
                 .teamSide("A")
-                .teamName(teamAName != null ? teamAName : "南军")
+                .teamName(teamAName != null ? teamAName : "薯家军")
                 .captainUserId(captainA.getId())
                 .captainName(captainA.getNickname())
                 .captainAvatar(captainA.getAvatar())
@@ -106,7 +110,7 @@ public class NancyDraftService {
         NancyDraftTeam teamB = NancyDraftTeam.builder()
                 .activityId(activityId)
                 .teamSide("B")
-                .teamName(teamBName != null ? teamBName : "北军")
+                .teamName(teamBName != null ? teamBName : "嘟家军")
                 .captainUserId(captainB.getId())
                 .captainName(captainB.getNickname())
                 .captainAvatar(captainB.getAvatar())
@@ -209,16 +213,22 @@ public class NancyDraftService {
     public Map<String, Object> getEventStatus(Long activityId, User currentUser) {
         Map<String, Object> result = new LinkedHashMap<>();
 
-        // 报名统计
-        long totalRegistered = registrationRepository.countByActivityId(activityId);
-        result.put("totalRegistered", totalRegistered);
+        // 报名统计（按轮次）
+        long totalR1 = registrationRepository.countByActivityIdAndRoundId(activityId, 1);
+        long totalR2 = registrationRepository.countByActivityIdAndRoundId(activityId, 2);
+        result.put("totalRegistered", totalR1);
+        result.put("totalRegisteredR1", totalR1);
+        result.put("totalRegisteredR2", totalR2);
 
-        // 用户报名状态
-        boolean isRegistered = false;
+        // 用户报名状态（按轮次）
+        boolean isRegisteredR1 = false, isRegisteredR2 = false;
         if (currentUser != null) {
-            isRegistered = registrationRepository.existsByActivityIdAndUserId(activityId, currentUser.getId());
+            isRegisteredR1 = registrationRepository.existsByActivityIdAndUserIdAndRoundId(activityId, currentUser.getId(), 1);
+            isRegisteredR2 = registrationRepository.existsByActivityIdAndUserIdAndRoundId(activityId, currentUser.getId(), 2);
         }
-        result.put("isRegistered", isRegistered);
+        result.put("isRegistered", isRegisteredR1);
+        result.put("isRegisteredR1", isRegisteredR1);
+        result.put("isRegisteredR2", isRegisteredR2);
 
         // 队伍/选秀状态
         List<NancyDraftTeam> teams = draftTeamRepository.findByActivityIdOrderByTeamSideAsc(activityId);

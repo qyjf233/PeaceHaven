@@ -219,59 +219,146 @@
         .db-honor-name { font-size: 1.1rem; font-weight: 700; }
 
         /* ========== Registration (加入演武) ========== */
-        .db-register { text-align: center; }
+        .db-register-grid { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+        /* 容器：动态光边 */
         .db-register-box {
-            background: var(--bg-card); border: 1px solid var(--db-border); border-radius: 12px;
-            padding: 40px; max-width: 560px; margin: 0 auto;
+            position: relative; flex: 1 1 320px; min-width: 0; max-width: 520px;
+            padding: 48px 32px 36px; border-radius: 16px;
+            background: var(--bg-card); overflow: hidden; z-index: 1;
+            transition: opacity 0.4s, filter 0.4s;
+            text-align: center;
         }
-        .db-register-progress-wrap { margin-bottom: 24px; }
-        .db-register-progress-header {
-            display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;
+        /* 非报名期：灰暗态 */
+        .db-register-box.closed {
+            opacity: 0.55; filter: saturate(0.3);
         }
-        .db-register-count { font-size: 2.6rem; font-weight: 900; color: var(--accent-gold); line-height: 1; }
-        .db-register-limit { font-size: 0.85rem; color: var(--text-muted); }
-        .db-register-bar {
-            width: 100%; height: 8px; background: var(--db-gold-dim); border-radius: 4px; overflow: hidden;
+        .db-register-box.closed::before { animation: none; opacity: 0.15; }
+        .db-register-box.closed .db-reg-particles { display: none; }
+        /* 内部粒子 */
+        .db-reg-particles { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: 16px; }
+        .db-reg-particle {
+            position: absolute; width: 3px; height: 3px; border-radius: 50%;
+            background: var(--accent-gold); opacity: 0;
+            animation: db-reg-float 4s ease-in-out infinite;
         }
+        .db-reg-particle:nth-child(1)  { left: 10%; animation-delay: 0s;    animation-duration: 5s; }
+        .db-reg-particle:nth-child(2)  { left: 25%; animation-delay: 0.8s;  animation-duration: 4.2s; }
+        .db-reg-particle:nth-child(3)  { left: 40%; animation-delay: 1.6s;  animation-duration: 5.5s; }
+        .db-reg-particle:nth-child(4)  { left: 55%; animation-delay: 0.4s;  animation-duration: 4.8s; }
+        .db-reg-particle:nth-child(5)  { left: 70%; animation-delay: 2.2s;  animation-duration: 5.2s; }
+        .db-reg-particle:nth-child(6)  { left: 85%; animation-delay: 1.2s;  animation-duration: 4.5s; }
+        .db-reg-particle:nth-child(7)  { left: 15%; animation-delay: 3s;    animation-duration: 5.8s; }
+        .db-reg-particle:nth-child(8)  { left: 50%; animation-delay: 0.6s;  animation-duration: 4s; }
+        .db-reg-particle:nth-child(9)  { left: 78%; animation-delay: 2.8s;  animation-duration: 5.4s; }
+        .db-reg-particle:nth-child(10) { left: 35%; animation-delay: 1.8s;  animation-duration: 4.6s; }
+        .db-reg-particle:nth-child(11) { left: 62%; animation-delay: 3.5s;  animation-duration: 5.1s; }
+        .db-reg-particle:nth-child(12) { left: 90%; animation-delay: 0.2s;  animation-duration: 4.3s; }
+        @keyframes db-reg-float {
+            0%   { bottom: -5%; opacity: 0; transform: translateX(0) scale(0.5); }
+            15%  { opacity: 0.7; }
+            50%  { opacity: 0.4; transform: translateX(12px) scale(1); }
+            85%  { opacity: 0.15; }
+            100% { bottom: 105%; opacity: 0; transform: translateX(-8px) scale(0.3); }
+        }
+        .db-register-box::before {
+            content: ''; position: absolute; inset: -2px; border-radius: 18px; z-index: -2;
+            background: conic-gradient(from 0deg, var(--accent-gold) 0%, transparent 15%, transparent 50%, var(--accent-primary) 65%, transparent 80%, var(--accent-gold) 100%);
+            animation: db-border-spin 4s linear infinite;
+        }
+        .db-register-box::after { content: ''; position: absolute; inset: 0; border-radius: 16px; z-index: -1; background: var(--bg-card); }
+        @keyframes db-border-spin { to { transform: rotate(360deg); } }
+        /* 装饰角标 */
+        .db-reg-corner { position: absolute; width: 28px; height: 28px; z-index: 2; border-color: var(--accent-gold); border-style: solid; border-width: 0; opacity: 0.4; }
+        .db-reg-corner.tl { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
+        .db-reg-corner.tr { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
+        .db-reg-corner.bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
+        .db-reg-corner.br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
+        /* 人数 */
+        .db-register-progress-wrap { margin-bottom: 28px; position: relative; z-index: 2; }
+        .db-register-progress-header { display: flex; justify-content: center; align-items: baseline; gap: 6px; margin-bottom: 14px; }
+        .db-register-count {
+            font-size: 3.2rem; font-weight: 900; line-height: 1;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-primary), var(--accent-gold));
+            background-size: 200% 200%;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: db-gold-shift 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 8px var(--db-gold-glow));
+        }
+        @keyframes db-gold-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .db-register-limit { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; }
+        /* 进度条：光波扫过 */
+        .db-register-bar { width: 100%; height: 6px; background: var(--db-gold-dim); border-radius: 3px; overflow: hidden; }
         .db-register-bar-fill {
-            height: 100%; border-radius: 4px; transition: width 0.5s ease;
-            background: linear-gradient(90deg, var(--accent-gold), var(--accent-primary));
+            height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-primary)); position: relative;
         }
+        .db-register-bar-fill::after {
+            content: ''; position: absolute; top: 0; left: -40%; width: 40%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: db-bar-shimmer 2s ease-in-out infinite;
+        }
+        @keyframes db-bar-shimmer { 0% { left: -40%; } 100% { left: 140%; } }
         .db-register-bar-fill.full { background: linear-gradient(90deg, #66BB6A, #4CAF50); }
-        .db-register-leaders {
-            display: flex; gap: 16px; justify-content: center; margin: 24px 0;
-        }
+        /* 队长卡片 */
+        .db-register-leaders { display: flex; gap: 20px; justify-content: center; margin: 28px 0; position: relative; z-index: 2; }
         .db-register-leader {
-            display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-            background: var(--db-gold-dim); border-radius: 10px; border: 1px solid var(--db-border);
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            padding: 16px 20px 12px; border-radius: 12px;
+            background: var(--db-gold-dim); border: 1px solid var(--db-border); transition: all 0.3s; min-width: 120px;
         }
+        .db-register-leader:hover { border-color: var(--accent-gold); transform: translateY(-3px); }
+        .db-register-leader-avatar-wrap { position: relative; width: 52px; height: 52px; }
         .db-register-leader-avatar {
-            width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
-            border: 2px solid var(--accent-gold); background: var(--bg-primary);
+            width: 52px; height: 52px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--accent-gold); background: var(--bg-primary); position: relative; z-index: 1;
         }
-        .db-register-leader-info { text-align: left; }
-        .db-register-leader-name { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
-        .db-register-leader-role { font-size: 0.72rem; color: var(--accent-gold); letter-spacing: 1px; }
+        .db-register-leader-avatar-wrap::before {
+            content: ''; position: absolute; inset: -3px; border-radius: 50%; z-index: 0;
+            background: conic-gradient(from 0deg, var(--accent-gold), var(--accent-primary), var(--accent-gold));
+            animation: db-avatar-ring 3s linear infinite; opacity: 0.6;
+        }
+        @keyframes db-avatar-ring { to { transform: rotate(360deg); } }
+        .db-register-leader-info { text-align: center; }
+        .db-register-leader-name { font-size: 0.92rem; font-weight: 700; color: var(--text-primary); }
+        .db-register-leader-role { font-size: 0.7rem; color: var(--accent-gold); letter-spacing: 2px; margin-top: 2px; }
+        /* 报名按钮 */
+        .db-register-actions { position: relative; z-index: 2; margin-top: 4px; }
         .db-register-btn {
-            padding: 14px 48px; font-size: 1rem; font-weight: 700; border-radius: 4px;
-            cursor: pointer; transition: all 0.3s; border: none; font-family: inherit;
-            letter-spacing: 3px;
+            padding: 15px 52px; font-size: 1rem; font-weight: 800; border-radius: 6px;
+            cursor: pointer; transition: all 0.35s; border: none; font-family: inherit;
+            letter-spacing: 4px; position: relative; overflow: hidden;
         }
         .db-register-btn.join {
-            background: linear-gradient(135deg, var(--db-red) 0%, #8b1a1a 100%);
-            color: #fff; box-shadow: 0 4px 20px rgba(184,50,50,0.3);
+            background: linear-gradient(135deg, var(--accent-gold) 0%, var(--accent-primary) 50%, var(--accent-gold) 100%);
+            background-size: 200% 200%; color: var(--bg-primary);
+            box-shadow: 0 4px 24px var(--db-gold-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+            animation: db-btn-glow 3s ease-in-out infinite;
         }
-        .db-register-btn.join:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(184,50,50,0.5); }
+        .db-register-btn.join::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent); transition: left 0.5s;
+        }
+        .db-register-btn.join:hover::before { left: 140%; }
+        .db-register-btn.join:hover { transform: translateY(-3px); box-shadow: 0 8px 36px var(--db-gold-glow); }
+        @keyframes db-btn-glow {
+            0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; }
+        }
         .db-register-btn.cancel {
             background: transparent; color: var(--text-muted);
-            border: 1px solid var(--db-border); margin-top: 12px; font-size: 0.85rem;
-            padding: 8px 24px;
+            border: 1px solid var(--db-border); margin-top: 14px; font-size: 0.82rem;
+            padding: 8px 28px; letter-spacing: 2px;
         }
         .db-register-btn.cancel:hover { border-color: var(--db-red); color: var(--db-red); }
         .db-register-btn.joined {
-            background: rgba(76,175,80,0.15); color: #66BB6A; border: 1px solid rgba(76,175,80,0.3);
-            cursor: default;
+            background: rgba(76,175,80,0.12); color: #66BB6A;
+            border: 1px solid rgba(76,175,80,0.25); cursor: default;
         }
+        .db-register-btn.loading {
+            background: var(--db-gold-dim); color: var(--text-muted);
+            border: 1px solid var(--db-border); cursor: wait; pointer-events: none;
+            animation: db-loading-pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes db-loading-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         /* ========== Footer Override ========== */
         .site-footer { background: var(--bg-secondary) !important; border-top: 1px solid var(--db-border) !important; }
@@ -301,11 +388,38 @@
             .db-intro-quote { font-size: 1.1rem; }
             .db-intro-body { font-size: 0.88rem; }
 
-            .db-register-box { padding: 28px 20px; }
-            .db-register-count { font-size: 2rem; }
-            .db-register-btn { padding: 12px 36px; font-size: 0.9rem; }
-            .db-register-leaders { flex-direction: column; gap: 10px; }
-            .db-register-leader { justify-content: center; }
+            .db-register-grid { flex-direction: column; align-items: stretch; gap: 16px; }
+            .db-register-box {
+                max-width: 100%; width: 100%;
+                padding: 22px 18px 20px; border-radius: 12px;
+                flex: none; /* 不拉伸，高度由内容决定 */
+            }
+            .db-register-progress-wrap { margin-bottom: 16px; }
+            .db-register-progress-header { margin-bottom: 10px; gap: 4px; }
+            .db-register-count { font-size: 2.2rem; }
+            .db-register-limit { font-size: 0.85rem; }
+            .db-register-bar { height: 5px; border-radius: 3px; }
+            .db-register-leaders {
+                margin: 16px 0; gap: 10px;
+                flex-direction: column; align-items: stretch;
+            }
+            .db-register-leader {
+                flex-direction: row; padding: 10px 14px; gap: 12px;
+                border-radius: 10px; min-width: unset;
+            }
+            .db-register-leader-avatar-wrap { width: 40px; height: 40px; flex-shrink: 0; }
+            .db-register-leader-avatar { width: 40px; height: 40px; }
+            .db-register-leader-info { text-align: left; }
+            .db-register-leader-name { font-size: 0.92rem; }
+            .db-register-leader-role { font-size: 0.72rem; letter-spacing: 1.5px; }
+            .db-register-actions { margin-top: 2px; }
+            .db-register-btn { padding: 12px 0; width: 100%; font-size: 0.9rem; letter-spacing: 3px; }
+            .db-register-btn.cancel { margin-top: 10px; padding: 8px 0; width: 100%; }
+            .db-reg-corner { width: 20px; height: 20px; }
+            .db-reg-corner.tl { top: 8px; left: 8px; }
+            .db-reg-corner.tr { top: 8px; right: 8px; }
+            .db-reg-corner.bl { bottom: 8px; left: 8px; }
+            .db-reg-corner.br { bottom: 8px; right: 8px; }
 
             .db-draft-side { padding: 16px; }
             .db-draft-captain-avatar { width: 48px; height: 48px; }
@@ -338,20 +452,53 @@
     <section class="db-section db-reveal" id="register">
         <h2 class="db-section-title">加入演武</h2>
         <div class="db-section-line"></div>
-        <div class="db-register">
-            <div class="db-register-box">
+        <div class="db-register-grid">
+            <!-- 第1、2场次 -->
+            <div class="db-register-box" id="regBox1">
+                <div class="db-reg-particles">
+                    <i class="db-reg-particle"></i><i class="db-reg-particle"></i><i class="db-reg-particle"></i>
+                    <i class="db-reg-particle"></i><i class="db-reg-particle"></i><i class="db-reg-particle"></i>
+                    <i class="db-reg-particle"></i><i class="db-reg-particle"></i><i class="db-reg-particle"></i>
+                    <i class="db-reg-particle"></i><i class="db-reg-particle"></i><i class="db-reg-particle"></i>
+                </div>
+                <span class="db-reg-corner tl"></span><span class="db-reg-corner tr"></span>
+                <span class="db-reg-corner bl"></span><span class="db-reg-corner br"></span>
                 <div class="db-register-progress-wrap">
                     <div class="db-register-progress-header">
-                        <span class="db-register-count" id="registerCount">0</span>
-                        <span class="db-register-limit">/ 22 名额</span>
+                        <span class="db-register-count" id="registerCount1">0</span>
+                        <span class="db-register-limit">/ 22 名额（第1、2场次）</span>
                     </div>
                     <div class="db-register-bar">
-                        <div class="db-register-bar-fill" id="registerBar" style="width:0%"></div>
+                        <div class="db-register-bar-fill" id="registerBar1" style="width:0%"></div>
                     </div>
                 </div>
-                <div class="db-register-leaders" id="registerLeaders"></div>
-                <div id="registerAction">
-                    <button class="db-register-btn join" id="btnRegister" onclick="doRegister()">⚔ 报名参赛</button>
+                <div class="db-register-leaders" id="registerLeaders1"></div>
+                <div class="db-register-actions" id="registerAction1">
+                    <button class="db-register-btn loading">加载中...</button>
+                </div>
+            </div>
+            <!-- 第3、4场次 -->
+            <div class="db-register-box" id="regBox2">
+                <div class="db-reg-particles">
+                    <i class="db-reg-particle"></i><i class="db-reg-particle"></i><i class="db-reg-particle"></i>
+                    <i class="db-reg-particle"></i><i class="db-reg-particle"></i><i class="db-reg-particle"></i>
+                    <i class="db-reg-particle"></i><i class="db-reg-particle"></i><i class="db-reg-particle"></i>
+                    <i class="db-reg-particle"></i><i class="db-reg-particle"></i><i class="db-reg-particle"></i>
+                </div>
+                <span class="db-reg-corner tl"></span><span class="db-reg-corner tr"></span>
+                <span class="db-reg-corner bl"></span><span class="db-reg-corner br"></span>
+                <div class="db-register-progress-wrap">
+                    <div class="db-register-progress-header">
+                        <span class="db-register-count" id="registerCount2">0</span>
+                        <span class="db-register-limit">/ 22 名额（第3、4场次）</span>
+                    </div>
+                    <div class="db-register-bar">
+                        <div class="db-register-bar-fill" id="registerBar2" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="db-register-leaders" id="registerLeaders2"></div>
+                <div class="db-register-actions" id="registerAction2">
+                    <button class="db-register-btn loading">加载中...</button>
                 </div>
             </div>
         </div>
@@ -359,28 +506,22 @@
 
     <!-- ==================== 4. 赛事介绍 ==================== -->
     <section class="db-section db-reveal" id="introduction">
-        <h2 class="db-section-title">何为点兵演武</h2>
+        <h2 class="db-section-title">点兵演武</h2>
         <div class="db-section-line"></div>
         <div class="db-intro">
             <p class="db-intro-quote">
                 点兵者，择良将而战。<br>演武者，以实力定乾坤。
             </p>
             <p class="db-intro-body">
-                本届赛事采用双将点兵机制，由两位队长轮流选拔队员，组成两支精锐战队，在南希战场展开最终对决。<br>
+                本届赛事采用双将点兵机制，由两位队长（抖音薯片、福气满满）轮流选拔队员，组成两支队伍，在南希战场展开最终对决。<br>
                 这不仅是一场操作的较量，更是战术、配合与团队精神的终极比拼。
             </p>
         </div>
-    </section>
-
-    <!-- ==================== 5. 比赛规则 ==================== -->
-    <section class="db-section db-reveal" id="rules">
-        <h2 class="db-section-title">演武规则</h2>
-        <div class="db-section-line"></div>
-        <div class="db-rules-grid">
+        <div class="db-rules-grid" style="margin-top: 36px;">
             <div class="db-rule-card">
                 <div class="db-rule-icon">⚔️</div>
                 <div class="db-rule-title">比赛模式</div>
-                <div class="db-rule-desc">南希市控团队竞技<br>占领据点、歼灭敌军</div>
+                <div class="db-rule-desc">南希市控团队竞技<br>狂战模式、激情对战</div>
             </div>
             <div class="db-rule-card">
                 <div class="db-rule-icon">👥</div>
@@ -389,13 +530,13 @@
             </div>
             <div class="db-rule-card">
                 <div class="db-rule-icon">🏴</div>
-                <div class="db-rule-title">组队方式</div>
-                <div class="db-rule-desc">裁判指定 A/B 队长<br>轮流选人组建战队</div>
+                <div class="db-rule-title">分组方式</div>
+                <div class="db-rule-desc">抖音薯片 & 福气满满<br>轮流选人组建战队</div>
             </div>
             <div class="db-rule-card">
                 <div class="db-rule-icon">🏆</div>
-                <div class="db-rule-title">胜负判定</div>
-                <div class="db-rule-desc">积分领先者胜<br>以团队总分定乾坤</div>
+                <div class="db-rule-title">特色颁奖</div>
+                <div class="db-rule-desc">不是最强？没关系没关系<br>特设多个头衔，等你来拿</div>
             </div>
         </div>
     </section>
@@ -408,13 +549,13 @@
             <div class="db-draft-arena" id="draftArena">
                 <div class="db-draft-side team-a" id="draftSideA">
                     <div class="db-draft-captain" id="captainA"></div>
-                    <div class="db-draft-team-name" id="teamAName">南军</div>
+                    <div class="db-draft-team-name" id="teamAName">薯家军</div>
                     <ul class="db-draft-members" id="membersA"></ul>
                 </div>
                 <div class="db-draft-vs">VS</div>
                 <div class="db-draft-side team-b" id="draftSideB">
                     <div class="db-draft-captain" id="captainB"></div>
-                    <div class="db-draft-team-name" id="teamBName">北军</div>
+                    <div class="db-draft-team-name" id="teamBName">嘟家军</div>
                     <ul class="db-draft-members" id="membersB"></ul>
                 </div>
             </div>
@@ -502,68 +643,120 @@
 
     // ==================== Registration ====================
     var REGISTER_LIMIT = 22;
-    function renderRegister(data) {
-        var count = data.totalRegistered || 0;
-        var pct = Math.min(100, Math.round(count / REGISTER_LIMIT * 100));
-        document.getElementById('registerCount').textContent = count;
-        var bar = document.getElementById('registerBar');
-        bar.style.width = pct + '%';
-        if (pct >= 100) bar.classList.add('full');
 
-        // Render leaders from judges data
-        var leadersEl = document.getElementById('registerLeaders');
-        var judges = data.judges || [];
-        if (judges.length > 0) {
-            var html = '';
-            for (var i = 0; i < judges.length; i++) {
-                var j = judges[i];
-                var avatar = j.avatar || '/images/default-avatar.png';
-                html += '<div class="db-register-leader">'
-                    + '<img class="db-register-leader-avatar" src="' + escAttr(avatar) + '" alt="" onerror="this.style.display=\'none\'">'
-                    + '<div class="db-register-leader-info">'
-                    + '<div class="db-register-leader-name">' + escHtml(j.name || '') + '</div>'
-                    + '<div class="db-register-leader-role">' + escHtml(j.roleTitle || '队长') + '</div>'
-                    + '</div></div>';
-            }
-            leadersEl.innerHTML = html;
+    /** 判断当前哪一轮报名是开放的 */
+    function getOpenRound() {
+        var phase = window.__activePhase;
+        if (phase === 'register1') return 1;
+        if (phase === 'register2') return 2;
+        return 0; // 都不开放
+    }
+
+    /** 构建队长卡片 HTML */
+    function buildLeadersHtml(judges) {
+        var html = '';
+        for (var i = 0; i < judges.length; i++) {
+            var j = judges[i];
+            var avatar = j.avatar || '/images/default-avatar.png';
+            html += '<div class="db-register-leader">'
+                + '<div class="db-register-leader-avatar-wrap">'
+                + '<img class="db-register-leader-avatar" src="' + escAttr(avatar) + '" alt="" onerror="this.style.display=\'none\'">'
+                + '</div>'
+                + '<div class="db-register-leader-info">'
+                + '<div class="db-register-leader-name">' + escHtml(j.name || '') + '</div>'
+                + '<div class="db-register-leader-role">' + escHtml(j.roleTitle || '队长') + '</div>'
+                + '</div></div>';
         }
+        return html;
+    }
 
-        var action = document.getElementById('registerAction');
-        if (data.isRegistered) {
-            action.innerHTML = '<button class="db-register-btn joined">✓ 已报名</button>'
-                + '<br><button class="db-register-btn cancel" onclick="doCancel()">取消报名</button>';
+    /** 渲染单轮报名卡片 */
+    function renderRegBox(roundId, count, isReg, isOpen, judges) {
+        var suffix = roundId;
+        var box = document.getElementById('regBox' + suffix);
+        var countEl = document.getElementById('registerCount' + suffix);
+        var barEl = document.getElementById('registerBar' + suffix);
+        var leadersEl = document.getElementById('registerLeaders' + suffix);
+        var actionEl = document.getElementById('registerAction' + suffix);
+        if (!box) return;
+
+        // 更新计数和进度条
+        countEl.textContent = count;
+        var pct = Math.min(100, Math.round(count / REGISTER_LIMIT * 100));
+        barEl.style.width = pct + '%';
+        barEl.classList.toggle('full', pct >= 100);
+
+        // 队长信息
+        if (judges.length > 0) leadersEl.innerHTML = buildLeadersHtml(judges);
+
+        // 开放/关闭状态
+        if (!isOpen) {
+            box.classList.add('closed');
+            actionEl.innerHTML = '<button class="db-register-btn cancel" disabled>不在报名时间范围内</button>';
+            return;
+        }
+        box.classList.remove('closed');
+
+        // 报名操作按钮
+        if (isReg) {
+            actionEl.innerHTML = '<button class="db-register-btn joined">✓ 已报名</button>'
+                + '<br><button class="db-register-btn cancel" onclick="doCancel(' + roundId + ')">取消报名</button>';
         } else if (count >= REGISTER_LIMIT) {
-            action.innerHTML = '<button class="db-register-btn cancel" disabled>名额已满</button>';
+            actionEl.innerHTML = '<button class="db-register-btn cancel" disabled>名额已满</button>';
         } else {
-            action.innerHTML = '<button class="db-register-btn join" onclick="doRegister()">⚔ 报名参赛</button>';
+            actionEl.innerHTML = '<button class="db-register-btn join" onclick="doRegister(' + roundId + ')">⚔ 报名参赛</button>';
         }
     }
 
-    window.doRegister = function() {
+    function renderRegister(data) {
+        var openRound = getOpenRound();
+        var judges = data.judges || [];
+
+        renderRegBox(1, data.totalRegisteredR1 || 0, data.isRegisteredR1, openRound === 1, judges);
+        renderRegBox(2, data.totalRegisteredR2 || 0, data.isRegisteredR2, openRound === 2, judges);
+    }
+
+    window.doRegister = function(roundId) {
+        // 未登录则触发登录弹窗
+        var loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) { loginBtn.click(); return; }
+
+        var actionEl = document.getElementById('registerAction' + roundId);
+        actionEl.innerHTML = '<button class="db-register-btn loading">报名中...</button>';
+
         fetch('/api/nancy/' + slug + '/register', {
             method: 'POST',
-            headers: { 'X-CSRF-TOKEN': csrfToken }
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ roundId: roundId })
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            if (data.error) { alert(data.error); return; }
+            if (data.error) { alert(data.error); loadEventStatus(); return; }
             loadEventStatus();
         })
-        .catch(function() { alert('报名失败，请刷新重试'); });
+        .catch(function() { alert('报名失败，请刷新重试'); loadEventStatus(); });
     };
 
-    window.doCancel = function() {
+    window.doCancel = function(roundId) {
         if (!confirm('确定要取消报名吗？')) return;
+        // 未登录则触发登录弹窗
+        var loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) { loginBtn.click(); return; }
+
+        var actionEl = document.getElementById('registerAction' + roundId);
+        actionEl.innerHTML = '<button class="db-register-btn loading">处理中...</button>';
+
         fetch('/api/nancy/' + slug + '/cancel', {
             method: 'POST',
-            headers: { 'X-CSRF-TOKEN': csrfToken }
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ roundId: roundId })
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            if (data.error) { alert(data.error); return; }
+            if (data.error) { alert(data.error); loadEventStatus(); return; }
             loadEventStatus();
         })
-        .catch(function() { alert('操作失败，请刷新重试'); });
+        .catch(function() { alert('操作失败，请刷新重试'); loadEventStatus(); });
     };
 
     // ==================== Draft (双将选人) ====================
@@ -576,12 +769,12 @@
         }
 
         if (teamA) {
-            document.getElementById('teamAName').textContent = teamA.teamName || '南军';
+            document.getElementById('teamAName').textContent = teamA.teamName || '薯家军';
             document.getElementById('captainA').innerHTML = renderCaptainHtml(teamA);
             document.getElementById('membersA').innerHTML = renderMembersHtml(teamA.members || []);
         }
         if (teamB) {
-            document.getElementById('teamBName').textContent = teamB.teamName || '北军';
+            document.getElementById('teamBName').textContent = teamB.teamName || '嘟家军';
             document.getElementById('captainB').innerHTML = renderCaptainHtml(teamB);
             document.getElementById('membersB').innerHTML = renderMembersHtml(teamB.members || []);
         }
