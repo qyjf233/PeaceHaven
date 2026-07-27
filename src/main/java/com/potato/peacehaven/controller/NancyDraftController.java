@@ -3,14 +3,17 @@ package com.potato.peacehaven.controller;
 import com.potato.peacehaven.entity.Activity;
 import com.potato.peacehaven.entity.User;
 import com.potato.peacehaven.service.ActivityService;
+import com.potato.peacehaven.service.DraftSessionManager;
 import com.potato.peacehaven.service.NancyDraftService;
 import com.potato.peacehaven.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +31,7 @@ public class NancyDraftController {
     private final NancyDraftService nancyDraftService;
     private final ActivityService activityService;
     private final UserService userService;
+    private final DraftSessionManager draftSessionManager;
 
     /**
      * 获取赛事完整状态
@@ -261,5 +265,147 @@ public class NancyDraftController {
             log.warn("[南希对抗赛] 批量战绩录入失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    // ==================== 实时点兵 SSE + REST ====================
+
+    /**
+     * SSE 长连接 - 将领进入点兵模式
+     * GET /api/nancy/{slug}/draft/{matchIndex}/stream
+     */
+    @GetMapping(value = "/{slug}/draft/{matchIndex}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter connectDraftStream(
+            @PathVariable String slug,
+            @PathVariable int matchIndex,
+            HttpSession session) {
+
+        User user = userService.getCurrentUser(session);
+        if (user == null) {
+            SseEmitter emitter = new SseEmitter(0L);
+            try {
+                emitter.send(SseEmitter.event().name("ERROR").data(Map.of("error", "请先登录")));
+                emitter.complete();
+            } catch (Exception ignored) {}
+            return emitter;
+        }
+
+        Activity activity = activityService.getActivityBySlug(slug);
+
+        try {
+            return draftSessionManager.joinSession(matchIndex, activity.getId(), user.getId());
+        } catch (RuntimeException e) {
+            log.warn("[点兵] 连接失败: {}", e.getMessage());
+            SseEmitter emitter = new SseEmitter(0L);
+            try {
+                emitter.send(SseEmitter.event().name("ERROR").data(Map.of("error", e.getMessage())));
+                emitter.complete();
+            } catch (Exception ignored) {}
+            return emitter;
+        }
+    }
+
+    /**
+     * 实时点兵 - 选人
+     * POST /api/nancy/{slug}/draft/{matchIndex}/live-pick
+     * body: { "playerUserId": 123 }
+     */
+    @PostMapping("/{slug}/draft/{matchIndex}/live-pick")
+    public ResponseEntity<Map<String, Object>> livePick(
+            @PathVariable String slug,
+            @PathVariable int matchIndex,
+            @RequestBody Map<String, Object> body,
+            HttpSession session) {
+
+        User user = userService.getCurrentUser(session);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
+        }
+
+        Activity activity = activityService.getActivityBySlug(slug);
+        Object playerIdObj = body.get("playerUserId");
+        if (playerIdObj == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "缺少 playerUserId"));
+        }
+
+        try {
+            Long playerUserId = Long.valueOf(playerIdObj.toString());
+            Map<String, Object> result = draftSessionManager.submitPick(
+                    matchIndex, activity.getId(), user.getId(), playerUserId);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            log.warn("[点兵] 选人失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 实时点兵 - 将领退出
+     * POST /api/nancy/{slug}/draft/{matchIndex}/leave
+     */
+    @PostMapping("/{slug}/draft/{matchIndex}/leave")
+    public ResponseEntity<Map<String, Object>> leaveDraft(
+            @PathVariable String slug,
+            @PathVariable int matchIndex,
+            HttpSession session) {
+
+        User user = userService.getCurrentUser(session);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
+        }
+
+        draftSessionManager.leaveSession(matchIndex, user.getId());
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    /**
+     * 查询某场比赛的点兵会话状态
+     * GET /api/nancy/{slug}/draft/{matchIndex}/session-state
+     */
+    @GetMapping("/{slug}/draft/{matchIndex}/session-state")
+    public ResponseEntity<Map<String, Object>> getSessionState(
+            @PathVariable String slug,
+            @PathVariable int matchIndex) {
+
+        Activity activity = activityService.getActivityBySlug(slug);
+        Map<String, Object> state = draftSessionManager.getSessionState(matchIndex, activity.getId());
+        return ResponseEntity.ok(state);
+    }
+
+    /**
+     * 获取当前可点兵的比赛场次
+     * GET /api/nancy/{slug}/draft/active-match
+     * @return { "activeMatchIndex": 0 } 或 { "activeMatchIndex": -1 } 不在点兵阶段
+     */
+    @GetMapping("/{slug}/draft/active-match")
+    public ResponseEntity<Map<String, Object>> getActiveMatch(@PathVariable String slug) {
+        Activity activity = activityService.getActivityBySlug(slug);
+        int activeMatch = draftSessionManager.getActiveMatchIndex(activity.getId());
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("activeMatchIndex", activeMatch);
+
+        // 附带所有场次的摘要状态
+        List<Map<String, Object>> matchSummaries = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            Map<String, Object> summary = new java.util.LinkedHashMap<>(
+                    draftSessionManager.getSessionSummary(i, activity.getId()));
+            summary.put("matchIndex", i);
+            matchSummaries.add(summary);
+        }
+        result.put("matches", matchSummaries);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 获取某场比赛的最终名单（点兵完成后）
+     * GET /api/nancy/{slug}/draft/{matchIndex}/roster
+     */
+    @GetMapping("/{slug}/draft/{matchIndex}/roster")
+    public ResponseEntity<Map<String, Object>> getRoster(
+            @PathVariable String slug,
+            @PathVariable int matchIndex) {
+
+        Activity activity = activityService.getActivityBySlug(slug);
+        Map<String, Object> roster = draftSessionManager.getRoster(matchIndex, activity.getId());
+        return ResponseEntity.ok(roster);
     }
 }

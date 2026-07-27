@@ -107,11 +107,17 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 跳过静态资源，只记录 API 和管理后台请求
+     * 跳过静态资源和 SSE 流，只记录 API 和管理后台请求
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
+
+        // SSE 长连接不能被 ContentCachingResponseWrapper 包装，否则流会被关闭
+        String accept = request.getHeader("Accept");
+        if (accept != null && accept.contains("text/event-stream")) return true;
+        if (path.endsWith("/stream")) return true;
+
         return path.startsWith("/css/")
                 || path.startsWith("/js/")
                 || path.startsWith("/images/")

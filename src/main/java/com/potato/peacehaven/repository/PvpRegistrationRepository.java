@@ -2,6 +2,8 @@ package com.potato.peacehaven.repository;
 
 import com.potato.peacehaven.entity.PvpRegistration;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -36,4 +38,8 @@ public interface PvpRegistrationRepository extends JpaRepository<PvpRegistration
 
     /** 按积分降序查询某活动某轮次的报名 */
     List<PvpRegistration> findByActivityIdAndRoundIdOrderByPointsDescWinsDesc(Long activityId, Integer roundId);
+
+    /** 按积分降序查询某活动某轮次的报名（急加载User，避免懒加载） */
+    @Query("SELECT r FROM PvpRegistration r JOIN FETCH r.user WHERE r.activityId = :activityId AND r.roundId = :roundId ORDER BY r.points DESC, r.wins DESC")
+    List<PvpRegistration> findByActivityIdAndRoundIdWithUser(@Param("activityId") Long activityId, @Param("roundId") Integer roundId);
 }

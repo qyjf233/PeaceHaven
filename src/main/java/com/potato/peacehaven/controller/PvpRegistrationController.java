@@ -65,7 +65,9 @@ public class PvpRegistrationController {
      * 报名
      */
     @PostMapping("/{slug}/register")
-    public ResponseEntity<Map<String, Object>> register(@PathVariable String slug, HttpSession session) {
+    public ResponseEntity<Map<String, Object>> register(@PathVariable String slug,
+                                                         @RequestBody(required = false) Map<String, Object> body,
+                                                         HttpSession session) {
         User user = userService.getCurrentUser(session);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
@@ -78,18 +80,39 @@ public class PvpRegistrationController {
             return ResponseEntity.badRequest().body(Map.of("error", "本活动仅限长安成员参赛"));
         }
 
-        if (registrationRepository.existsByActivityIdAndUserId(activity.getId(), user.getId())) {
+        // 解析 roundId 和 job
+        int roundId = 1;
+        String job = "";
+        if (body != null) {
+            if (body.get("roundId") instanceof Number) {
+                roundId = ((Number) body.get("roundId")).intValue();
+            }
+            if (body.get("job") instanceof String) {
+                job = (String) body.get("job");
+            }
+        }
+
+        // 校验职业
+        List<String> validJobs = List.of("步枪兵", "狙击手", "武士");
+        if (job.isEmpty() || !validJobs.contains(job)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "请选择有效的职业"));
+        }
+
+        // 检查是否已在该轮报名
+        if (registrationRepository.existsByActivityIdAndUserIdAndRoundId(activity.getId(), user.getId(), roundId)) {
             return ResponseEntity.badRequest().body(Map.of("error", "你已经报名了"));
         }
 
         PvpRegistration reg = PvpRegistration.builder()
                 .activityId(activity.getId())
+                .roundId(roundId)
+                .job(job)
                 .user(user)
                 .build();
         registrationRepository.save(reg);
 
-        long totalRegistered = registrationRepository.countByActivityId(activity.getId());
-        log.info("用户 {} 报名活动 {} (ID:{})", user.getNickname(), slug, activity.getId());
+        long totalRegistered = registrationRepository.countByActivityIdAndRoundId(activity.getId(), roundId);
+        log.info("用户 {} 报名活动 {} 第{}轮 职业:{} (ID:{})", user.getNickname(), slug, roundId, job, activity.getId());
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
@@ -101,7 +124,9 @@ public class PvpRegistrationController {
      * 取消报名
      */
     @PostMapping("/{slug}/cancel")
-    public ResponseEntity<Map<String, Object>> cancel(@PathVariable String slug, HttpSession session) {
+    public ResponseEntity<Map<String, Object>> cancel(@PathVariable String slug,
+                                                       @RequestBody(required = false) Map<String, Object> body,
+                                                       HttpSession session) {
         User user = userService.getCurrentUser(session);
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
@@ -109,7 +134,12 @@ public class PvpRegistrationController {
 
         Activity activity = activityService.getActivityBySlug(slug);
 
-        var reg = registrationRepository.findByActivityIdAndUserId(activity.getId(), user.getId());
+        int roundId = 1;
+        if (body != null && body.get("roundId") instanceof Number) {
+            roundId = ((Number) body.get("roundId")).intValue();
+        }
+
+        var reg = registrationRepository.findByActivityIdAndUserIdAndRoundId(activity.getId(), user.getId(), roundId);
         if (reg.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "你还没有报名"));
         }

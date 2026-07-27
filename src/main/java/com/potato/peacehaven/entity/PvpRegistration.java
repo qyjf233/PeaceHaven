@@ -75,6 +75,12 @@ public class PvpRegistration {
     @Comment("完成度(0~1)")
     private Double completion = 0.0;
 
+    /** 职业（步枪兵/狙击手/武士） */
+    @Column(name = "job", length = 32)
+    @Builder.Default
+    @Comment("职业(步枪兵/狙击手/武士)")
+    private String job = "";
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     @Comment("报名时间")

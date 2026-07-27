@@ -18,6 +18,8 @@
             --db-gold-glow: rgba(232,131,58,0.25);
             --db-red: #c0392b;
             --db-red-dim: rgba(192,57,43,0.1);
+            --db-team-b: #4A90D9;
+            --db-team-b-dim: rgba(74,144,217,0.1);
             --db-overlay-bg: rgba(0,0,0,0.06);
             --db-border-subtle: rgba(232,131,58,0.08);
             --db-border: rgba(232,131,58,0.15);
@@ -28,6 +30,8 @@
             --db-gold-glow: rgba(200,162,78,0.3);
             --db-red: #e74c3c;
             --db-red-dim: rgba(231,76,60,0.1);
+            --db-team-b: #6DB3F2;
+            --db-team-b-dim: rgba(109,179,242,0.12);
             --db-overlay-bg: rgba(0,0,0,0.2);
             --db-border-subtle: rgba(200,162,78,0.06);
             --db-border: rgba(200,162,78,0.18);
@@ -419,6 +423,309 @@
         /* ========== Footer Override ========== */
         .site-footer { background: var(--bg-secondary) !important; border-top: 1px solid var(--db-border) !important; }
 
+        /* ========== Live Draft (实时点兵) ========== */
+        .db-live-draft-btn {
+            display: none; margin: 24px auto 0; padding: 14px 48px;
+            font-size: 1rem; font-weight: 800; letter-spacing: 4px;
+            border: none; border-radius: 8px; cursor: pointer;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-primary));
+            color: var(--bg-primary); font-family: inherit;
+            box-shadow: 0 4px 24px var(--db-gold-glow);
+            transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .db-live-draft-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 36px var(--db-gold-glow); }
+        .db-live-draft-btn.active { display: inline-block; }
+        .db-live-draft-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            transition: left 0.5s;
+        }
+        .db-live-draft-btn:hover::before { left: 140%; }
+
+        /* 场次选择器 */
+        .db-match-selector {
+            display: none; margin: 16px auto 0; padding: 12px 20px;
+            background: var(--bg-card); border: 1px solid var(--db-border);
+            border-radius: 10px; max-width: 400px;
+        }
+        .db-match-selector.active { display: block; }
+        .db-match-selector-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; }
+        .db-match-opt {
+            display: inline-block; padding: 8px 18px; margin: 4px;
+            border-radius: 6px; border: 1px solid var(--db-border);
+            background: var(--db-gold-dim); color: var(--text-primary);
+            cursor: pointer; font-size: 0.85rem; font-weight: 600;
+            transition: all 0.2s; font-family: inherit;
+        }
+        .db-match-opt:hover { border-color: var(--accent-gold); }
+        .db-match-opt.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+        /* 点兵弹窗 - 全屏遮罩 */
+        .db-draft-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+            align-items: center; justify-content: center;
+        }
+        .db-draft-overlay.active { display: flex; }
+
+        /* 双开门动画 */
+        .db-door-left, .db-door-right {
+            position: fixed; top: 0; width: 50%; height: 100%; z-index: 10000;
+            background: var(--bg-primary);
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+        }
+        .db-door-left { left: 0; transform-origin: left center; }
+        .db-door-right { right: 0; transform-origin: right center; }
+        .db-door-left.open { transform: translateX(-100%); }
+        .db-door-right.open { transform: translateX(100%); }
+        .db-door-text {
+            font-size: 2rem; font-weight: 900; color: var(--accent-gold);
+            letter-spacing: 8px; text-shadow: 0 0 20px var(--db-gold-glow);
+        }
+        .db-door-left .db-door-text { padding-right: 20px; }
+        .db-door-right .db-door-text { padding-left: 20px; }
+
+        /* ========== Draft Modal ========== */
+        .db-draft-modal {
+            position: relative; width: 95vw; max-width: 960px; max-height: 92vh;
+            background: var(--bg-primary);
+            border: 1px solid var(--db-border); border-radius: 20px;
+            overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+        }
+        .db-draft-modal::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+            z-index: 1;
+        }
+        .db-draft-modal-header {
+            position: relative; z-index: 2;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 28px;
+            border-bottom: 1px solid var(--db-border-subtle);
+            background: linear-gradient(135deg, var(--db-gold-dim), transparent 60%);
+        }
+        .db-draft-modal-title {
+            font-size: 1.2rem; font-weight: 900; letter-spacing: 3px;
+            color: var(--accent-gold);
+        }
+        .db-draft-modal-match {
+            font-size: 0.8rem; color: var(--text-muted); margin-left: 14px;
+            padding: 3px 12px; border-radius: 20px;
+            background: var(--db-overlay-bg); border: 1px solid var(--db-border-subtle);
+            letter-spacing: 1px;
+        }
+        .db-draft-modal-close {
+            width: 38px; height: 38px; border-radius: 50%;
+            border: 1px solid var(--db-border-subtle);
+            background: transparent; color: var(--text-muted);
+            font-size: 1.2rem; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .db-draft-modal-close:hover {
+            border-color: var(--db-red); color: var(--db-red);
+            background: var(--db-red-dim);
+        }
+
+        /* 回合状态栏 */
+        .db-draft-turn-bar {
+            padding: 12px 28px; text-align: center; font-size: 0.92rem; font-weight: 700;
+            border-bottom: 1px solid var(--db-border-subtle); letter-spacing: 1px;
+            background: var(--db-overlay-bg); color: var(--text-muted);
+        }
+        .db-draft-turn-bar.turn-a {
+            color: var(--accent-primary);
+            background: var(--db-gold-dim);
+            border-bottom-color: var(--db-border);
+        }
+        .db-draft-turn-bar.turn-b {
+            color: var(--db-team-b);
+            background: var(--db-team-b-dim);
+            border-bottom-color: var(--db-border);
+        }
+        .db-draft-turn-bar.turn-complete {
+            color: var(--accent-gold);
+            background: var(--db-gold-dim);
+            border-bottom-color: var(--db-border);
+        }
+
+        /* 点兵内容区 */
+        .db-draft-modal-body {
+            flex: 1; overflow-y: auto; padding: 20px 24px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        .db-draft-modal-body::-webkit-scrollbar { width: 6px; }
+        .db-draft-modal-body::-webkit-scrollbar-track { background: transparent; }
+        .db-draft-modal-body::-webkit-scrollbar-thumb { background: var(--db-border); border-radius: 3px; }
+
+        /* 队伍对阵区 - 上方双列 */
+        .db-draft-teams-row {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        }
+
+        /* 队伍面板 */
+        .db-draft-team-panel {
+            display: flex; flex-direction: column; border-radius: 14px; overflow: hidden;
+            border: 1px solid var(--db-border-subtle);
+            background: var(--bg-card);
+        }
+        .db-draft-team-header {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.92rem; font-weight: 800; padding: 14px 16px; letter-spacing: 2px;
+        }
+        .db-draft-team-header.team-a {
+            color: var(--accent-primary);
+            background: var(--db-gold-dim);
+            border-bottom: 2px solid var(--accent-primary);
+        }
+        .db-draft-team-header.team-b {
+            color: var(--db-team-b);
+            background: var(--db-team-b-dim);
+            border-bottom: 2px solid var(--db-team-b);
+        }
+        .db-draft-team-count {
+            font-size: 0.78rem; font-weight: 700; padding: 3px 10px;
+            border-radius: 20px; letter-spacing: 0;
+        }
+        .team-a .db-draft-team-count {
+            background: var(--db-gold-dim); color: var(--accent-primary);
+            border: 1px solid var(--db-border);
+        }
+        .team-b .db-draft-team-count {
+            background: var(--db-team-b-dim); color: var(--db-team-b);
+            border: 1px solid var(--db-border);
+        }
+
+        /* 已选列表 */
+        .db-draft-picked {
+            min-height: 60px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px;
+            background: var(--bg-primary);
+        }
+        .db-draft-picked-item {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 7px 14px; border-radius: 10px;
+            font-size: 0.82rem; font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background: var(--bg-card); border: 1px solid var(--db-border-subtle);
+            color: var(--text-primary);
+        }
+        .db-draft-picked-item:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        .db-draft-picked-item.team-a { border-left: 3px solid var(--accent-primary); }
+        .db-draft-picked-item.team-b { border-left: 3px solid var(--db-team-b); }
+        .db-draft-picked-item .pick-order {
+            font-size: 0.65rem; font-weight: 700; color: var(--text-muted);
+            min-width: 16px; text-align: center;
+        }
+        .db-draft-picked-item .player-name { font-weight: 700; }
+
+        /* 可选池 */
+        .db-draft-pool-section {
+            border-radius: 14px; overflow: hidden;
+            border: 1px solid var(--db-border-subtle);
+            background: var(--bg-card);
+        }
+        .db-draft-pool-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px;
+            background: var(--db-overlay-bg);
+            border-bottom: 1px solid var(--db-border-subtle);
+        }
+        .db-draft-pool-title {
+            font-size: 0.88rem; font-weight: 800; color: var(--text-secondary);
+            letter-spacing: 2px;
+        }
+        .db-draft-pool-count {
+            font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+            padding: 2px 10px; border-radius: 12px;
+            background: var(--db-overlay-bg);
+        }
+        .db-draft-pool-list {
+            display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px;
+            max-height: 240px; overflow-y: auto;
+        }
+        .db-draft-pool-list::-webkit-scrollbar { width: 4px; }
+        .db-draft-pool-list::-webkit-scrollbar-thumb { background: var(--db-border-subtle); border-radius: 2px; }
+        .db-draft-pool-item {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 14px; border-radius: 10px;
+            background: var(--bg-primary);
+            border: 1px solid var(--db-border-subtle);
+            font-size: 0.82rem; cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-primary);
+        }
+        .db-draft-pool-item:hover {
+            border-color: var(--accent-gold);
+            background: var(--db-gold-dim);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        .db-draft-pool-item.disabled {
+            opacity: 0.3; cursor: not-allowed; pointer-events: none;
+        }
+        .db-draft-pool-item .player-name { font-weight: 600; }
+
+        /* 职业徽章 */
+        .job-badge {
+            display: inline-flex; align-items: center; gap: 3px;
+            font-size: 0.68rem; padding: 2px 8px; border-radius: 6px;
+            font-weight: 700; letter-spacing: 0.5px; white-space: nowrap;
+            background: var(--db-overlay-bg); color: var(--text-muted);
+            border: 1px solid var(--db-border-subtle);
+        }
+        /* 兼容旧class */
+        .job-tag { display: inline-flex; font-size: 0.68rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; letter-spacing: 0.5px; }
+
+        /* 选人闪光动画 */
+        @keyframes db-pick-flash {
+            0% { background: var(--db-gold-glow); box-shadow: 0 0 20px var(--db-gold-glow); }
+            100% { background: var(--bg-card); box-shadow: none; }
+        }
+        .db-draft-picked-item.just-picked {
+            animation: db-pick-flash 1s ease-out;
+        }
+
+        /* 等待/连接状态 */
+        .db-draft-waiting {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 50px 20px; color: var(--text-muted); font-size: 0.95rem; gap: 16px;
+        }
+        .db-draft-waiting .spinner {
+            display: inline-block; width: 36px; height: 36px;
+            border: 3px solid var(--db-border-subtle);
+            border-top-color: var(--accent-gold); border-radius: 50%;
+            animation: db-spin 0.8s linear infinite;
+        }
+        @keyframes db-spin { to { transform: rotate(360deg); } }
+
+        /* 点兵区通用辅助 */
+        .db-draft-empty-hint {
+            width: 100%; text-align: center; padding: 16px;
+            color: var(--text-muted); font-size: 0.82rem;
+        }
+        .db-draft-divider {
+            width: 100%; height: 1px; background: var(--db-border-subtle); margin: 4px 0;
+        }
+        .db-draft-group-label {
+            width: 100%; font-size: 0.72rem; color: var(--text-muted);
+            letter-spacing: 1px; padding: 4px 0 2px; font-weight: 600;
+        }
+
+        /* ========== 报名职业选择 ========== */
+        .db-register-job-row {
+            display: flex; align-items: center; gap: 10px; justify-content: center;
+        }
+        .db-job-select {
+            padding: 10px 14px; font-size: 0.88rem; font-weight: 600;
+            border-radius: 8px; border: 1px solid var(--db-border);
+            background: var(--bg-primary); color: var(--text-primary);
+            font-family: inherit; cursor: pointer; min-width: 110px;
+            appearance: auto;
+        }
+        .db-job-select:focus { outline: none; border-color: var(--accent-gold); }
+        .db-register-btn-sm { padding: 10px 24px; font-size: 0.85rem; }
+
         /* ========== Empty State ========== */
         .db-empty { text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.9rem; }
 
@@ -479,6 +786,17 @@
 
             .db-rank-table th, .db-rank-table td { padding: 8px 6px; font-size: 0.78rem; }
             .db-rank-tab { padding: 8px 16px; font-size: 0.82rem; }
+
+            /* 点兵弹窗手机端 */
+            .db-draft-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
+            .db-draft-modal-header { padding: 14px 16px; }
+            .db-draft-modal-title { font-size: 1rem; }
+            .db-draft-modal-body { padding: 14px; gap: 14px; }
+            .db-draft-teams-row { grid-template-columns: 1fr; }
+            .db-draft-pool-list { max-height: 180px; }
+            .db-draft-picked-item { padding: 6px 10px; font-size: 0.78rem; }
+            .db-draft-pool-item { padding: 7px 10px; font-size: 0.78rem; }
+            .db-door-text { font-size: 1.3rem; letter-spacing: 4px; }
 
             /* 手机端隐藏列：个人总榜/职业榜 隐藏 职业(4)、队伍(5)、结果(10) */
             .db-rank-overall th:nth-child(4), .db-rank-overall td:nth-child(4),
@@ -638,6 +956,8 @@
                 <div class="db-draft-available-title">可选选手</div>
                 <div id="availableList"></div>
             </div>
+            <!-- 开始点兵按钮（仅将领可见） -->
+            <button class="db-live-draft-btn" id="liveDraftBtn">⚔ 开始点兵</button>
         </div>
     </section>
 
@@ -796,19 +1116,36 @@
         if (loginBtn) { loginBtn.click(); return; }
 
         var actionEl = document.getElementById('registerAction' + roundId);
+        actionEl.innerHTML = '<div class="db-register-job-row">'
+            + '<select class="db-job-select" id="jobSelect' + roundId + '">'
+            + '<option value="" disabled selected>选择职业</option>'
+            + '<option value="步枪兵">步枪兵</option>'
+            + '<option value="狙击手">狙击手</option>'
+            + '<option value="武士">武士</option>'
+            + '</select>'
+            + '<button class="db-register-btn join db-register-btn-sm" onclick="submitRegister(' + roundId + ')">确认报名</button>'
+            + '</div>';
+    };
+
+    window.submitRegister = function(roundId) {
+        var sel = document.getElementById('jobSelect' + roundId);
+        var job = sel ? sel.value : '';
+        if (!job) { PHDialog.show({ message: '请先选择职业' }); return; }
+
+        var actionEl = document.getElementById('registerAction' + roundId);
         actionEl.innerHTML = '<button class="db-register-btn loading">报名中...</button>';
 
         fetch('/api/nancy/' + slug + '/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-            body: JSON.stringify({ roundId: roundId })
+            body: JSON.stringify({ roundId: roundId, job: job })
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            if (data.error) { alert(data.error); loadEventStatus(); return; }
+            if (data.error) { PHDialog.show({ message: data.error }); loadEventStatus(); return; }
             loadEventStatus();
         })
-        .catch(function() { alert('报名失败，请刷新重试'); loadEventStatus(); });
+        .catch(function() { PHDialog.show({ message: '报名失败，请刷新重试' }); loadEventStatus(); });
     };
 
     window.doCancel = function(roundId) {
@@ -1095,6 +1432,468 @@
     }
     function escAttr(s) {
         return escHtml(s).replace(/"/g, '&quot;');
+    }
+})();
+</script>
+
+<!-- 双开门动画 -->
+<div class="db-door-left" id="doorLeft" style="display:none"><span class="db-door-text">点兵</span></div>
+<div class="db-door-right" id="doorRight" style="display:none"><span class="db-door-text">演武</span></div>
+
+<!-- 实时点兵弹窗 -->
+<div class="db-draft-overlay" id="draftOverlay">
+    <div class="db-draft-modal">
+        <div class="db-draft-modal-header">
+            <div style="display:flex;align-items:baseline">
+                <span class="db-draft-modal-title">⚔ 双将点兵</span>
+                <span class="db-draft-modal-match" id="draftMatchLabel">第1场</span>
+            </div>
+            <button class="db-draft-modal-close" id="draftCloseBtn" title="关闭">✕</button>
+        </div>
+        <div class="db-draft-turn-bar" id="draftTurnBar">等待双方将领连接...</div>
+        <div class="db-draft-modal-body" id="draftModalBody">
+            <div class="db-draft-waiting"><div class="spinner"></div><div>等待将领进入...</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== 实时点兵系统 ====================
+(function() {
+    var slug = 'draft-battle-1';
+    var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+    var draftEventSource = null;
+    var draftMatchIndex = -1;
+    var draftState = null;
+    var myCaptainSide = null;
+    var myUserId = null;
+    var activeMatchIndex = -1;
+    var matchSummaries = [];
+
+    // 页面加载后检查将领身份 + 获取活跃场次
+    initDraft();
+
+    function initDraft() {
+        // 并行请求身份和活跃场次
+        Promise.all([
+            fetch('/api/nancy/' + slug + '/status').then(function(r) { return r.json(); }),
+            fetch('/api/nancy/' + slug + '/draft/active-match').then(function(r) { return r.json(); })
+        ]).then(function(results) {
+            var status = results[0];
+            var activeInfo = results[1];
+            myUserId = status.currentUserId || null;
+            activeMatchIndex = (activeInfo && typeof activeInfo.activeMatchIndex === 'number')
+                ? activeInfo.activeMatchIndex : -1;
+            matchSummaries = (activeInfo && activeInfo.matches) || [];
+
+            if (status.isCaptain) {
+                if (status.myTeamSide) myCaptainSide = status.myTeamSide.replace('team', '');
+            }
+            updateDraftButton(status.isCaptain);
+        }).catch(function() {});
+    }
+
+    // 更新按钮状态
+    function updateDraftButton(isCaptain) {
+        var btn = document.getElementById('liveDraftBtn');
+
+        // 找到当前活跃场次的摘要
+        var summary = null;
+        for (var i = 0; i < matchSummaries.length; i++) {
+            if (matchSummaries[i].matchIndex === activeMatchIndex) {
+                summary = matchSummaries[i];
+                break;
+            }
+        }
+
+        // 点兵完成 → 所有人可见"查看名单"
+        if (summary && summary.status === 'COMPLETED') {
+            btn.classList.add('active');
+            btn.textContent = '📋 查看名单';
+            btn.style.opacity = '';
+            btn.style.cursor = '';
+            btn.onclick = function() { viewRoster(activeMatchIndex); };
+            return;
+        }
+
+        // 非将领：只有完成状态才显示按钮
+        if (!isCaptain) {
+            btn.classList.remove('active');
+            return;
+        }
+
+        // 将领：始终显示按钮
+        btn.classList.add('active');
+
+        if (activeMatchIndex < 0) {
+            btn.textContent = '⚔ 比赛当天可点兵';
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'default';
+            btn.onclick = null;
+            return;
+        }
+
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+
+        if (summary && summary.status === 'IN_PROGRESS') {
+            btn.textContent = '⚔ 继续点兵';
+            btn.onclick = function() { startDraft(activeMatchIndex); };
+        } else {
+            btn.textContent = '⚔ 开始点兵';
+            btn.onclick = function() { startDraft(activeMatchIndex); };
+        }
+    }
+
+    // 查看名单（已完成点兵）
+    function viewRoster(matchIndex) {
+        if (matchIndex === undefined || matchIndex === null || matchIndex < 0) return;
+        draftMatchIndex = matchIndex;
+        document.getElementById('draftMatchLabel').textContent = '第' + (matchIndex + 1) + '场';
+        document.getElementById('draftOverlay').classList.add('active');
+        document.getElementById('draftModalBody').innerHTML =
+            '<div class="db-draft-waiting"><div class="spinner"></div><div>加载名单...</div></div>';
+        document.getElementById('draftTurnBar').textContent = '🎉 点兵完成';
+        document.getElementById('draftTurnBar').className = 'db-draft-turn-bar turn-complete';
+
+        fetch('/api/nancy/' + slug + '/draft/' + matchIndex + '/roster')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                draftState = data;
+                renderRosterView(data);
+            })
+            .catch(function() {
+                document.getElementById('draftModalBody').innerHTML =
+                    '<div class="db-draft-waiting">加载失败，请重试</div>';
+            });
+    }
+
+    // 开始点兵 - 建立SSE连接
+    window.startDraft = function(matchIndex) {
+        if (matchIndex === undefined || matchIndex === null || matchIndex < 0) {
+            PHDialog.show({ message: '当前不在点兵阶段，无法开始点兵' });
+            return;
+        }
+        draftMatchIndex = matchIndex;
+        document.getElementById('draftMatchLabel').textContent = '第' + (matchIndex + 1) + '场';
+
+        // 显示遮罩
+        document.getElementById('draftOverlay').classList.add('active');
+        document.getElementById('draftModalBody').innerHTML =
+            '<div class="db-draft-waiting"><div class="spinner"></div><div>正在连接服务器...</div></div>';
+        document.getElementById('draftTurnBar').textContent = '连接中...';
+        document.getElementById('draftTurnBar').className = 'db-draft-turn-bar';
+
+        // 建立SSE连接
+        var url = '/api/nancy/' + slug + '/draft/' + matchIndex + '/stream';
+        draftEventSource = new EventSource(url);
+
+        draftEventSource.addEventListener('CAPTAIN_JOINED', function(e) {
+            var data = JSON.parse(e.data);
+            if (data.connectedCount < 2) {
+                document.getElementById('draftModalBody').innerHTML =
+                    '<div class="db-draft-waiting"><div class="spinner"></div><div>等待对方将领加入...</div></div>';
+                document.getElementById('draftTurnBar').textContent = '等待对方将领...';
+            }
+        });
+
+        draftEventSource.addEventListener('BOTH_READY', function(e) {
+            var data = JSON.parse(e.data);
+            draftState = data;
+            playDoorAnimation(function() { renderDraftModal(data); });
+        });
+
+        draftEventSource.addEventListener('PICK_MADE', function(e) {
+            var data = JSON.parse(e.data);
+            draftState = data;
+            renderDraftModal(data);
+        });
+
+        draftEventSource.addEventListener('DRAFT_COMPLETE', function(e) {
+            var data = JSON.parse(e.data);
+            draftState = data;
+            renderRosterView(data);
+        });
+
+        draftEventSource.addEventListener('STATE_SYNC', function(e) {
+            var data = JSON.parse(e.data);
+            draftState = data;
+            if (data.status === 'COMPLETED') renderRosterView(data);
+            else renderDraftModal(data);
+        });
+
+        draftEventSource.addEventListener('CAPTAIN_LEFT', function(e) {
+            document.getElementById('draftTurnBar').textContent = '⚠ 对方将领已离开';
+            document.getElementById('draftTurnBar').className = 'db-draft-turn-bar';
+        });
+
+        draftEventSource.addEventListener('ERROR', function(e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.error) {
+                    PHDialog.show({ message: data.error, onConfirm: function() { closeDraftOverlay(); } });
+                }
+            } catch(err) {}
+        });
+
+        draftEventSource.onerror = function() {
+            document.getElementById('draftTurnBar').textContent = '⚠ 连接断开，尝试重连...';
+        };
+    };
+
+    // 双开门动画
+    function playDoorAnimation(callback) {
+        var left = document.getElementById('doorLeft');
+        var right = document.getElementById('doorRight');
+        left.style.display = 'flex';
+        right.style.display = 'flex';
+        left.classList.remove('open');
+        right.classList.remove('open');
+        setTimeout(function() {
+            left.classList.add('open');
+            right.classList.add('open');
+            setTimeout(function() {
+                left.style.display = 'none';
+                right.style.display = 'none';
+                left.classList.remove('open');
+                right.classList.remove('open');
+                if (callback) callback();
+            }, 900);
+        }, 600);
+    }
+
+    // 渲染点兵进行中界面
+    function renderDraftModal(state) {
+        var body = document.getElementById('draftModalBody');
+        var turnBar = document.getElementById('draftTurnBar');
+
+        if (!myCaptainSide && myUserId && state.captainAUserId && state.captainBUserId) {
+            if (String(myUserId) === String(state.captainAUserId)) myCaptainSide = 'A';
+            else if (String(myUserId) === String(state.captainBUserId)) myCaptainSide = 'B';
+        }
+        var isMyTurn = state.currentTurn && myCaptainSide && state.currentTurn === myCaptainSide;
+
+        // 如果已完成，切换到名单视图
+        if (state.status === 'COMPLETED') {
+            renderRosterView(state);
+            turnBar.textContent = '🎉 点兵完成！';
+            turnBar.className = 'db-draft-turn-bar turn-complete';
+            return;
+        }
+
+        // 回合状态栏
+        if (state.currentTurn === 'A') {
+            turnBar.textContent = '🟠 ' + (state.teamAName || '薯家军') + ' 正在选人...';
+            turnBar.className = 'db-draft-turn-bar turn-a';
+        } else {
+            turnBar.textContent = '🔵 ' + (state.teamBName || '嘟家军') + ' 正在选人...';
+            turnBar.className = 'db-draft-turn-bar turn-b';
+        }
+
+        var html = '';
+        // 上方：双队伍对阵
+        html += '<div class="db-draft-teams-row">';
+        html += buildTeamPanel('a', state.teamAName || '薯家军', state.pickedA || []);
+        html += buildTeamPanel('b', state.teamBName || '嘟家军', state.pickedB || []);
+        html += '</div>';
+
+        // 下方：可选池
+        var available = state.available || [];
+        html += '<div class="db-draft-pool-section">'
+            + '<div class="db-draft-pool-header">'
+            + '<span class="db-draft-pool-title">⚔ 待选选手</span>'
+            + '<span class="db-draft-pool-count">' + available.length + ' 人</span>'
+            + '</div>'
+            + '<div class="db-draft-pool-list" id="draftPool">';
+        for (var i = 0; i < available.length; i++) {
+            var p = available[i];
+            var canPick = isMyTurn;
+            html += '<div class="db-draft-pool-item' + (canPick ? '' : ' disabled') + '" '
+                + (canPick ? 'onclick="doLivePick(' + p.userId + ')"' : '') + '>'
+                + '<span class="player-name">' + escHtml(p.nickname) + '</span>'
+                + (p.job ? '<span class="job-badge ' + getJobClass(p.job) + '">' + escHtml(p.job) + '</span>' : '')
+                + '</div>';
+        }
+        if (available.length === 0) {
+            html += '<div class="db-draft-empty-hint">所有士兵已被选走</div>';
+        }
+        html += '</div></div>';
+        body.innerHTML = html;
+    }
+
+    // 构建队伍面板（点兵进行中）
+    function buildTeamPanel(side, name, picked) {
+        var emoji = side === 'a' ? '🟠' : '🔵';
+        var maxPicks = 11;
+
+        var html = '<div class="db-draft-team-panel">'
+            + '<div class="db-draft-team-header team-' + side + '">'
+            + '<span>' + emoji + ' ' + escHtml(name) + '</span>'
+            + '<span class="db-draft-team-count">' + picked.length + ' / ' + maxPicks + '</span>'
+            + '</div>'
+            + '<div class="db-draft-picked">';
+
+        if (picked.length === 0) {
+            html += '<div class="db-draft-empty-hint">— 暂未选人 —</div>';
+        } else {
+            for (var i = 0; i < picked.length; i++) {
+                html += '<div class="db-draft-picked-item team-' + side + '">'
+                    + '<span class="pick-order">#' + (i + 1) + '</span>'
+                    + '<span class="player-name">' + escHtml(picked[i].nickname) + '</span>'
+                    + (picked[i].job ? '<span class="job-badge ' + getJobClass(picked[i].job) + '">' + escHtml(picked[i].job) + '</span>' : '')
+                    + '</div>';
+            }
+        }
+        html += '</div></div>';
+        return html;
+    }
+
+    // 渲染名单视图（点兵完成后）
+    function renderRosterView(state) {
+        var body = document.getElementById('draftModalBody');
+        var turnBar = document.getElementById('draftTurnBar');
+        turnBar.textContent = '🎉 点兵完成！';
+        turnBar.className = 'db-draft-turn-bar turn-complete';
+
+        var JOB_ORDER = {'步枪兵': 1, '狙击手': 2, '武士': 3};
+        function sortByJob(list) {
+            return list.slice().sort(function(a, b) {
+                return (JOB_ORDER[a.job] || 99) - (JOB_ORDER[b.job] || 99);
+            });
+        }
+
+        var pickedA = sortByJob(state.pickedA || []);
+        var pickedB = sortByJob(state.pickedB || []);
+
+        var html = '';
+        html += '<div class="db-draft-teams-row">';
+        // 薯家军名单
+        html += '<div class="db-draft-team-panel">'
+            + '<div class="db-draft-team-header team-a"><span>🟠 ' + escHtml(state.teamAName || '薯家军') + '</span>'
+            + '<span class="db-draft-team-count">' + pickedA.length + ' 人</span></div>'
+            + '<div class="db-draft-picked">' + buildRosterList(pickedA, 'a') + '</div></div>';
+        // 嘟家军名单
+        html += '<div class="db-draft-team-panel">'
+            + '<div class="db-draft-team-header team-b"><span>🔵 ' + escHtml(state.teamBName || '嘟家军') + '</span>'
+            + '<span class="db-draft-team-count">' + pickedB.length + ' 人</span></div>'
+            + '<div class="db-draft-picked">' + buildRosterList(pickedB, 'b') + '</div></div>';
+        html += '</div>';
+
+        // 确认名单按钮
+        html += '<div style="text-align:center;padding:20px 0">'
+            + '<button class="db-live-draft-btn active" style="display:inline-block;margin:0;padding:14px 48px;font-size:0.95rem;letter-spacing:3px" '
+            + 'onclick="confirmRoster()">✓ 确认名单</button></div>';
+
+        body.innerHTML = html;
+    }
+
+    // 构建名单列表（按职业分组，带分隔线）
+    function buildRosterList(players, side) {
+        if (players.length === 0) return '<div class="db-draft-empty-hint">— 暂无名单 —</div>';
+
+        // 按职业分组
+        var JOB_LABELS = { '步枪兵': '🔫 步枪兵', '狙击手': '🎯 狙击手', '武士': '⚔ 武士' };
+        var groups = {};
+        var jobOrder = [];
+        for (var i = 0; i < players.length; i++) {
+            var job = players[i].job || '未知';
+            if (!groups[job]) { groups[job] = []; jobOrder.push(job); }
+            groups[job].push(players[i]);
+        }
+
+        var html = '';
+        var firstGroup = true;
+        for (var g = 0; g < jobOrder.length; g++) {
+            var job = jobOrder[g];
+            var list = groups[job];
+            if (!firstGroup) {
+                html += '<div class="db-draft-divider"></div>';
+            }
+            firstGroup = false;
+            // 职业分组标题
+            var label = JOB_LABELS[job] || job;
+            html += '<div class="db-draft-group-label">' + label + ' (' + list.length + ')</div>';
+            for (var i = 0; i < list.length; i++) {
+                html += '<div class="db-draft-picked-item team-' + side + '">'
+                    + '<span class="player-name">' + escHtml(list[i].nickname) + '</span>'
+                    + (list[i].job ? '<span class="job-badge ' + getJobClass(list[i].job) + '">' + escHtml(list[i].job) + '</span>' : '')
+                    + '</div>';
+            }
+        }
+        return html;
+    }
+
+    // 确认名单 — 关闭弹窗并刷新按钮状态
+    window.confirmRoster = function() {
+        closeDraftOverlay();
+        initDraft();
+    };
+
+    // 职业样式映射
+    function getJobClass(job) {
+        if (!job) return 'job-default';
+        if (job.indexOf('步枪') >= 0) return 'job-rifle';
+        if (job.indexOf('狙击') >= 0) return 'job-sniper';
+        if (job.indexOf('武士') >= 0 || job.indexOf('近战') >= 0) return 'job-warrior';
+        if (job.indexOf('医疗') >= 0 || job.indexOf('护士') >= 0) return 'job-medic';
+        return 'job-default';
+    }
+
+    // 实时选人
+    window.doLivePick = function(playerUserId) {
+        if (!draftState || draftState.status === 'COMPLETED') return;
+        fetch('/api/nancy/' + slug + '/draft/' + draftMatchIndex + '/live-pick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ playerUserId: playerUserId })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { PHDialog.show({ message: data.error }); return; }
+        })
+        .catch(function() { PHDialog.show({ message: '选人失败，请重试' }); });
+    };
+
+    // 关闭弹窗
+    document.getElementById('draftCloseBtn').addEventListener('click', function() {
+        // 如果点兵已完成，直接关闭无需确认
+        if (draftState && draftState.status === 'COMPLETED') {
+            closeDraftOverlay();
+            initDraft();
+            return;
+        }
+        PHDialog.confirm({
+            message: '确定要离开点兵吗？离开后已选的兵不会丢失，下次可继续。',
+            confirmText: '确定离开',
+            cancelText: '继续点兵',
+            confirmStyle: 'danger',
+            onConfirm: function() {
+                fetch('/api/nancy/' + slug + '/draft/' + draftMatchIndex + '/leave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }
+                }).catch(function() {});
+                closeDraftOverlay();
+            }
+        });
+    });
+
+    function closeDraftOverlay() {
+        document.getElementById('draftOverlay').classList.remove('active');
+        if (draftEventSource) { draftEventSource.close(); draftEventSource = null; }
+        draftMatchIndex = -1;
+        draftState = null;
+    }
+
+    // 阻止点击遮罩关闭
+    document.getElementById('draftOverlay').addEventListener('click', function(e) {
+        if (e.target === this) { e.stopPropagation(); }
+    });
+
+    function escHtml(s) {
+        if (!s) return '';
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(s));
+        return d.innerHTML;
     }
 })();
 </script>

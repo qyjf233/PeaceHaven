@@ -8,6 +8,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -85,12 +86,28 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * SSE 异步请求超时 — 不返回任何响应体，让框架自行关闭连接
+     * 如果返回 JSON 会因 Content-Type=text/event-stream 导致二次异常
+     */
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    public ResponseEntity<Void> handleSseTimeout(AsyncRequestTimeoutException ex, HttpServletRequest request) {
+        log.info("[SSE] 连接超时: {} {}", request.getMethod(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+    }
+
+    /**
      * 兜底：捕获所有其他异常（500）
      * 这是最重要的异常处理，确保任何未预期的错误都被记录
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex, HttpServletRequest request) {
+        // SSE 端点的其他异常也不应返回 JSON，直接关闭连接
         String uri = request.getRequestURI();
+        if (uri != null && uri.endsWith("/stream")) {
+            log.warn("[SSE] 端点异常: {} {} | {}: {}", request.getMethod(), uri, ex.getClass().getSimpleName(), ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
         String method = request.getMethod();
         String queryString = request.getQueryString();
         String fullUri = queryString != null ? uri + "?" + queryString : uri;

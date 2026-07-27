@@ -343,6 +343,11 @@ public class NancyDraftService {
         }
         result.put("isCaptain", isCaptain);
 
+        // 当前用户ID（用于前端判断身份）
+        if (currentUser != null) {
+            result.put("currentUserId", currentUser.getId());
+        }
+
         // 已报名玩家列表（用于气泡展示）
         List<PvpRegistration> allRegs = registrationRepository.findByActivityIdOrderByPointsDescWinsDesc(activityId);
         Set<Long> pickedUserIds = new HashSet<>();
