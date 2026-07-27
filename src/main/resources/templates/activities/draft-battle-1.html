@@ -80,21 +80,29 @@
         .db-rule-title { font-size: 1rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 8px; }
         .db-rule-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
 
-        /* ========== Draft Pick (双将点兵 - 气泡浮动) ========== */
+        /* ========== Draft Pick (双将点兵 - 气泡上浮冒泡) ========== */
         .db-draft { text-align: center; }
         .db-draft-bubble-arena {
-            position: relative; width: 100%; min-height: 420px;
-            background: var(--bg-card); border: 1px solid var(--db-border); border-radius: 16px;
-            overflow: hidden; margin-top: 20px;
+            position: relative; width: 100%; height: 480px;
+            border-radius: 18px; margin-top: 20px;
+            background: var(--bg-card);
         }
-        /* 旋转光边 */
+        /* 七彩渐变流动边框（同气泡配色） */
         .db-draft-bubble-arena::before {
-            content: ''; position: absolute; inset: -2px; border-radius: 18px; z-index: 0;
-            background: conic-gradient(from 0deg, var(--accent-gold) 0%, transparent 15%, transparent 50%, var(--accent-primary) 65%, transparent 80%, var(--accent-gold) 100%);
-            animation: db-border-spin 5s linear infinite;
+            content: ''; position: absolute; inset: -2px; border-radius: 20px; z-index: 0;
+            background: linear-gradient(
+                135deg,
+                rgba(255,120,120,0.7),
+                rgba(255,200,80,0.65),
+                rgba(120,255,150,0.6),
+                rgba(80,180,255,0.65),
+                rgba(200,120,255,0.7)
+            );
+            background-size: 300% 300%;
+            animation: db-bubble-shimmer 6s ease-in-out infinite;
         }
         .db-draft-bubble-arena::after {
-            content: ''; position: absolute; inset: 0; border-radius: 16px; z-index: 1;
+            content: ''; position: absolute; inset: 2px; border-radius: 16px; z-index: 1;
             background: var(--bg-card);
         }
         /* 内部粒子 */
@@ -112,18 +120,19 @@
         .db-draft-particle:nth-child(6)  { left: 80%; animation-delay: 1.5s;  animation-duration: 4.5s; }
         .db-draft-particle:nth-child(7)  { left: 92%; animation-delay: 3s;    animation-duration: 5.2s; }
         .db-draft-particle:nth-child(8)  { left: 42%; animation-delay: 2.5s;  animation-duration: 6.2s; }
-        /* 气泡容器 */
+        /* 气泡容器 - 填满 arena */
         .db-draft-bubbles {
-            position: relative; z-index: 3; padding: 16px 20px 28px;
-            display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
-            gap: 12px; min-height: 340px;
+            position: absolute; inset: 0; z-index: 3;
+            overflow: hidden; border-radius: 16px;
         }
-        /* 单个气泡 - 七彩虹光半透明 */
+        /* 单个气泡 - 正圆形从底部往上冒 */
         .db-bubble {
-            display: inline-flex; align-items: center;
-            padding: 9px 20px; border-radius: 24px;
-            font-size: 0.88rem; font-weight: 700; white-space: nowrap;
-            position: relative; cursor: default;
+            position: absolute; bottom: -60px;
+            display: flex; align-items: center; justify-content: center;
+            aspect-ratio: 1; border-radius: 50%;
+            min-width: 48px; padding: 12px;
+            font-size: 0.78rem; font-weight: 700; white-space: nowrap; text-align: center;
+            cursor: default; opacity: 0;
             background: linear-gradient(
                 135deg,
                 rgba(255,120,120,0.15),
@@ -133,34 +142,41 @@
                 rgba(200,120,255,0.12)
             );
             background-size: 300% 300%;
-            animation: db-bubble-float var(--float-dur, 4s) ease-in-out infinite,
-                       db-bubble-shimmer 6s ease-in-out infinite;
-            animation-delay: var(--float-delay, 0s), var(--float-delay, 0s);
-            border: 1px solid rgba(255,255,255,0.25);
+            border: 1px solid rgba(255,255,255,0.22);
             color: var(--text-primary);
-            box-shadow: 0 2px 14px rgba(180,140,255,0.12),
+            box-shadow: 0 2px 14px rgba(180,140,255,0.15),
                         inset 0 1px 0 rgba(255,255,255,0.25),
                         inset 0 -1px 0 rgba(255,255,255,0.08);
-            transition: transform 0.2s, box-shadow 0.2s;
             backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            animation:
+                db-bubble-rise var(--rise-dur, 8s) linear forwards,
+                db-bubble-wobble var(--wobble-dur, 3s) ease-in-out infinite,
+                db-bubble-shimmer 6s ease-in-out infinite;
+            animation-delay: var(--rise-delay, 0s), 0s, 0s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
         .db-bubble:hover {
-            transform: scale(1.15) !important; z-index: 10;
-            box-shadow: 0 4px 28px rgba(180,140,255,0.25),
-                        inset 0 1px 0 rgba(255,255,255,0.35),
-                        inset 0 -1px 0 rgba(255,255,255,0.12);
+            transform: scale(1.2) !important; z-index: 10;
+            box-shadow: 0 4px 28px rgba(180,140,255,0.35),
+                        inset 0 1px 0 rgba(255,255,255,0.4);
         }
         /* 气泡七彩流动动画 */
         @keyframes db-bubble-shimmer {
             0%, 100% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
         }
-        /* 气泡浮动动画 */
-        @keyframes db-bubble-float {
-            0%, 100% { transform: translateY(0) translateX(0); }
-            25%  { transform: translateY(calc(var(--float-y, -8px))) translateX(calc(var(--float-x, 5px))); }
-            50%  { transform: translateY(calc(var(--float-y, -8px) * 0.5)) translateX(calc(var(--float-x, 5px) * -1)); }
-            75%  { transform: translateY(calc(var(--float-y, -8px) * -0.3)) translateX(calc(var(--float-x, 5px) * 0.6)); }
+        /* 气泡上升：从底部浮到顶部 */
+        @keyframes db-bubble-rise {
+            0%   { bottom: -80px; opacity: 0; }
+            6%   { opacity: 0.95; }
+            82%  { opacity: 0.95; }
+            100% { bottom: 110%; opacity: 0; }
+        }
+        /* 气泡左右摇摆 */
+        @keyframes db-bubble-wobble {
+            0%, 100% { transform: translateX(0); }
+            25%  { transform: translateX(var(--wobble-x, 10px)); }
+            75%  { transform: translateX(calc(var(--wobble-x, 10px) * -1)); }
         }
         /* 空状态 */
         .db-draft-empty-bubbles {
@@ -414,9 +430,8 @@
 
             .db-draft-arena, .db-teams-vs { flex-direction: column; }
             .db-draft-vs, .db-vs-divider { padding: 12px 0; min-width: unset; }
-            .db-draft-bubble-arena { min-height: 320px; }
-            .db-draft-bubbles { min-height: 240px; gap: 8px; padding: 10px 14px 20px; }
-            .db-bubble { padding: 7px 14px; font-size: 0.82rem; }
+            .db-draft-bubble-arena { height: 360px; }
+            .db-bubble { padding: 8px; font-size: 0.7rem; min-width: 36px; }
 
             .db-rules-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
             .db-rule-card { padding: 16px; }
@@ -818,12 +833,16 @@
         .catch(function() { alert('操作失败，请刷新重试'); loadEventStatus(); });
     };
 
-    // ==================== Draft (双将点兵 - 气泡浮动) ====================
+    // ==================== Draft (双将点兵 - 气泡上浮冒泡) ====================
+    var bubbleTimer = null;
+
     function renderDraft(data) {
         var teams = data.teams || [];
         var registeredPlayers = data.registeredPlayers || [];
-
         var bubblesEl = document.getElementById('draftBubbles');
+
+        // 清除旧定时器
+        if (bubbleTimer) { clearInterval(bubbleTimer); bubbleTimer = null; }
 
         // 无数据时空状态
         if (registeredPlayers.length === 0 && teams.length === 0) {
@@ -834,38 +853,67 @@
         // 收集所有玩家名字（去重）
         var nameSet = {};
         var names = [];
-        // 队长
         for (var i = 0; i < teams.length; i++) {
             var t = teams[i];
             if (t.captainName && !nameSet[t.captainName]) {
                 nameSet[t.captainName] = true;
                 names.push(t.captainName);
             }
-            // 队员
             var members = t.members || [];
             for (var j = 0; j < members.length; j++) {
                 var n = members[j].nickname || '';
                 if (n && !nameSet[n]) { nameSet[n] = true; names.push(n); }
             }
         }
-        // 已报名玩家
         for (var i = 0; i < registeredPlayers.length; i++) {
             var n = registeredPlayers[i].nickname || '';
             if (n && !nameSet[n]) { nameSet[n] = true; names.push(n); }
         }
+        if (names.length === 0) return;
 
-        // 渲染七彩色气泡
-        var html = '';
-        for (var i = 0; i < names.length; i++) {
-            var floatY = -(Math.random() * 10 + 4).toFixed(1);
-            var floatX = (Math.random() * 12 + 3).toFixed(1);
-            var floatDur = (Math.random() * 3 + 3).toFixed(1);
-            var floatDelay = (Math.random() * 4).toFixed(1);
-            html += '<span class="db-bubble"'
-                + ' style="--float-y:' + floatY + 'px;--float-x:' + floatX + 'px;--float-dur:' + floatDur + 's;--float-delay:' + floatDelay + 's"'
-                + '>' + escHtml(names[i]) + '</span>';
+        // 清空初始占位内容，准备渲染气泡
+        bubblesEl.innerHTML = '';
+
+        // 气泡工厂：创建一个气泡 DOM
+        function spawnBubble(name) {
+            var el = document.createElement('span');
+            el.className = 'db-bubble';
+            el.textContent = name;
+            var left = (Math.random() * 80 + 5).toFixed(1);
+            var riseDur = (Math.random() * 5 + 7).toFixed(1);
+            var wobbleX = (Math.random() * 15 + 5).toFixed(1);
+            var wobbleDur = (Math.random() * 2 + 2).toFixed(1);
+            el.style.left = left + '%';
+            el.style.setProperty('--rise-dur', riseDur + 's');
+            el.style.setProperty('--wobble-x', wobbleX + 'px');
+            el.style.setProperty('--wobble-dur', wobbleDur + 's');
+            el.addEventListener('animationend', function(e) {
+                if (e.animationName === 'db-bubble-rise' && el.parentNode) {
+                    el.parentNode.removeChild(el);
+                }
+            });
+            bubblesEl.appendChild(el);
+            return el;
         }
-        bubblesEl.innerHTML = html;
+
+        // 初始批次：错开延迟让气泡分布在不同高度
+        var batchSize = Math.min(names.length, 12);
+        for (var i = 0; i < batchSize; i++) {
+            var el = spawnBubble(names[i % names.length]);
+            var delay = (i * 1.2 + Math.random() * 0.8).toFixed(1);
+            el.style.setProperty('--rise-delay', delay + 's');
+        }
+
+        // 持续冒泡：每隔一段时间从底部新增气泡
+        var nameIdx = 0;
+        var maxVisible = Math.min(names.length * 2, 20);
+        bubbleTimer = setInterval(function() {
+            if (bubblesEl.querySelectorAll('.db-bubble').length < maxVisible) {
+                var el = spawnBubble(names[nameIdx % names.length]);
+                el.style.setProperty('--rise-delay', '0s');
+                nameIdx++;
+            }
+        }, 1500);
 
         // Load available players for captains
         if (myTeamSide) {
