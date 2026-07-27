@@ -591,15 +591,15 @@
 
     <!-- ==================== 9. 排行榜 ==================== -->
     <section class="db-section db-reveal" id="rankings">
-        <h2 class="db-section-title">演武榜</h2>
+        <h2 class="db-section-title">演武榜 (KD排行)</h2>
         <div class="db-section-line"></div>
         <div class="db-rank-tabs" id="rankTabs">
             <button class="db-rank-tab active" data-tab="overall" onclick="switchRankTab('overall')">个人总榜</button>
-            <button class="db-rank-tab" data-tab="rifle" onclick="switchRankTab('rifle')">最佳步枪兵</button>
-            <button class="db-rank-tab" data-tab="sniper" onclick="switchRankTab('sniper')">最佳狙击手</button>
-            <button class="db-rank-tab" data-tab="warrior" onclick="switchRankTab('warrior')">最佳武士</button>
             <button class="db-rank-tab" data-tab="teamA" onclick="switchRankTab('teamA')">薯家军榜</button>
             <button class="db-rank-tab" data-tab="teamB" onclick="switchRankTab('teamB')">嘟家军榜</button>
+            <button class="db-rank-tab" data-tab="rifle" onclick="switchRankTab('rifle')">步枪兵榜</button>
+            <button class="db-rank-tab" data-tab="sniper" onclick="switchRankTab('sniper')">狙击手榜</button>
+            <button class="db-rank-tab" data-tab="warrior" onclick="switchRankTab('warrior')">武士榜</button>
         </div>
         <div id="rankContent"></div>
     </section>
