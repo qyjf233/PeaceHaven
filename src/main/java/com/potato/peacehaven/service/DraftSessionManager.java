@@ -568,6 +568,36 @@ public class DraftSessionManager {
 
         List<Map<String, Object>> pickedA = new ArrayList<>();
         List<Map<String, Object>> pickedB = new ArrayList<>();
+
+        // 添加将领到名单（将领不在 draft_pick 中，需从配置和报名表获取）
+        if (teamA.get("captainUserId") instanceof Number && teamB.get("captainUserId") instanceof Number) {
+            Long captainAId = ((Number) teamA.get("captainUserId")).longValue();
+            Long captainBId = ((Number) teamB.get("captainUserId")).longValue();
+            String captainAName = userRepository.findById(captainAId).map(User::getNickname).orElse("将领A");
+            String captainBName = userRepository.findById(captainBId).map(User::getNickname).orElse("将领B");
+            int roundId = matchIndex < 2 ? 1 : 2;
+
+            // 查将领职业
+            String captainAJob = registrationRepository.findByActivityIdAndUserIdAndRoundId(activityId, captainAId, roundId)
+                    .map(r -> r.getJob() != null ? r.getJob() : "").orElse("");
+            String captainBJob = registrationRepository.findByActivityIdAndUserIdAndRoundId(activityId, captainBId, roundId)
+                    .map(r -> r.getJob() != null ? r.getJob() : "").orElse("");
+
+            Map<String, Object> capA = new LinkedHashMap<>();
+            capA.put("userId", captainAId);
+            capA.put("nickname", captainAName);
+            capA.put("job", captainAJob);
+            capA.put("isCaptain", true);
+            pickedA.add(capA);
+
+            Map<String, Object> capB = new LinkedHashMap<>();
+            capB.put("userId", captainBId);
+            capB.put("nickname", captainBName);
+            capB.put("job", captainBJob);
+            capB.put("isCaptain", true);
+            pickedB.add(capB);
+        }
+
         for (DraftPick p : picks) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("userId", p.getUserId());

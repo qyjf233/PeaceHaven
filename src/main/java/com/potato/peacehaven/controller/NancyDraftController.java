@@ -1,7 +1,10 @@
 package com.potato.peacehaven.controller;
 
 import com.potato.peacehaven.entity.Activity;
+import com.potato.peacehaven.entity.DraftBattleRecord;
 import com.potato.peacehaven.entity.User;
+import com.potato.peacehaven.enums.UserRole;
+import com.potato.peacehaven.repository.DraftBattleRecordRepository;
 import com.potato.peacehaven.service.ActivityService;
 import com.potato.peacehaven.service.DraftSessionManager;
 import com.potato.peacehaven.service.NancyDraftService;
@@ -32,6 +35,7 @@ public class NancyDraftController {
     private final ActivityService activityService;
     private final UserService userService;
     private final DraftSessionManager draftSessionManager;
+    private final DraftBattleRecordRepository draftBattleRecordRepository;
 
     /**
      * 获取赛事完整状态
@@ -407,5 +411,89 @@ public class NancyDraftController {
         Activity activity = activityService.getActivityBySlug(slug);
         Map<String, Object> roster = draftSessionManager.getRoster(matchIndex, activity.getId());
         return ResponseEntity.ok(roster);
+    }
+
+    /**
+     * 管理员提交某场比赛的成绩
+     * POST /api/nancy/{slug}/draft/{matchIndex}/submit-scores
+     */
+    @PostMapping("/{slug}/draft/{matchIndex}/submit-scores")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> submitScores(
+            @PathVariable String slug,
+            @PathVariable int matchIndex,
+            @RequestBody List<Map<String, Object>> scores,
+            HttpSession session) {
+
+        User user = userService.getCurrentUser(session);
+        if (user == null || user.getRole() != UserRole.ADMIN) {
+            return ResponseEntity.status(403).body(Map.of("error", "仅管理员可提交成绩"));
+        }
+
+        Activity activity = activityService.getActivityBySlug(slug);
+
+        // 获取该场次名单（包含 userId, nickname, job, team）
+        Map<String, Object> roster = draftSessionManager.getRoster(matchIndex, activity.getId());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pickedA = (List<Map<String, Object>>) roster.getOrDefault("pickedA", List.of());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pickedB = (List<Map<String, Object>>) roster.getOrDefault("pickedB", List.of());
+
+        // 构建 userId -> {team, nickname, job} 映射
+        Map<Long, Map<String, Object>> playerMap = new HashMap<>();
+        for (Map<String, Object> p : pickedA) {
+            Long uid = ((Number) p.get("userId")).longValue();
+            Map<String, Object> info = new HashMap<>();
+            info.put("team", "teamA");
+            info.put("nickname", p.get("nickname"));
+            info.put("job", p.getOrDefault("job", ""));
+            playerMap.put(uid, info);
+        }
+        for (Map<String, Object> p : pickedB) {
+            Long uid = ((Number) p.get("userId")).longValue();
+            Map<String, Object> info = new HashMap<>();
+            info.put("team", "teamB");
+            info.put("nickname", p.get("nickname"));
+            info.put("job", p.getOrDefault("job", ""));
+            playerMap.put(uid, info);
+        }
+
+        int saved = 0;
+        for (Map<String, Object> score : scores) {
+            Long userId = ((Number) score.get("userId")).longValue();
+            Map<String, Object> info = playerMap.get(userId);
+            if (info == null) continue;
+
+            int kills = score.get("kills") instanceof Number ? ((Number) score.get("kills")).intValue() : 0;
+            int deaths = score.get("deaths") instanceof Number ? ((Number) score.get("deaths")).intValue() : 0;
+            int assists = score.get("assists") instanceof Number ? ((Number) score.get("assists")).intValue() : 0;
+            long damage = score.get("damage") instanceof Number ? ((Number) score.get("damage")).longValue() : 0L;
+            String result = score.get("result") instanceof String ? (String) score.get("result") : "LOSS";
+
+            DraftBattleRecord record = DraftBattleRecord.builder()
+                    .activityId(activity.getId())
+                    .userId(userId)
+                    .userName((String) info.get("nickname"))
+                    .gameId(matchIndex)
+                    .team((String) info.get("team"))
+                    .kills(kills)
+                    .deaths(deaths)
+                    .assists(assists)
+                    .damage(damage)
+                    .job((String) info.get("job"))
+                    .result(result)
+                    .build();
+            record.calculateKda();
+
+            draftBattleRecordRepository.save(record);
+            saved++;
+        }
+
+        log.info("[南希对抗赛] 管理员 {} 提交第{}场成绩，共{}条记录", user.getNickname(), matchIndex + 1, saved);
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("success", true);
+        resp.put("savedCount", saved);
+        return ResponseEntity.ok(resp);
     }
 }

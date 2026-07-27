@@ -324,6 +324,11 @@ public class NancyDraftService {
                 && judgeRepository.existsByActivityIdAndUserId(activityId, currentUser.getId());
         result.put("isJudge", isJudge);
 
+        // 管理员身份
+        boolean isAdmin = currentUser != null
+                && currentUser.getRole() == com.potato.peacehaven.enums.UserRole.ADMIN;
+        result.put("isAdmin", isAdmin);
+
         // 赛程、荣誉等配置数据
         result.put("schedule", configMap.getOrDefault("schedule", Collections.emptyList()));
         result.put("matchHistory", configMap.getOrDefault("matchHistory", Collections.emptyList()));
