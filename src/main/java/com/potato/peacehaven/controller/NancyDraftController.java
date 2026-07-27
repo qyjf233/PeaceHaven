@@ -37,6 +37,14 @@ public class NancyDraftController {
             @PathVariable String slug, HttpSession session) {
         Activity activity = activityService.getActivityBySlug(slug);
         User currentUser = userService.getCurrentUser(session);
+
+        // 独立事务：自动为将领创建报名记录（失败不影响主查询）
+        try {
+            nancyDraftService.autoRegisterCaptains(activity.getId());
+        } catch (Exception e) {
+            log.debug("[南希对抗赛] 将领自动报名跳过: {}", e.getMessage());
+        }
+
         Map<String, Object> status = nancyDraftService.getEventStatus(activity.getId(), currentUser);
         return ResponseEntity.ok(status);
     }

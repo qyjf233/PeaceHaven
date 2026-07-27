@@ -210,12 +210,54 @@ public class NancyDraftService {
     // ==================== 赛事状态 ====================
 
     /**
+     * 自动为将领创建报名记录（确保将领出现在气泡和选秀池中）
+     * 独立事务，失败不影响主流程
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    @SuppressWarnings("unchecked")
+    public void autoRegisterCaptains(Long activityId) {
+        Map<String, Object> configMap = loadConfig(activityId);
+        Map<String, Object> teamConfig = (Map<String, Object>) configMap.get("teamConfig");
+        if (teamConfig == null) return;
+
+        for (Object val : teamConfig.values()) {
+            Map<String, Object> team = (Map<String, Object>) val;
+            if (team == null) continue;
+            Number captainUserId = (Number) team.get("captainUserId");
+            if (captainUserId == null) continue;
+
+            long uid = captainUserId.longValue();
+            userRepository.findById(uid).ifPresent(captain -> {
+                for (int roundId = 1; roundId <= 2; roundId++) {
+                    if (!registrationRepository.existsByActivityIdAndUserIdAndRoundId(activityId, uid, roundId)) {
+                        try {
+                            PvpRegistration reg = PvpRegistration.builder()
+                                    .activityId(activityId)
+                                    .user(captain)
+                                    .roundId(roundId)
+                                    .build();
+                            registrationRepository.saveAndFlush(reg);
+                            log.info("[南希对抗赛] 自动为将领 {} 创建第{}轮报名记录", captain.getNickname(), roundId);
+                        } catch (Exception e) {
+                            // 并发请求或旧约束导致重复插入，忽略即可
+                            log.debug("[南希对抗赛] 将领 {} 第{}轮报名记录已存在，跳过", captain.getNickname(), roundId);
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    /**
      * 获取赛事完整状态
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getEventStatus(Long activityId, User currentUser) {
         Map<String, Object> result = new LinkedHashMap<>();
-
+    
+        // 从 configJson 加载配置
+        Map<String, Object> configMap = loadConfig(activityId);
+    
         // 报名统计（按轮次）
         long totalR1 = registrationRepository.countByActivityIdAndRoundId(activityId, 1);
         long totalR2 = registrationRepository.countByActivityIdAndRoundId(activityId, 2);
@@ -282,8 +324,7 @@ public class NancyDraftService {
                 && judgeRepository.existsByActivityIdAndUserId(activityId, currentUser.getId());
         result.put("isJudge", isJudge);
 
-        // 从 configJson 读取赛程、荣誉
-        Map<String, Object> configMap = loadConfig(activityId);
+        // 赛程、荣誉等配置数据
         result.put("schedule", configMap.getOrDefault("schedule", Collections.emptyList()));
         result.put("matchHistory", configMap.getOrDefault("matchHistory", Collections.emptyList()));
         result.put("honors", configMap.getOrDefault("honors", Collections.emptyList()));
