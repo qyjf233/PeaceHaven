@@ -27,6 +27,7 @@ public class NancyDraftService {
     private final ActivityConfigRepository configRepository;
     private final ActivityJudgeRepository judgeRepository;
     private final DraftBattleRecordRepository battleRecordRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 每队人数上限 */
@@ -291,17 +292,15 @@ public class NancyDraftService {
         // 战绩排行榜（从 DB 实时计算）
         result.put("rankings", buildRankings(activityId));
 
-        // 裁判/队长信息（用于报名区展示）
-        var judges = judgeRepository.findByActivityIdOrderBySortOrderAsc(activityId);
-        List<Map<String, Object>> judgeList = new ArrayList<>();
-        for (var j : judges) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("name", j.getUser().getNickname());
-            m.put("roleTitle", j.getRoleTitle() != null ? j.getRoleTitle() : "队长");
-            m.put("avatar", j.getUser().getAvatar());
-            judgeList.add(m);
+        // 队长信息（从 configJson 的 teamConfig 读取）
+        result.put("judges", buildCaptainsFromConfig(configMap));
+
+        // 当前用户是否是将领
+        boolean isCaptain = false;
+        if (currentUser != null) {
+            isCaptain = isUserCaptain(configMap, currentUser.getId());
         }
-        result.put("judges", judgeList);
+        result.put("isCaptain", isCaptain);
 
         // 已报名玩家列表（用于气泡展示）
         List<PvpRegistration> allRegs = registrationRepository.findByActivityIdOrderByPointsDescWinsDesc(activityId);
@@ -563,6 +562,53 @@ public class NancyDraftService {
     }
 
     // ==================== 辅助方法 ====================
+
+    /**
+     * 从 configJson 的 teamConfig 构建队长列表（用于报名区展示）
+     * configJson 结构示例：
+     * "teamConfig": {
+     *   "teamA": {"name": "薯家军", "captainUserId": 16},
+     *   "teamB": {"name": "嘟家军", "captainUserId": 55}
+     * }
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> buildCaptainsFromConfig(Map<String, Object> configMap) {
+        List<Map<String, Object>> captains = new ArrayList<>();
+        Map<String, Object> teamConfig = (Map<String, Object>) configMap.get("teamConfig");
+        if (teamConfig == null) return captains;
+
+        String[] sides = {"teamA", "teamB"};
+        for (String side : sides) {
+            Map<String, Object> team = (Map<String, Object>) teamConfig.get(side);
+            if (team == null) continue;
+
+            Number captainUserId = (Number) team.get("captainUserId");
+            if (captainUserId == null) continue;
+
+            userRepository.findById(captainUserId.longValue()).ifPresent(user -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("name", user.getNickname());
+                m.put("roleTitle", team.getOrDefault("name", "队长"));
+                m.put("avatar", user.getAvatar());
+                captains.add(m);
+            });
+        }
+        return captains;
+    }
+
+    /** 判断用户是否是将领（teamConfig 中任一队的 captainUserId 匹配） */
+    @SuppressWarnings("unchecked")
+    private boolean isUserCaptain(Map<String, Object> configMap, Long userId) {
+        Map<String, Object> teamConfig = (Map<String, Object>) configMap.get("teamConfig");
+        if (teamConfig == null) return false;
+        for (Object val : teamConfig.values()) {
+            Map<String, Object> team = (Map<String, Object>) val;
+            if (team == null) continue;
+            Number captainUserId = (Number) team.get("captainUserId");
+            if (captainUserId != null && captainUserId.longValue() == userId) return true;
+        }
+        return false;
+    }
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> loadConfig(Long activityId) {

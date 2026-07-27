@@ -680,7 +680,7 @@
     }
 
     /** 渲染单轮报名卡片 */
-    function renderRegBox(roundId, count, isReg, isOpen, judges) {
+    function renderRegBox(roundId, count, isReg, isOpen, judges, isCaptain) {
         var suffix = roundId;
         var box = document.getElementById('regBox' + suffix);
         var countEl = document.getElementById('registerCount' + suffix);
@@ -697,6 +697,13 @@
 
         // 队长信息
         if (judges.length > 0) leadersEl.innerHTML = buildLeadersHtml(judges);
+
+        // 将领无需报名
+        if (isCaptain) {
+            box.classList.remove('closed');
+            actionEl.innerHTML = '<button class="db-register-btn joined" disabled>⚔ 将领无需报名</button>';
+            return;
+        }
 
         // 开放/关闭状态
         if (!isOpen) {
@@ -720,9 +727,10 @@
     function renderRegister(data) {
         var openRound = getOpenRound();
         var judges = data.judges || [];
+        var isCaptain = !!data.isCaptain;
 
-        renderRegBox(1, data.totalRegisteredR1 || 0, data.isRegisteredR1, openRound === 1, judges);
-        renderRegBox(2, data.totalRegisteredR2 || 0, data.isRegisteredR2, openRound === 2, judges);
+        renderRegBox(1, data.totalRegisteredR1 || 0, data.isRegisteredR1, openRound === 1, judges, isCaptain);
+        renderRegBox(2, data.totalRegisteredR2 || 0, data.isRegisteredR2, openRound === 2, judges, isCaptain);
     }
 
     window.doRegister = function(roundId) {

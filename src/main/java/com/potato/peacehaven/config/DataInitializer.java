@@ -212,12 +212,16 @@ public class DataInitializer implements ApplicationRunner {
             // 荣誉殿堂
             String honorsJson = "[]";
 
+            // 队伍与将领配置
+            String teamConfigJson = "{\"teamA\":{\"name\":\"薯家军\",\"captainUserId\":16},\"teamB\":{\"name\":\"嘟家军\",\"captainUserId\":55}}";
+
             Map<String, String> configData = new LinkedHashMap<>();
             configData.put("timeline", timelineJson);
             configData.put("schedule", scheduleJson);
             configData.put("matchHistory", matchHistoryJson);
             configData.put("rankings", rankingsJson);
             configData.put("honors", honorsJson);
+            configData.put("teamConfig", teamConfigJson);
 
             ActivityConfig config = ActivityConfig.builder()
                     .activityId(activity.getId())
