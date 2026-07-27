@@ -26,6 +26,7 @@ public class NancyDraftService {
     private final NancyDraftTeamRepository draftTeamRepository;
     private final ActivityConfigRepository configRepository;
     private final ActivityJudgeRepository judgeRepository;
+    private final DraftBattleRecordRepository battleRecordRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 每队人数上限 */
@@ -210,6 +211,7 @@ public class NancyDraftService {
     /**
      * 获取赛事完整状态
      */
+    @Transactional(readOnly = true)
     public Map<String, Object> getEventStatus(Long activityId, User currentUser) {
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -279,13 +281,15 @@ public class NancyDraftService {
                 && judgeRepository.existsByActivityIdAndUserId(activityId, currentUser.getId());
         result.put("isJudge", isJudge);
 
-        // 从 configJson 读取赛程、战绩、排行、荣誉
+        // 从 configJson 读取赛程、荣誉
         Map<String, Object> configMap = loadConfig(activityId);
         result.put("schedule", configMap.getOrDefault("schedule", Collections.emptyList()));
         result.put("matchHistory", configMap.getOrDefault("matchHistory", Collections.emptyList()));
-        result.put("rankings", configMap.getOrDefault("rankings", Collections.emptyMap()));
         result.put("honors", configMap.getOrDefault("honors", Collections.emptyList()));
         result.put("timeline", configMap.getOrDefault("timeline", Collections.emptyList()));
+
+        // 战绩排行榜（从 DB 实时计算）
+        result.put("rankings", buildRankings(activityId));
 
         // 裁判/队长信息（用于报名区展示）
         var judges = judgeRepository.findByActivityIdOrderBySortOrderAsc(activityId);
@@ -298,6 +302,28 @@ public class NancyDraftService {
             judgeList.add(m);
         }
         result.put("judges", judgeList);
+
+        // 已报名玩家列表（用于气泡展示）
+        List<PvpRegistration> allRegs = registrationRepository.findByActivityIdOrderByPointsDescWinsDesc(activityId);
+        Set<Long> pickedUserIds = new HashSet<>();
+        for (NancyDraftTeam t : teams) {
+            if (t.getCaptainUserId() != null) pickedUserIds.add(t.getCaptainUserId());
+            try {
+                List<Map<String, Object>> members = parseMembers(t.getMemberJson());
+                for (Map<String, Object> mem : members) {
+                    pickedUserIds.add(((Number) mem.get("userId")).longValue());
+                }
+            } catch (Exception ignored) {}
+        }
+        List<Map<String, Object>> registeredPlayers = new ArrayList<>();
+        for (PvpRegistration r : allRegs) {
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("nickname", r.getUser().getNickname());
+            p.put("roundId", r.getRoundId());
+            p.put("picked", pickedUserIds.contains(r.getUser().getId()));
+            registeredPlayers.add(p);
+        }
+        result.put("registeredPlayers", registeredPlayers);
 
         return result;
     }
@@ -353,6 +379,145 @@ public class NancyDraftService {
         }
         result.put("availablePlayers", available);
 
+        return result;
+    }
+
+    // ==================== 战绩录入与排行榜 ====================
+
+    /**
+     * 录入单条战绩记录（裁判/管理员）
+     */
+    @Transactional
+    public Map<String, Object> submitBattleRecord(Long activityId, Long userId, String userName,
+                                                   int gameId, String team, int kills, int deaths,
+                                                   int assists, long damage, String job, String result) {
+        // 校验
+        if (gameId < 1 || gameId > 4) throw new RuntimeException("gameId 必须在 1-4 之间");
+        if (!"teamA".equals(team) && !"teamB".equals(team)) throw new RuntimeException("team 必须为 teamA 或 teamB");
+        if (!"步枪兵".equals(job) && !"狙击手".equals(job) && !"武士".equals(job)) throw new RuntimeException("job 无效");
+        if (!"WIN".equals(result) && !"LOSS".equals(result)) throw new RuntimeException("result 必须为 WIN 或 LOSS");
+
+        // 查找已有记录或新建
+        List<DraftBattleRecord> existing = battleRecordRepository.findByActivityIdAndGameId(activityId, gameId);
+        DraftBattleRecord record = existing.stream()
+                .filter(r -> r.getUserId().equals(userId))
+                .findFirst()
+                .orElse(DraftBattleRecord.builder()
+                        .activityId(activityId)
+                        .userId(userId)
+                        .gameId(gameId)
+                        .build());
+
+        record.setUserName(userName);
+        record.setTeam(team);
+        record.setKills(kills);
+        record.setDeaths(deaths);
+        record.setAssists(assists);
+        record.setDamage(damage);
+        record.setJob(job);
+        record.setResult(result);
+        record.calculateKda();
+
+        battleRecordRepository.save(record);
+        log.info("[南希对抗赛] 录入战绩: {} 第{}场 K={} D={} A={} KDA={}",
+                userName, gameId, kills, deaths, assists, record.getKda());
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("success", true);
+        resp.put("recordId", record.getId());
+        resp.put("kda", record.getKda());
+        return resp;
+    }
+
+    /**
+     * 批量录入战绩（一场比赛所有玩家）
+     */
+    @Transactional
+    public Map<String, Object> submitBatchRecords(Long activityId, int gameId,
+                                                    List<Map<String, Object>> players) {
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (Map<String, Object> p : players) {
+            Long userId = Long.valueOf(p.get("userId").toString());
+            String userName = (String) p.getOrDefault("userName", "");
+            String team = (String) p.get("team");
+            int kills = Integer.parseInt(p.getOrDefault("kills", 0).toString());
+            int deaths = Integer.parseInt(p.getOrDefault("deaths", 0).toString());
+            int assists = Integer.parseInt(p.getOrDefault("assists", 0).toString());
+            long damage = Long.parseLong(p.getOrDefault("damage", 0).toString());
+            String job = (String) p.get("job");
+            String result = (String) p.get("result");
+            results.add(submitBattleRecord(activityId, userId, userName, gameId,
+                    team, kills, deaths, assists, damage, job, result));
+        }
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("success", true);
+        resp.put("gameId", gameId);
+        resp.put("count", results.size());
+        resp.put("records", results);
+        return resp;
+    }
+
+    /**
+     * 构建6个排行榜数据
+     * 每个榜单：按 KDA 降序，每个用户只取最高 KDA 的一条记录
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> buildRankings(Long activityId) {
+        List<DraftBattleRecord> allRecords = battleRecordRepository.findByActivityId(activityId);
+
+        Map<String, Object> rankings = new LinkedHashMap<>();
+        rankings.put("overall", buildRankList(allRecords));
+        rankings.put("rifle", buildRankList(filterByJob(allRecords, "步枪兵")));
+        rankings.put("sniper", buildRankList(filterByJob(allRecords, "狙击手")));
+        rankings.put("warrior", buildRankList(filterByJob(allRecords, "武士")));
+        rankings.put("teamA", buildRankList(filterByTeam(allRecords, "teamA")));
+        rankings.put("teamB", buildRankList(filterByTeam(allRecords, "teamB")));
+        return rankings;
+    }
+
+    private List<DraftBattleRecord> filterByJob(List<DraftBattleRecord> records, String job) {
+        return records.stream().filter(r -> job.equals(r.getJob())).collect(Collectors.toList());
+    }
+
+    private List<DraftBattleRecord> filterByTeam(List<DraftBattleRecord> records, String team) {
+        return records.stream().filter(r -> team.equals(r.getTeam())).collect(Collectors.toList());
+    }
+
+    /**
+     * 从记录列表中构建排行榜：每个用户只保留最高 KDA 的记录，按 KDA 降序
+     */
+    private List<Map<String, Object>> buildRankList(List<DraftBattleRecord> records) {
+        // 按 userId 分组，取每组最高 KDA
+        Map<Long, DraftBattleRecord> bestByUser = new LinkedHashMap<>();
+        for (DraftBattleRecord r : records) {
+            DraftBattleRecord existing = bestByUser.get(r.getUserId());
+            if (existing == null || r.getKda() > existing.getKda()) {
+                bestByUser.put(r.getUserId(), r);
+            }
+        }
+
+        // 按 KDA 降序排列
+        List<DraftBattleRecord> sorted = new ArrayList<>(bestByUser.values());
+        sorted.sort((a, b) -> Double.compare(b.getKda(), a.getKda()));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        int rank = 1;
+        for (DraftBattleRecord r : sorted) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("rank", rank++);
+            m.put("userId", r.getUserId());
+            m.put("userName", r.getUserName());
+            m.put("gameId", r.getGameId());
+            m.put("team", r.getTeam());
+            m.put("job", r.getJob());
+            m.put("kills", r.getKills());
+            m.put("deaths", r.getDeaths());
+            m.put("assists", r.getAssists());
+            m.put("damage", r.getDamage());
+            m.put("result", r.getResult());
+            m.put("kda", Math.round(r.getKda() * 100.0) / 100.0);
+            result.add(m);
+        }
         return result;
     }
 
