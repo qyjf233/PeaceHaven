@@ -209,8 +209,18 @@ public class DataInitializer implements ApplicationRunner {
             // 排行榜
             String rankingsJson = "{\"personal\":[],\"teams\":[]}";
 
-            // 荣誉殿堂
-            String honorsJson = "[]";
+            // 荣誉殿堂（预设占位，颁奖阶段按title匹配更新name）
+            String honorsJson = "["
+                + "{\"icon\":\"📊\",\"title\":\"人口调控办主任\",\"name\":\"待定\",\"prizeAmount\":\"8.88\",\"detail\":\"单场输出最高\"},"
+                + "{\"icon\":\"💀\",\"title\":\"阎王殿优秀员工奖\",\"name\":\"待定\",\"prizeAmount\":\"8.88\",\"detail\":\"单场击杀最高\"},"
+                + "{\"icon\":\"🔄\",\"title\":\"复活点尊享会员\",\"name\":\"待定\",\"prizeAmount\":\"8.88\",\"detail\":\"累计死亡最高\"},"
+                + "{\"icon\":\"🔫\",\"title\":\"突突突神教教主\",\"name\":\"待定\",\"prizeAmount\":\"8.88\",\"detail\":\"步枪兵单场KD最高\"},"
+                + "{\"icon\":\"🎯\",\"title\":\"八百里外包邮王\",\"name\":\"待定\",\"prizeAmount\":\"8.88\",\"detail\":\"狙击手单场KD最高\"},"
+                + "{\"icon\":\"🤗\",\"title\":\"贴贴不需要同意奖\",\"name\":\"待定\",\"prizeAmount\":\"8.88\",\"detail\":\"武士单场KD最高\"},"
+                + "{\"icon\":\"🏆\",\"title\":\"长安南希诸葛亮\",\"name\":\"待定\",\"prizeAmount\":\"38.88\",\"isCaptain\":true,\"detail\":\"胜方将领独享\"},"
+                + "{\"icon\":\"🛡️\",\"title\":\"最佳抗压将领奖\",\"name\":\"待定\",\"prizeAmount\":\"18.88\",\"isCaptain\":true,\"detail\":\"败方将领获得\"},"
+                + "{\"icon\":\"⚔️\",\"title\":\"谁也不服谁奖\",\"name\":\"待定\",\"prizeAmount\":\"28.88\",\"isCaptain\":true,\"detail\":\"2:2平局时双方将领各获\"}"
+                + "]";
 
             // 队伍与将领配置
             String teamConfigJson = "{\"teamA\":{\"name\":\"薯家军\",\"captainUserId\":16},\"teamB\":{\"name\":\"嘟家军\",\"captainUserId\":55}}";

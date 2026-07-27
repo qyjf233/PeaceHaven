@@ -602,6 +602,206 @@ public class NancyDraftService {
         return result;
     }
 
+    // ==================== 荣誉殿堂（奖项计算） ====================
+
+    /**
+     * 确保奖项已计算（颁奖阶段自动触发，仅计算一次）
+     */
+    @Transactional
+    public void ensureHonorsCalculated(Long activityId) {
+        Map<String, Object> configMap = loadConfig(activityId);
+
+        // 已计算过则跳过
+        if (Boolean.TRUE.equals(configMap.get("honorsCalculated"))) return;
+
+        // 检查是否进入颁奖阶段
+        if (!isAwardsPhase(configMap)) return;
+
+        // double-check：重新读取最新配置防止并发
+        configMap = loadConfig(activityId);
+        if (Boolean.TRUE.equals(configMap.get("honorsCalculated"))) return;
+
+        List<Map<String, Object>> honors = calculateHonors(activityId, configMap);
+        configMap.put("honors", honors);
+        configMap.put("honorsCalculated", true);
+        saveConfig(activityId, configMap);
+        log.info("[南希对抗赛] 荣耀殿堂奖项已计算并保存，共{}项", honors.size());
+    }
+
+    /** 判断当前是否在颁奖阶段 */
+    @SuppressWarnings("unchecked")
+    private boolean isAwardsPhase(Map<String, Object> configMap) {
+        List<Map<String, Object>> timeline = (List<Map<String, Object>>) configMap.get("timeline");
+        if (timeline == null) return false;
+        LocalDateTime now = LocalDateTime.now();
+        for (Map<String, Object> phase : timeline) {
+            if ("awards".equals(phase.get("phase"))) {
+                try {
+                    LocalDateTime start = LocalDateTime.parse((String) phase.get("start"));
+                    LocalDateTime end = LocalDateTime.parse((String) phase.get("end"));
+                    return !now.isBefore(start) && !now.isAfter(end);
+                } catch (Exception e) { return false; }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 计算全部奖项（基于模板按 title 匹配更新 name/detail）
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> calculateHonors(Long activityId, Map<String, Object> configMap) {
+        List<DraftBattleRecord> records = battleRecordRepository.findByActivityId(activityId);
+        List<Map<String, Object>> honors = (List<Map<String, Object>>) configMap.get("honors");
+        if (honors == null) honors = new ArrayList<>();
+
+        // ===== 6个单项奖：按 title 匹配，更新 name 和 detail =====
+        updateHonorByName(honors, "人口调控办主任", records,
+                r -> r.getDamage() != null ? r.getDamage() : 0L, true);
+        updateHonorByName(honors, "阎王殿优秀员工奖", records,
+                r -> r.getKills() != null ? r.getKills() : 0, false);
+
+        // 复活点尊享会员：累计死亡最高（需要跨场次汇总）
+        updateDeathHonor(honors, records);
+
+        // 职业KD奖
+        updateJobKdHonor(honors, records, "突突突神教教主", "步枪兵");
+        updateJobKdHonor(honors, records, "八百里外包邮王", "狙击手");
+        updateJobKdHonor(honors, records, "贴贴不需要同意奖", "武士");
+
+        // ===== 将领专属奖励：3种奖项按 title 匹配，根据胜负设置 name 和 valid =====
+        Map<String, Object> teamConfig = (Map<String, Object>) configMap.get("teamConfig");
+        List<Map<String, Object>> matchHistory = (List<Map<String, Object>>) configMap.get("matchHistory");
+        if (teamConfig != null && matchHistory != null) {
+            int teamAWins = 0, teamBWins = 0;
+            for (Map<String, Object> match : matchHistory) {
+                String winner = (String) match.get("winner");
+                if ("A".equals(winner)) teamAWins++;
+                else if ("B".equals(winner)) teamBWins++;
+            }
+
+            String captainAName = getCaptainName((Map<String, Object>) teamConfig.get("teamA"));
+            String captainBName = getCaptainName((Map<String, Object>) teamConfig.get("teamB"));
+            boolean isTie = (teamAWins == 2 && teamBWins == 2);
+            // 确定胜方/败方将领名
+            String winnerName = teamAWins > teamBWins ? captainAName : captainBName;
+            String loserName = teamAWins > teamBWins ? captainBName : captainAName;
+
+            for (Map<String, Object> h : honors) {
+                if (!Boolean.TRUE.equals(h.get("isCaptain"))) continue;
+                String title = (String) h.get("title");
+
+                if ("长安南希诸葛亮".equals(title)) {
+                    if (isTie) {
+                        h.put("valid", false);
+                        h.put("detail", "本场平局，未颁发");
+                    } else {
+                        h.put("name", winnerName);
+                        h.put("valid", true);
+                        h.put("detail", "胜 " + Math.max(teamAWins, teamBWins) + " 场");
+                    }
+                } else if ("最佳抗压将领奖".equals(title)) {
+                    if (isTie) {
+                        h.put("valid", false);
+                        h.put("detail", "本场平局，未颁发");
+                    } else {
+                        h.put("name", loserName);
+                        h.put("valid", true);
+                        h.put("detail", "虽败犹荣");
+                    }
+                } else if ("谁也不服谁奖".equals(title)) {
+                    if (isTie) {
+                        h.put("name", captainAName + " & " + captainBName);
+                        h.put("valid", true);
+                        h.put("detail", "2:2 平局，各获 28.88 红包");
+                    } else {
+                        h.put("valid", false);
+                        h.put("detail", "本场分出胜负，未颁发");
+                    }
+                }
+            }
+        }
+
+        return honors;
+    }
+
+    /** 按 title 匹配奖项，用单场数值最高者更新 name/detail */
+    private void updateHonorByName(List<Map<String, Object>> honors, String title,
+                                    List<DraftBattleRecord> records,
+                                    java.util.function.Function<DraftBattleRecord, ? extends Number> scorer,
+                                    boolean showGame) {
+        DraftBattleRecord best = null;
+        double bestScore = -1;
+        for (DraftBattleRecord r : records) {
+            double s = scorer.apply(r).doubleValue();
+            if (s > bestScore) { bestScore = s; best = r; }
+        }
+        for (Map<String, Object> h : honors) {
+            if (title.equals(h.get("title")) && !Boolean.TRUE.equals(h.get("isCaptain"))) {
+                if (best != null) {
+                    h.put("name", best.getUserName());
+                    h.put("detail", "第" + best.getGameId() + "场 " + (showGame ? "输出" : "击杀") + " " + (int) bestScore);
+                }
+                break;
+            }
+        }
+    }
+
+    /** 复活点尊享会员：累计死亡最高 */
+    private void updateDeathHonor(List<Map<String, Object>> honors, List<DraftBattleRecord> records) {
+        Map<Long, Integer> totalDeaths = new LinkedHashMap<>();
+        Map<Long, String> userNameMap = new LinkedHashMap<>();
+        for (DraftBattleRecord r : records) {
+            totalDeaths.merge(r.getUserId(), r.getDeaths() != null ? r.getDeaths() : 0, Integer::sum);
+            userNameMap.putIfAbsent(r.getUserId(), r.getUserName());
+        }
+        Long deathUserId = null;
+        int maxDeaths = -1;
+        for (Map.Entry<Long, Integer> e : totalDeaths.entrySet()) {
+            if (e.getValue() > maxDeaths) { maxDeaths = e.getValue(); deathUserId = e.getKey(); }
+        }
+        for (Map<String, Object> h : honors) {
+            if ("复活点尊享会员".equals(h.get("title")) && !Boolean.TRUE.equals(h.get("isCaptain"))) {
+                if (deathUserId != null) {
+                    h.put("name", userNameMap.get(deathUserId));
+                    h.put("detail", "累计死亡 " + maxDeaths + " 次");
+                }
+                break;
+            }
+        }
+    }
+
+    /** 职业KD奖：按 title+job 匹配，用单场KD最高者更新 */
+    private void updateJobKdHonor(List<Map<String, Object>> honors, List<DraftBattleRecord> records,
+                                   String title, String job) {
+        DraftBattleRecord best = null;
+        double bestKd = -1;
+        for (DraftBattleRecord r : records) {
+            if (!job.equals(r.getJob())) continue;
+            int k = r.getKills() != null ? r.getKills() : 0;
+            int d = (r.getDeaths() == null || r.getDeaths() == 0) ? 1 : r.getDeaths();
+            double kd = (double) k / d;
+            if (kd > bestKd) { bestKd = kd; best = r; }
+        }
+        for (Map<String, Object> h : honors) {
+            if (title.equals(h.get("title")) && !Boolean.TRUE.equals(h.get("isCaptain"))) {
+                if (best != null) {
+                    h.put("name", best.getUserName());
+                    h.put("detail", "KD " + String.format("%.2f", bestKd) + " 第" + best.getGameId() + "场");
+                }
+                break;
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private String getCaptainName(Map<String, Object> team) {
+        if (team == null) return "待定";
+        Number uid = (Number) team.get("captainUserId");
+        if (uid == null) return (String) team.getOrDefault("name", "待定");
+        return userRepository.findById(uid.longValue()).map(u -> u.getNickname()).orElse("待定");
+    }
+
     // ==================== 辅助方法 ====================
 
     /**

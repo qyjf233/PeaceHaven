@@ -45,6 +45,13 @@ public class NancyDraftController {
             log.debug("[南希对抗赛] 将领自动报名跳过: {}", e.getMessage());
         }
 
+        // 颁奖阶段自动计算荣耀殿堂奖项（独立事务，仅触发一次）
+        try {
+            nancyDraftService.ensureHonorsCalculated(activity.getId());
+        } catch (Exception e) {
+            log.warn("[南希对抗赛] 奖项计算跳过: {}", e.getMessage());
+        }
+
         Map<String, Object> status = nancyDraftService.getEventStatus(activity.getId(), currentUser);
         return ResponseEntity.ok(status);
     }

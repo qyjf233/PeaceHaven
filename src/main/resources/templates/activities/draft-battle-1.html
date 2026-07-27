@@ -210,16 +210,53 @@
         .db-rank-medal { font-size: 1.1rem; }
 
         /* ========== Honors (荣耀殿堂) ========== */
+        .db-honors-section { margin-bottom: 32px; }
+        .db-honors-subtitle {
+            text-align: center; font-size: 0.9rem; font-weight: 600; color: var(--text-muted);
+            margin-bottom: 16px; letter-spacing: 2px;
+        }
         .db-honors-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .db-honor-card {
             background: var(--bg-card); border: 1px solid var(--db-border); border-radius: 12px;
-            padding: 28px; text-align: center; transition: all 0.3s;
+            padding: 28px 20px; text-align: center; transition: all 0.3s;
         }
         .db-honor-card:hover { border-color: var(--accent-gold); transform: translateY(-4px); }
-        .db-honor-card.honor-champion { border-color: var(--accent-gold); box-shadow: 0 0 20px var(--db-gold-dim); }
         .db-honor-icon { font-size: 2.5rem; margin-bottom: 12px; }
         .db-honor-title { font-size: 0.78rem; color: var(--accent-gold); letter-spacing: 2px; margin-bottom: 8px; }
         .db-honor-name { font-size: 1.1rem; font-weight: 700; }
+        .db-honor-detail { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+        .db-honor-prize { font-size: 0.82rem; font-weight: 700; color: #e74c3c; margin-top: 8px; }
+        /* 待定态（名称未揭晓） */
+        .db-honor-card.honor-pending .db-honor-name { color: var(--text-muted); font-weight: 400; font-style: italic; }
+        /* 将领专属卡片 */
+        .db-honors-captain-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .db-honor-card.honor-captain {
+            background: linear-gradient(135deg, var(--bg-card), rgba(232,131,58,0.06));
+            border: 2px solid var(--accent-gold); border-radius: 16px;
+            padding: 32px 20px; position: relative; overflow: hidden;
+        }
+        .db-honor-card.honor-captain::before {
+            content: '👑'; position: absolute; top: 8px; right: 12px; font-size: 1.2rem; opacity: 0.3;
+        }
+        .db-honor-card.honor-captain .db-honor-icon { font-size: 3rem; }
+        .db-honor-card.honor-captain .db-honor-title { font-size: 0.85rem; color: var(--accent-gold); }
+        .db-honor-card.honor-captain .db-honor-name { font-size: 1.2rem; }
+        .db-honor-card.honor-captain .db-honor-prize { font-size: 1rem; color: #c0392b; }
+        .db-honor-card.honor-captain .db-honor-badge {
+            display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
+            padding: 2px 10px; border-radius: 10px; margin-top: 8px;
+        }
+        .db-honor-card.honor-captain .db-honor-badge.badge-valid {
+            background: rgba(76,175,80,0.15); color: #66BB6A; border: 1px solid rgba(76,175,80,0.3);
+        }
+        .db-honor-card.honor-captain .db-honor-badge.badge-invalid {
+            background: rgba(150,150,150,0.1); color: var(--text-muted); border: 1px solid rgba(150,150,150,0.2);
+        }
+        /* 未获得的将领奖：降灰 */
+        .db-honor-card.honor-captain.honor-invalid {
+            opacity: 0.45; filter: saturate(0.3); border-color: var(--db-border);
+        }
+        .db-honor-card.honor-captain.honor-invalid::before { content: ''; }
 
         /* ========== Registration (加入演武) ========== */
         .db-register-grid { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
@@ -608,8 +645,13 @@
     <section class="db-section db-reveal" id="honors">
         <h2 class="db-section-title">荣耀殿堂</h2>
         <div class="db-section-line"></div>
-        <div class="db-honors-grid" id="honorsGrid">
-            <div class="db-empty">赛事尚未结束，荣誉待揭晓</div>
+        <div class="db-honors-section">
+            <div class="db-honors-subtitle">🎖️ 个人奖项 · 红包 8.88</div>
+            <div class="db-honors-grid" id="honorsRegular"></div>
+        </div>
+        <div class="db-honors-section">
+            <div class="db-honors-subtitle">👑 将领专属</div>
+            <div class="db-honors-captain-grid" id="honorsCaptain"></div>
         </div>
     </section>
 
@@ -923,22 +965,60 @@
 
     // ==================== Honors ====================
     function renderHonors(honors) {
-        var el = document.getElementById('honorsGrid');
+        var regularEl = document.getElementById('honorsRegular');
+        var captainEl = document.getElementById('honorsCaptain');
         if (!honors || honors.length === 0) {
-            el.innerHTML = '<div class="db-empty">赛事尚未结束，荣誉待揭晓</div>';
+            regularEl.innerHTML = '<div class="db-empty">暂无奖项配置</div>';
+            captainEl.innerHTML = '';
             return;
         }
-        var html = '';
+
+        var regular = [], captain = [];
         for (var i = 0; i < honors.length; i++) {
-            var h = honors[i];
-            var isChamp = h.title === '冠军';
-            html += '<div class="db-honor-card' + (isChamp ? ' honor-champion' : '') + '">'
+            if (honors[i].isCaptain) captain.push(honors[i]);
+            else regular.push(honors[i]);
+        }
+
+        // 渲染普通奖项（不显示金额，已在区域标题说明）
+        var html = '';
+        for (var i = 0; i < regular.length; i++) {
+            var h = regular[i];
+            var isPending = h.name === '待定' || !h.name;
+            html += '<div class="db-honor-card' + (isPending ? ' honor-pending' : '') + '">'
                 + '<div class="db-honor-icon">' + (h.icon || '🏅') + '</div>'
                 + '<div class="db-honor-title">' + escHtml(h.title || '') + '</div>'
-                + '<div class="db-honor-name">' + escHtml(h.name || '') + '</div>'
+                + '<div class="db-honor-name">' + escHtml(h.name || '待定') + '</div>'
+                + (h.detail ? '<div class="db-honor-detail">' + escHtml(h.detail) + '</div>' : '')
                 + '</div>';
         }
-        el.innerHTML = html;
+        regularEl.innerHTML = html;
+
+        // 渲染将领奖项
+        var html2 = '';
+        for (var i = 0; i < captain.length; i++) {
+            var h = captain[i];
+            var isPending = h.name === '待定' || !h.name;
+            var cls = 'db-honor-card honor-captain';
+            if (h.valid === false) cls += ' honor-invalid';
+            if (isPending) cls += ' honor-pending';
+
+            var badgeHtml = '';
+            if (!isPending && h.valid === true) {
+                badgeHtml = '<div class="db-honor-badge badge-valid">✦ 获奖</div>';
+            } else if (h.valid === false) {
+                badgeHtml = '<div class="db-honor-badge badge-invalid">未颁发</div>';
+            }
+
+            html2 += '<div class="' + cls + '">'
+                + '<div class="db-honor-icon">' + (h.icon || '👑') + '</div>'
+                + '<div class="db-honor-title">' + escHtml(h.title || '') + '</div>'
+                + '<div class="db-honor-name">' + escHtml(h.name || '待定') + '</div>'
+                + (h.detail ? '<div class="db-honor-detail">' + escHtml(h.detail) + '</div>' : '')
+                + (h.prizeAmount ? '<div class="db-honor-prize">🧧 ' + escHtml(h.prizeAmount) + '</div>' : '')
+                + badgeHtml
+                + '</div>';
+        }
+        captainEl.innerHTML = html2;
     }
 
     // ==================== Scroll Reveal ====================
