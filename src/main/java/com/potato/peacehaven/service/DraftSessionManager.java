@@ -515,8 +515,10 @@ public class DraftSessionManager {
     /** 获取当前活跃阶段对应的 matchIndex */
     @SuppressWarnings("unchecked")
     private int getActiveMatchIndex(Map<String, Object> config) {
+        // 优先使用 draftTimeline（点兵专用时间），否则回退到 timeline
         List<Map<String, Object>> schedule = (List<Map<String, Object>>)
-                config.getOrDefault("timeline", Collections.emptyList());
+                config.getOrDefault("draftTimeline",
+                        config.getOrDefault("timeline", Collections.emptyList()));
         long now = System.currentTimeMillis();
         for (Map<String, Object> step : schedule) {
             String phase = (String) step.get("phase");

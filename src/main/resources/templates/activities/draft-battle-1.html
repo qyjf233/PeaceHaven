@@ -425,7 +425,7 @@
 
         /* ========== Live Draft (实时点兵) ========== */
         .db-live-draft-btn {
-            display: none; margin: 24px auto 0; padding: 14px 48px;
+            display: inline-block; margin: 24px auto 0; padding: 14px 48px;
             font-size: 1rem; font-weight: 800; letter-spacing: 4px;
             border: none; border-radius: 8px; cursor: pointer;
             background: linear-gradient(135deg, var(--accent-gold), var(--accent-primary));
@@ -434,13 +434,33 @@
             transition: all 0.3s; position: relative; overflow: hidden;
         }
         .db-live-draft-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 36px var(--db-gold-glow); }
-        .db-live-draft-btn.active { display: inline-block; }
         .db-live-draft-btn::before {
             content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
             transition: left 0.5s;
         }
         .db-live-draft-btn:hover::before { left: 140%; }
+        .db-live-draft-btn.disabled {
+            opacity: 0.5; cursor: default; pointer-events: none;
+        }
+
+        /* 点兵按钮组容器 */
+        #draftBtnGroup {
+            text-align: center; margin-top: 20px;
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+        }
+
+        /* 查看分组按钮 */
+        .db-roster-btn {
+            padding: 8px 18px; font-size: 0.82rem; font-weight: 700;
+            border-radius: 6px; cursor: pointer; font-family: inherit;
+            border: 1px solid var(--db-border); background: var(--bg-card);
+            color: var(--text-secondary); transition: all 0.2s;
+        }
+        .db-roster-btn:hover {
+            border-color: var(--accent-gold); color: var(--accent-gold);
+            transform: translateY(-1px);
+        }
 
         /* 场次选择器 */
         .db-match-selector {
@@ -1103,8 +1123,8 @@
                 <div class="db-draft-available-title">可选选手</div>
                 <div id="availableList"></div>
             </div>
-            <!-- 开始点兵按钮（仅将领可见） -->
-            <button class="db-live-draft-btn" id="liveDraftBtn">⚔ 开始点兵</button>
+            <!-- 点兵按钮组（动态渲染：分组查看 + 点兵操作） -->
+            <div id="draftBtnGroup"></div>
         </div>
     </section>
 
@@ -1676,54 +1696,47 @@
 
     // 更新按钮状态
     function updateDraftButton(isCaptain) {
-        var btn = document.getElementById('liveDraftBtn');
+        var group = document.getElementById('draftBtnGroup');
+        var html = '';
 
-        // 找到当前活跃场次的摘要
-        var summary = null;
+        // 1. 已完成点兵的场次 → "第X场分组" 按钮（所有人可见）
+        var matchLabels = ['第一场', '第二场', '第三场', '第四场'];
         for (var i = 0; i < matchSummaries.length; i++) {
-            if (matchSummaries[i].matchIndex === activeMatchIndex) {
-                summary = matchSummaries[i];
-                break;
+            if (matchSummaries[i].status === 'COMPLETED') {
+                var mi = matchSummaries[i].matchIndex;
+                html += '<button class="db-roster-btn" onclick="viewRoster(' + mi + ')">'
+                    + '📋 ' + matchLabels[mi] + '分组</button>';
             }
         }
 
-        // 点兵完成 → 所有人可见"查看名单"
-        if (summary && summary.status === 'COMPLETED') {
-            btn.classList.add('active');
-            btn.textContent = '📋 查看名单';
-            btn.style.opacity = '';
-            btn.style.cursor = '';
-            btn.onclick = function() { viewRoster(activeMatchIndex); };
-            return;
+        // 2. 点兵操作按钮（仅将领可见）
+        if (isCaptain) {
+            if (activeMatchIndex < 0) {
+                // 不在点兵阶段
+                html += '<button class="db-live-draft-btn disabled">⚔ 当前不在点兵阶段</button>';
+            } else {
+                // 找到当前活跃场次摘要
+                var summary = null;
+                for (var i = 0; i < matchSummaries.length; i++) {
+                    if (matchSummaries[i].matchIndex === activeMatchIndex) {
+                        summary = matchSummaries[i];
+                        break;
+                    }
+                }
+
+                if (summary && summary.status === 'COMPLETED') {
+                    // 当前活跃场次已完成，不需要点兵按钮
+                } else if (summary && summary.status === 'IN_PROGRESS') {
+                    html += '<button class="db-live-draft-btn" onclick="startDraft(' + activeMatchIndex + ')">'
+                        + '⚔ 继续第' + (activeMatchIndex + 1) + '场点兵</button>';
+                } else {
+                    html += '<button class="db-live-draft-btn" onclick="startDraft(' + activeMatchIndex + ')">'
+                        + '⚔ 开始第' + (activeMatchIndex + 1) + '场点兵</button>';
+                }
+            }
         }
 
-        // 非将领：只有完成状态才显示按钮
-        if (!isCaptain) {
-            btn.classList.remove('active');
-            return;
-        }
-
-        // 将领：始终显示按钮
-        btn.classList.add('active');
-
-        if (activeMatchIndex < 0) {
-            btn.textContent = '⚔ 比赛当天可点兵';
-            btn.style.opacity = '0.5';
-            btn.style.cursor = 'default';
-            btn.onclick = null;
-            return;
-        }
-
-        btn.style.opacity = '';
-        btn.style.cursor = '';
-
-        if (summary && summary.status === 'IN_PROGRESS') {
-            btn.textContent = '⚔ 继续点兵';
-            btn.onclick = function() { startDraft(activeMatchIndex); };
-        } else {
-            btn.textContent = '⚔ 开始点兵';
-            btn.onclick = function() { startDraft(activeMatchIndex); };
-        }
+        group.innerHTML = html;
     }
 
     // 查看名单（已完成点兵）
