@@ -590,6 +590,9 @@
             border: 1px solid var(--db-border-subtle);
             background: var(--bg-card);
         }
+        .db-draft-picked {
+            flex: 1; min-height: 0;
+        }
         .db-draft-team-header {
             display: flex; align-items: center; justify-content: space-between;
             font-size: 0.92rem; font-weight: 800; padding: 14px 16px; letter-spacing: 2px;
@@ -1740,7 +1743,7 @@
     }
 
     // 查看名单（已完成点兵）
-    function viewRoster(matchIndex) {
+    window.viewRoster = function(matchIndex) {
         if (matchIndex === undefined || matchIndex === null || matchIndex < 0) return;
         draftMatchIndex = matchIndex;
         document.getElementById('draftMatchLabel').textContent = '第' + (matchIndex + 1) + '场';
