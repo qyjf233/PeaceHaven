@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.potato</groupId>
 	<artifactId>peacehaven</artifactId>
-	<version>3.3.4</version> <!-- 项目架构版本 x 数据库版本 x 业务逻辑版本 -->
+	<version>3.4.0</version> <!-- 项目架构版本 x 数据库版本 x 业务逻辑版本 -->
 	<name/>
 	<description/>
 	<url/>
