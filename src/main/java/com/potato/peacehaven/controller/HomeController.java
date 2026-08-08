@@ -8,6 +8,8 @@ import com.potato.peacehaven.repository.TeamMemberRepository;
 import com.potato.peacehaven.repository.UserRepository;
 import com.potato.peacehaven.repository.WelfareRecordRepository;
 import com.potato.peacehaven.service.ActivityService;
+import com.potato.peacehaven.service.LotteryService;
+import com.potato.peacehaven.service.MemoryMessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,10 +29,19 @@ public class HomeController {
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
     private final WelfareRecordRepository welfareRecordRepository;
+    private final MemoryMessageService memoryMessageService;
+    private final LotteryService lotteryService;
 
     @GetMapping("/")
-    public String index(Model model) {
+    public String index(Model model, jakarta.servlet.http.HttpSession session) {
         model.addAttribute("recentActivities", activityService.getRecentActivities());
+
+        // 当前登录用户昵称（留言用）
+        Long userId = (Long) session.getAttribute("session_user_id");
+        if (userId != null) {
+            userRepository.findById(userId).ifPresent(u ->
+                    model.addAttribute("currentNickname", u.getNickname()));
+        }
 
         // 营地简介统计数据
         SiteStats stats = siteStatsRepository.findSiteStats().orElse(
@@ -63,6 +74,12 @@ public class HomeController {
             model.addAttribute("latestContribDate", contribDate);
             model.addAttribute("latestContribWinners", contribs);
         }
+
+        // 留言板：已审核留言
+        model.addAttribute("memoryMessages", memoryMessageService.getApprovedMessages());
+
+        // 抽奖：所有抽奖（含已开奖）
+        model.addAttribute("lotteries", lotteryService.getAllLotteries());
 
         return "index";
     }

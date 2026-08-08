@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽奖管理 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+    <meta name="_csrf" th:content="${_csrf}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>🎰 抽奖管理</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin" class="btn-back">← 管理后台</a>
+            <a href="/" class="btn-back">← 返回前台</a>
+        </div>
+    </header>
+
+    <!-- 创建抽奖表单 -->
+    <div style="background:#f9f9f9; border:1px solid #ddd; border-radius:8px; padding:20px; margin-bottom:24px;">
+        <h3 style="margin-top:0;">创建新抽奖</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+                <label>奖品名称 *</label>
+                <input type="text" id="f_title" class="form-input" placeholder="如：春节礼盒">
+            </div>
+            <div>
+                <label>奖品份数 *</label>
+                <input type="number" id="f_totalPrizes" class="form-input" value="1" min="1">
+            </div>
+            <div>
+                <label>奖品描述</label>
+                <input type="text" id="f_description" class="form-input" placeholder="奖品详细描述">
+            </div>
+            <div>
+                <label>奖品图片URL</label>
+                <input type="text" id="f_imageUrl" class="form-input" placeholder="https://...">
+            </div>
+            <div>
+                <label>开始时间 *</label>
+                <input type="datetime-local" id="f_startDate" class="form-input">
+            </div>
+            <div>
+                <label>截止时间 *</label>
+                <input type="datetime-local" id="f_endDate" class="form-input">
+            </div>
+        </div>
+        <button class="btn-primary" style="margin-top:16px;" onclick="createLottery()">创建抽奖</button>
+    </div>
+
+    <!-- 抽奖列表 -->
+    <h3>抽奖列表</h3>
+    <table class="admin-table" id="lotteryTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>奖品名称</th>
+            <th>份数</th>
+            <th>状态</th>
+            <th>参与人数</th>
+            <th>中奖人数</th>
+            <th>起止时间</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody id="lotteryBody">
+        <tr><td colspan="8" style="text-align:center;color:#999;">加载中...</td></tr>
+        </tbody>
+    </table>
+
+    <!-- 详情面板 -->
+    <div id="detailPanel" style="display:none; margin-top:24px;">
+        <h3 id="detailTitle">详情</h3>
+        <div style="display:flex; gap:16px; margin-bottom:12px;">
+            <button class="btn-secondary" onclick="showDetailTab('participants')">参与者</button>
+            <button class="btn-secondary" onclick="showDetailTab('winners')">中奖者</button>
+        </div>
+        <div id="detailParticipants"></div>
+        <div id="detailWinners" style="display:none;"></div>
+    </div>
+</div>
+
+<script th:src="@{/js/ph-dialog.js}"></script>
+<script>
+var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+var currentDetailId = null;
+
+function loadLotteries() {
+    fetch('/admin/api/lotteries')
+        .then(r => r.json())
+        .then(lotteries => {
+            var tbody = document.getElementById('lotteryBody');
+            if (lotteries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#999;">暂无抽奖活动</td></tr>';
+                return;
+            }
+            tbody.innerHTML = lotteries.map(l => {
+                var statusText = l.status === 'OPEN' ? '<span style="color:#27ae60;">进行中</span>' : '<span style="color:#999;">已开奖</span>';
+                return '<tr>'
+                    + '<td>' + l.id + '</td>'
+                    + '<td><strong>' + esc(l.title) + '</strong></td>'
+                    + '<td>' + l.totalPrizes + '</td>'
+                    + '<td>' + statusText + '</td>'
+                    + '<td>' + l.participantCount + '</td>'
+                    + '<td>' + l.winnerCount + '</td>'
+                    + '<td>' + formatTime(l.startDate) + ' ~ ' + formatTime(l.endDate) + '</td>'
+                    + '<td><button class="btn-primary btn-sm" onclick="showDetail(' + l.id + ', \'' + esc(l.title) + '\')">详情</button></td>'
+                    + '</tr>';
+            }).join('');
+        });
+}
+
+function createLottery() {
+    var title = document.getElementById('f_title').value.trim();
+    var totalPrizes = parseInt(document.getElementById('f_totalPrizes').value) || 1;
+    var description = document.getElementById('f_description').value.trim();
+    var imageUrl = document.getElementById('f_imageUrl').value.trim();
+    var startDate = document.getElementById('f_startDate').value;
+    var endDate = document.getElementById('f_endDate').value;
+
+    if (!title || !startDate || !endDate) {
+        alert('请填写奖品名称、开始时间和截止时间');
+        return;
+    }
+
+    fetch('/admin/api/lotteries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+        body: JSON.stringify({ title: title, description: description, imageUrl: imageUrl, totalPrizes: totalPrizes, startDate: startDate, endDate: endDate })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('抽奖创建成功');
+            document.getElementById('f_title').value = '';
+            document.getElementById('f_description').value = '';
+            document.getElementById('f_imageUrl').value = '';
+            loadLotteries();
+        } else {
+            alert('创建失败: ' + (data.error || '未知错误'));
+        }
+    });
+}
+
+function showDetail(id, title) {
+    currentDetailId = id;
+    document.getElementById('detailPanel').style.display = '';
+    document.getElementById('detailTitle').textContent = '抽奖 #' + id + ' - ' + title;
+    showDetailTab('participants');
+}
+
+function showDetailTab(tab) {
+    document.getElementById('detailParticipants').style.display = tab === 'participants' ? '' : 'none';
+    document.getElementById('detailWinners').style.display = tab === 'winners' ? '' : 'none';
+    if (tab === 'participants') loadParticipants();
+    else loadWinners();
+}
+
+function loadParticipants() {
+    fetch('/admin/api/lotteries/' + currentDetailId + '/participants')
+        .then(r => r.json())
+        .then(list => {
+            var el = document.getElementById('detailParticipants');
+            if (list.length === 0) { el.innerHTML = '<p style="color:#999;">暂无参与者</p>'; return; }
+            el.innerHTML = '<table class="admin-table"><thead><tr><th>用户ID</th><th>昵称</th><th>参与时间</th></tr></thead><tbody>'
+                + list.map(p => '<tr><td>' + p.userId + '</td><td>' + esc(p.userName) + '</td><td>' + formatTime(p.createdAt) + '</td></tr>').join('')
+                + '</tbody></table>';
+        });
+}
+
+function loadWinners() {
+    fetch('/admin/api/lotteries/' + currentDetailId + '/winners')
+        .then(r => r.json())
+        .then(list => {
+            var el = document.getElementById('detailWinners');
+            if (list.length === 0) { el.innerHTML = '<p style="color:#999;">暂无中奖者</p>'; return; }
+            el.innerHTML = '<table class="admin-table"><thead><tr><th>用户ID</th><th>昵称</th><th>地址</th><th>电话</th><th>已填写</th><th>中奖时间</th></tr></thead><tbody>'
+                + list.map(w => '<tr><td>' + w.userId + '</td><td>' + esc(w.userName) + '</td><td>' + (w.address || '-') + '</td><td>' + (w.phone || '-') + '</td><td>' + (w.shippingFilled ? '是' : '否') + '</td><td>' + formatTime(w.wonAt) + '</td></tr>').join('')
+                + '</tbody></table>';
+        });
+}
+
+function formatTime(s) {
+    if (!s) return '';
+    return s.replace('T', ' ').substring(0, 16);
+}
+
+function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+loadLotteries();
+</script>
+</body>
+</html>

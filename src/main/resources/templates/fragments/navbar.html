@@ -21,7 +21,8 @@
             <li><a th:href="${prefix + 'about'}" class="nav-link" th:classappend="${page == 'about'} ? 'active'">营地简介</a></li>
             <li><a th:href="${prefix + 'team'}" class="nav-link" th:classappend="${page == 'team'} ? 'active'">管理组</a></li>
             <li><a th:href="${page == 'home' ? '#activities' : '/activities'}" class="nav-link" th:classappend="${page == 'activities'} ? 'active'">活动</a></li>
-            <li><a th:href="${prefix + 'benefits'}" class="nav-link" th:classappend="${page == 'benefits'} ? 'active'">福利</a></li>
+            <li><a th:href="${prefix + 'memory-board'}" class="nav-link" th:classappend="${page == 'memory-board'} ? 'active'">留言</a></li>
+            <li><a th:href="${prefix + 'lottery'}" class="nav-link" th:classappend="${page == 'lottery'} ? 'active'">抽奖</a></li>
         </ul>
 
         <div th:if="${mode != 'bare'}" class="nav-actions">

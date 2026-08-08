@@ -70,4 +70,20 @@ public class AdminAuthController {
         model.addAttribute("activity", activity);
         return "admin/contest-works-detail";
     }
+
+    /**
+     * 留言管理页面
+     */
+    @GetMapping("/memory-messages")
+    public String memoryMessagesPage() {
+        return "admin/memory-messages";
+    }
+
+    /**
+     * 抽奖管理页面
+     */
+    @GetMapping("/lotteries")
+    public String lotteriesPage() {
+        return "admin/lotteries";
+    }
 }

@@ -44,7 +44,7 @@
             <span class="title-cn">拾光录</span>
         </h1>
         <p class="hero-slogan">长安不问来路，唯迎同路之人</p>
-        <a href="#about" class="hero-cta">探索长安 ↓</a>
+        <a href="#about" class="hero-cta">回忆长安 ↓</a>
     </div>
 </section>
 
@@ -119,324 +119,230 @@
     </div>
 </section>
 
-<!-- 活动板块 -->
-<section class="section activities" id="activities">
-    <div class="container">
-        <div class="section-header fade-in">
-            <span class="section-tag">EVENTS</span>
-            <h2 class="section-title">近期活动</h2>
-            <div class="section-divider"></div>
-        </div>
-
-        <div class="activities-grid" th:if="${!#lists.isEmpty(recentActivities)}">
-            <a th:each="act : ${recentActivities}" th:href="@{/activities/{slug}(slug=${act.slug})}" class="activity-card fade-in">
-                <div class="activity-img">
-                    <img th:src="${act.thumbnail != null and !act.thumbnail.isEmpty() ? act.thumbnail : '/images/banner_1.png'}" th:alt="${act.title}">
-                    <div class="activity-date-badge" th:if="${act.startDate != null}">
-                        <span class="date-month" th:text="${#temporals.format(act.startDate, 'M月')}"></span>
-                        <span class="date-day" th:text="${#temporals.format(act.startDate, 'dd')}"></span>
-                    </div>
-                </div>
-                <div class="activity-info">
-                    <div class="activity-period"
-                         th:text="${(act.startDate != null ? #temporals.format(act.startDate, 'yyyy.MM.dd') : '') + (act.endDate != null ? ' - ' + #temporals.format(act.endDate, 'yyyy.MM.dd') : '')}"></div>
-                    <h3 class="activity-title" th:text="${act.title}"></h3>
-                    <p class="activity-desc" th:text="${act.summary}"></p>
-                    <div class="activity-view-count">
-                        <span class="eye-icon">👁️</span>
-                        <span th:text="${act.viewCount != null ? act.viewCount : 0}">0</span>
-                        <span>次浏览</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- 无活动时显示 -->
-        <div class="activities-grid" th:if="${#lists.isEmpty(recentActivities)}" style="text-align:center; padding: 40px 0;">
-            <p style="color: var(--text-muted); font-size: 1.1rem;">🗓️ 暂无进行中的活动，敬请期待！</p>
-        </div>
-
-        <div class="activities-more fade-in">
-            <a href="/activities" class="btn-more">查看更多活动 →</a>
-        </div>
-    </div>
-</section>
-
-<!-- 营地福利 -->
-<section class="section benefits" id="benefits">
-    <div class="container">
-        <div class="section-header fade-in">
-            <span class="section-tag">BENEFITS</span>
-            <h2 class="section-title">营地福利</h2>
-            <div class="section-divider"></div>
-        </div>
-        <div class="benefits-grid">
-            <div class="benefit-card fade-in">
-                <div class="benefit-icon">🧧</div>
-                <h3 class="benefit-title">月度幸运儿</h3>
-                <p class="benefit-desc">每月15号抽取2名营地成员，各获得58元幸运红包奖励！</p>
-                <div class="benefit-highlight">每月15日</div>
-            </div>
-            <div class="benefit-card fade-in">
-                <div class="benefit-icon">🏆</div>
-                <h3 class="benefit-title">最佳贡献</h3>
-                <p class="benefit-desc">每月15号结算营地贡献排名前三的成员，每人28元红包奖励。</p>
-                <div class="benefit-highlight">每月15日</div>
-            </div>
-            <div class="benefit-card fade-in">
-                <div class="benefit-icon">🎮</div>
-                <h3 class="benefit-title">带本福利</h3>
-                <p class="benefit-desc">周末管理带本发车，副本轻松过！</p>
-                <div class="benefit-highlight">每周末</div>
-            </div>
-            <div class="benefit-card fade-in">
-                <div class="benefit-icon">🎁</div>
-                <h3 class="benefit-title">活动奖励</h3>
-                <p class="benefit-desc">参与营地举办的活动，以及日常铁手、资源战等，随机掉落红包奖励。</p>
-                <div class="benefit-highlight">随机掉落</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- 福利公示榜 -->
-<section class="section welfare-showcase" id="welfare-showcase" th:if="${latestLuckyWinners != null or latestContribWinners != null}">
-    <div class="container">
-        <div class="section-header fade-in">
-            <span class="section-tag">HALL OF FAME</span>
-            <h2 class="section-title">福利公示榜</h2>
-            <div class="section-divider"></div>
-        </div>
-
-        <div class="welfare-cards">
-            <!-- 月度幸运儿 -->
-            <div class="welfare-card lucky-card fade-in" th:if="${latestLuckyWinners != null}">
-                <div class="welfare-card-glow"></div>
-                <div class="welfare-card-header">
-                    <span class="welfare-type-badge lucky">🧧 月度幸运儿</span>
-                    <span class="welfare-date" th:text="${latestLuckyDate}"></span>
-                </div>
-                <div class="lucky-winners">
-                    <div class="lucky-winner" th:each="w, stat : ${latestLuckyWinners}">
-                        <div class="lucky-name-badge">
-                            <span class="lucky-icon">🎊</span>
-                            <span class="lucky-name" th:text="${w.nickname}"></span>
-                        </div>
-                        <div class="lucky-stars">✨</div>
-                    </div>
-                </div>
-                <div class="welfare-card-footer">🎉 恭喜获得 <strong>58元幸运红包</strong></div>
-            </div>
-
-            <!-- 最佳贡献 -->
-            <div class="welfare-card contrib-card fade-in" th:if="${latestContribWinners != null}">
-                <div class="welfare-card-glow contrib-glow"></div>
-                <div class="welfare-card-header">
-                    <span class="welfare-type-badge contrib">🏆 最佳贡献</span>
-                    <span class="welfare-date" th:text="${latestContribDate}"></span>
-                </div>
-                <div class="podium">
-                    <div class="podium-item silver" th:if="${#lists.size(latestContribWinners) > 1}">
-                        <div class="podium-rank">🥈</div>
-                        <div class="podium-name-badge silver-badge">
-                            <span class="podium-name" th:text="${latestContribWinners[1].nickname}"></span>
-                        </div>
-                        <div class="podium-score" th:text="${#numbers.formatInteger(latestContribWinners[1].contribution, 1, 'COMMA')}"></div>
-                        <div class="podium-bar bar-silver"></div>
-                    </div>
-                    <div class="podium-item gold" th:if="${#lists.size(latestContribWinners) > 0}">
-                        <div class="podium-rank">🥇</div>
-                        <div class="podium-name-badge gold-badge">
-                            <span class="podium-name" th:text="${latestContribWinners[0].nickname}"></span>
-                        </div>
-                        <div class="podium-score" th:text="${#numbers.formatInteger(latestContribWinners[0].contribution, 1, 'COMMA')}"></div>
-                        <div class="podium-bar bar-gold"></div>
-                    </div>
-                    <div class="podium-item bronze" th:if="${#lists.size(latestContribWinners) > 2}">
-                        <div class="podium-rank">🥉</div>
-                        <div class="podium-name-badge bronze-badge">
-                            <span class="podium-name" th:text="${latestContribWinners[2].nickname}"></span>
-                        </div>
-                        <div class="podium-score" th:text="${#numbers.formatInteger(latestContribWinners[2].contribution, 1, 'COMMA')}"></div>
-                        <div class="podium-bar bar-bronze"></div>
-                    </div>
-                </div>
-                <div class="welfare-card-footer">🎁 每人获得 <strong>28元贡献红包</strong></div>
-            </div>
-        </div>
-    </div>
-</section>
 
 <style>
-    /* === 福利公示榜 === */
-    .welfare-showcase {
-        background: var(--bg-primary);
+    /* === 留言板 === */
+    .memory-board { background: var(--bg-secondary); }
+    .memory-form {
+        max-width: 600px; margin: 0 auto 30px;
+        background: var(--bg-card); border: 1px solid var(--border-subtle, rgba(0,0,0,0.08));
+        border-radius: 16px; padding: 28px; box-shadow: var(--shadow-sm);
+    }
+    .memory-input, .memory-textarea {
+        width: 100%; padding: 12px 16px; font-size: 0.95rem;
+        border: 1px solid var(--border-subtle, rgba(0,0,0,0.1));
+        border-radius: 10px; background: var(--bg-primary);
+        color: var(--text-primary); font-family: inherit;
+        box-sizing: border-box;
+    }
+    .memory-input:focus, .memory-textarea:focus { outline: none; border-color: var(--accent-primary); }
+    .memory-form-row { margin-bottom: 14px; }
+    .memory-textarea { resize: vertical; min-height: 100px; }
+    .memory-submit-btn {
+        display: block; width: 100%; padding: 14px; font-size: 1rem; font-weight: 700;
+        border: none; border-radius: 10px; cursor: pointer;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        color: #fff; font-family: inherit; transition: all 0.3s;
+    }
+    .memory-submit-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .memory-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .memory-list { max-width: 700px; margin: 0 auto; }
+    .memory-card {
+        background: var(--bg-card); border: 1px solid var(--border-subtle, rgba(0,0,0,0.06));
+        border-radius: 12px; padding: 18px 22px; margin-bottom: 12px;
+        transition: all 0.3s;
+    }
+    .memory-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-2px); }
+    .memory-card-nickname {
+        font-weight: 700; font-size: 0.9rem; color: var(--accent-primary);
+        margin-bottom: 6px;
+    }
+    .memory-card-content {
+        font-size: 0.92rem; color: var(--text-primary); line-height: 1.6;
+        margin-bottom: 8px;
+    }
+    .memory-card-time {
+        font-size: 0.76rem; color: var(--text-muted);
     }
 
-    .welfare-cards {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
+    /* === 抽奖 === */
+    .lottery-section { background: var(--bg-primary); }
+    .lottery-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px; max-width: 900px; margin: 0 auto;
     }
-    .welfare-card {
-        background: var(--gradient-card);
-        border: var(--border-card);
-        border-radius: 20px;
-        padding: 28px;
-        position: relative;
+    .lottery-card {
+        background: var(--gradient-card); border: 1px solid var(--border-card);
+        border-radius: 16px; overflow: hidden; transition: all 0.3s;
+    }
+    .lottery-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+    .lottery-img-wrap {
+        width: 100%; height: 180px; overflow: hidden; background: var(--bg-secondary);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .lottery-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .lottery-img-placeholder span { font-size: 3rem; }
+    .lottery-info { padding: 18px; }
+    .lottery-title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 6px; }
+    .lottery-desc { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 12px; line-height: 1.5; }
+    .lottery-meta {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px;
+    }
+    .lottery-status { font-weight: 700; padding: 2px 10px; border-radius: 10px; font-size: 0.78rem; }
+    .lottery-status.status-open { background: rgba(39,174,96,0.12); color: #27ae60; }
+    .lottery-status.status-drawn { background: rgba(149,165,166,0.15); color: #95a5a6; }
+    .lottery-time { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px; }
+    .lottery-actions { display: flex; gap: 8px; }
+    .lottery-join-btn {
+        flex: 1; padding: 10px; font-size: 0.88rem; font-weight: 700;
+        border: none; border-radius: 8px; cursor: pointer;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        color: #fff; font-family: inherit; transition: all 0.3s;
+    }
+    .lottery-join-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .lottery-result-btn {
+        flex: 1; padding: 10px; font-size: 0.88rem; font-weight: 600;
+        border: 1px solid var(--border-card); border-radius: 8px; cursor: pointer;
+        background: var(--bg-card); color: var(--text-secondary); font-family: inherit;
+    }
+    .lottery-result-btn:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+
+    /* === 滚动留言蒙版 === */
+    .memory-scroll-overlay {
+        position: fixed; bottom: 24px; left: 24px; z-index: 900;
+        display: flex; align-items: flex-end; gap: 10px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .memory-scroll-overlay.collapsed .memory-scroll-inner { display: none; }
+    .memory-scroll-ball {
+        width: 48px; height: 48px; flex-shrink: 0;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem; cursor: pointer;
+        background: var(--bg-card); border: 1px solid var(--border-card);
+        box-shadow: var(--shadow-md);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .memory-scroll-ball:hover { transform: scale(1.1); box-shadow: var(--shadow-lg); }
+    .memory-scroll-inner {
+        width: 320px; height: 40vh; min-height: 260px;
+        display: flex; flex-direction: column;
         overflow: hidden;
-        transition: all 0.4s ease;
     }
-    .welfare-card:hover {
-        transform: translateY(-6px);
-        box-shadow: var(--shadow-lg);
+    .memory-scroll-body {
+        flex: 1; overflow: hidden; padding: 10px;
     }
-    .welfare-card-glow {
-        position: absolute;
-        top: -30px;
-        right: -30px;
-        width: 120px;
-        height: 120px;
-        background: radial-gradient(circle, rgba(232,131,58,0.15), transparent 70%);
-        border-radius: 50%;
-        animation: glowPulse 3s ease-in-out infinite;
+    .memory-scroll-track {
+        display: flex; flex-direction: column; gap: 8px;
+        animation: memoryScrollUp 30s linear infinite;
     }
-    .contrib-glow {
-        background: radial-gradient(circle, rgba(139,92,246,0.15), transparent 70%) !important;
+    .memory-scroll-item {
+        background: rgba(0,0,0,0.35); border-radius: 10px;
+        padding: 10px 14px; backdrop-filter: blur(8px);
+        font-size: 0.78rem; color: rgba(255,255,255,0.7); line-height: 1.4;
     }
-    @keyframes glowPulse {
-        0%, 100% { opacity: 0.5; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.2); }
+    .memory-scroll-item .scroll-nick {
+        font-weight: 700; color: rgba(255,255,255,0.85);
     }
-
-    .welfare-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
+    @keyframes memoryScrollUp {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-50%); }
     }
-    .welfare-type-badge {
-        font-size: 1.1rem;
-        font-weight: 700;
-        padding: 6px 16px;
-        border-radius: 20px;
-    }
-    .welfare-type-badge.lucky { background: rgba(232,131,58,0.12); color: var(--accent-primary); }
-    .welfare-type-badge.contrib { background: rgba(139,92,246,0.12); color: #8B5CF6; }
-    .welfare-date {
-        color: var(--text-muted);
-        font-size: 0.85rem;
-    }
-    .welfare-card-footer {
-        margin-top: 20px;
-        padding-top: 16px;
-        border-top: 1px solid var(--border-subtle, rgba(0,0,0,0.06));
-        color: var(--text-muted);
-        font-size: 0.9rem;
-        text-align: center;
-    }
-    .welfare-card-footer strong { color: var(--accent-primary); }
-
-    /* 幸运儿 */
-    .lucky-winners {
-        display: flex;
-        justify-content: center;
-        gap: 40px;
-    }
-    .lucky-winner {
-        text-align: center;
-        animation: floatUp 3s ease-in-out infinite;
-    }
-    .lucky-winner:nth-child(2) { animation-delay: 0.5s; }
-    @keyframes floatUp {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-8px); }
-    }
-    .lucky-name-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(135deg, rgba(232,131,58,0.12), rgba(232,131,58,0.06));
-        border: 1px solid rgba(232,131,58,0.25);
-        border-radius: 24px;
-        padding: 10px 22px;
-        position: relative;
-    }
-    .lucky-icon {
-        font-size: 1.2rem;
-    }
-    .lucky-name {
-        color: var(--text-primary);
-        font-size: 1.15rem;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-    }
-    .lucky-stars {
-        font-size: 0.8rem;
-        margin-top: 4px;
-        animation: twinkle 1.5s ease-in-out infinite;
-    }
-    @keyframes twinkle {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
-    }
-
-    /* 领奖台 */
-    .podium {
-        display: flex;
-        justify-content: center;
-        align-items: flex-end;
-        gap: 12px;
-        padding: 0 10px;
-    }
-    .podium-item {
-        text-align: center;
-        flex: 1;
-        max-width: 130px;
-    }
-    .podium-rank { font-size: 1.6rem; margin-bottom: 6px; }
-    .podium-name-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 6px 18px;
-        border-radius: 16px;
-        margin-bottom: 8px;
-        min-width: 80px;
-    }
-    .podium-item.gold .podium-name-badge { background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08)); border: 1px solid rgba(255,215,0,0.3); }
-    .podium-item.silver .podium-name-badge { background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(160,160,160,0.08)); border: 1px solid rgba(192,192,192,0.3); }
-    .podium-item.bronze .podium-name-badge { background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(160,82,45,0.08)); border: 1px solid rgba(205,127,50,0.3); }
-    .podium-name { color: var(--text-primary); font-size: 1rem; font-weight: 700; letter-spacing: 0.5px; }
-    .podium-score {
-        color: var(--accent-primary);
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin-bottom: 8px;
-    }
-    .podium-bar {
-        border-radius: 6px 6px 0 0;
-        margin: 0 auto;
-        width: 60px;
-    }
-    .bar-gold { height: 80px; background: linear-gradient(180deg, #FFD700, #B8860B); }
-    .bar-silver { height: 56px; background: linear-gradient(180deg, #C0C0C0, #808080); }
-    .bar-bronze { height: 36px; background: linear-gradient(180deg, #CD7F32, #8B4513); }
-
-    .podium-item.gold { order: 2; }
-    .podium-item.silver { order: 1; }
-    .podium-item.bronze { order: 3; }
 
     @media (max-width: 768px) {
-        .welfare-cards { grid-template-columns: 1fr; }
-        .lucky-winners { gap: 24px; }
-        .lucky-name-badge { padding: 8px 16px; }
-        .lucky-name { font-size: 1rem; }
-        .bar-gold { height: 60px; }
-        .bar-silver { height: 42px; }
-        .bar-bronze { height: 28px; }
+        .memory-scroll-overlay {
+            bottom: 16px; left: 0;
+            flex-direction: column-reverse;
+            align-items: flex-start;
+        }
+        .memory-scroll-inner {
+            width: 65vw; height: 40vh;
+            margin-left: 0;
+        }
+        .memory-scroll-ball { width: 44px; height: 44px; font-size: 1.2rem; }
+        .lottery-grid { grid-template-columns: 1fr; }
     }
 </style>
+
+<!-- 留言板 -->
+<section class="section memory-board" id="memory-board">
+    <div class="container">
+        <div class="section-header fade-in">
+            <span class="section-tag">MEMORIES</span>
+            <h2 class="section-title">时光留言板</h2>
+            <div class="section-divider"></div>
+            <p class="section-subtitle" style="color:var(--text-muted); margin-top:8px;">写下你在长安的故事，留给后来的旅人</p>
+        </div>
+
+        <!-- 留言表单 -->
+        <div class="memory-form fade-in">
+            <div class="memory-form-row">
+                <input type="text" id="msgNickname" class="memory-input"
+                       placeholder="你的昵称" maxlength="50"
+                       th:if="${currentNickname == null}">
+                <input type="text" id="msgNickname" class="memory-input"
+                       th:value="${currentNickname}" readonly
+                       style="opacity:0.7;cursor:not-allowed;"
+                       th:if="${currentNickname != null}">
+            </div>
+            <div class="memory-form-row">
+                <textarea id="msgContent" class="memory-textarea" placeholder="写下你想说的话...（最多500字）" maxlength="500" rows="4"></textarea>
+            </div>
+            <button class="memory-submit-btn" id="msgSubmitBtn" onclick="submitMessage()">留下回忆</button>
+        </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- 抽奖 -->
+<section class="section lottery-section" id="lottery" th:if="${!#lists.isEmpty(lotteries)}">
+    <div class="container">
+        <div class="section-header fade-in">
+            <span class="section-tag">LUCKY DRAW</span>
+            <h2 class="section-title">抽奖</h2>
+            <div class="section-divider"></div>
+        </div>
+
+        <div class="lottery-grid">
+            <div class="lottery-card fade-in" th:each="l : ${lotteries}">
+                <div class="lottery-img-wrap" th:if="${l.imageUrl != null and !l.imageUrl.isEmpty()}">
+                    <img th:src="${l.imageUrl}" th:alt="${l.title}">
+                </div>
+                <div class="lottery-img-wrap lottery-img-placeholder" th:if="${l.imageUrl == null or l.imageUrl.isEmpty()}">
+                    <span>🎁</span>
+                </div>
+                <div class="lottery-info">
+                    <h3 class="lottery-title" th:text="${l.title}"></h3>
+                    <p class="lottery-desc" th:text="${l.description}"></p>
+                    <div class="lottery-meta">
+                        <span>🎁 共 <strong th:text="${l.totalPrizes}"></strong> 份</span>
+                        <span class="lottery-status" th:classappend="${l.status == 'OPEN' ? 'status-open' : 'status-drawn'}"
+                              th:text="${l.status == 'OPEN' ? '进行中' : '已开奖'}"></span>
+                    </div>
+                    <div class="lottery-time" th:text="'截止：' + ${#temporals.format(l.endDate, 'yyyy-MM-dd HH:mm')}"></div>
+                    <div class="lottery-actions">
+                        <button th:if="${l.status == 'OPEN'}" class="lottery-join-btn" th:attr="data-id=${l.id}" onclick="joinLottery(this)">参与抽奖</button>
+                        <button th:if="${l.status == 'DRAWN'}" class="lottery-result-btn" th:attr="data-id=${l.id}" onclick="showLotteryResult(this)">查看中奖</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 滚动留言蒙版（固定左下角，可收起） -->
+<div class="memory-scroll-overlay" id="memoryScroll">
+    <!-- 常驻小球按钮 -->
+    <div class="memory-scroll-ball" onclick="toggleMemoryScroll()">💬</div>
+    <!-- 展开状态：留言列表 -->
+    <div class="memory-scroll-inner">
+        <div class="memory-scroll-body">
+            <div class="memory-scroll-track" id="memoryScrollTrack"></div>
+        </div>
+    </div>
+</div>
 
 <!-- 页尾 -->
 <div th:replace="~{fragments/footer :: footer(mode='full')}"></div>
@@ -446,9 +352,6 @@
     <span class="scroll-dot active" data-target="hero" title="首页"></span>
     <span class="scroll-dot" data-target="about" title="营地简介"></span>
     <span class="scroll-dot" data-target="team" title="管理组"></span>
-    <span class="scroll-dot" data-target="activities" title="活动"></span>
-    <span class="scroll-dot" data-target="benefits" title="福利"></span>
-    <span class="scroll-dot" data-target="welfare-showcase" title="光荣榜" th:if="${latestLuckyWinners != null or latestContribWinners != null}"></span>
     <span class="scroll-dot" data-target="footer" title="页尾"></span>
 </nav>
 
@@ -459,5 +362,117 @@
 <canvas id="particleCanvas"></canvas>
 
 <th:block th:replace="~{fragments/footer :: scripts(auth=true)}"></th:block>
+<script>
+// 留言提交
+function submitMessage() {
+    var nickname = document.getElementById('msgNickname').value.trim();
+    var content = document.getElementById('msgContent').value.trim();
+    if (!nickname) { alert('请填写昵称'); return; }
+    if (!content) { alert('请填写留言内容'); return; }
+
+    var btn = document.getElementById('msgSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = '提交中...';
+
+    fetch('/api/memory-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname: nickname, content: content })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = '留下回忆';
+        if (data.error) { alert(data.error); return; }
+        alert(data.message || '留言已提交，等待审核');
+        document.getElementById('msgContent').value = '';
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = '留下回忆';
+        alert('提交失败，请重试');
+    });
+}
+
+// 抽奖参与
+function joinLottery(btn) {
+    var id = btn.getAttribute('data-id');
+    btn.disabled = true;
+    btn.textContent = '参与中...';
+
+    fetch('/api/lotteries/' + id + '/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        if (data.error) { alert(data.error); btn.textContent = '参与抽奖'; return; }
+        btn.textContent = '已参与 ✓';
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'default';
+        btn.disabled = true;
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = '参与抽奖';
+        alert('请求失败，请登录后重试');
+    });
+}
+
+// 查看中奖结果
+function showLotteryResult(btn) {
+    var id = btn.getAttribute('data-id');
+    fetch('/api/lotteries/' + id + '/winners')
+        .then(function(r) { return r.json(); })
+        .then(function(winners) {
+            if (winners.length === 0) { alert('暂无中奖信息'); return; }
+            var msg = '🎉 中奖名单：\n\n';
+            for (var i = 0; i < winners.length; i++) {
+                msg += (i + 1) + '. ' + winners[i].userName + '\n';
+            }
+            alert(msg);
+        });
+}
+
+// 滚动留言展开/收起
+function toggleMemoryScroll() {
+    var el = document.getElementById('memoryScroll');
+    el.classList.toggle('collapsed');
+}
+
+// 滚动留言初始化
+(function() {
+    fetch('/api/memory-messages/approved')
+        .then(function(r) { return r.json(); })
+        .then(function(messages) {
+            if (!messages || messages.length === 0) return;
+            var track = document.getElementById('memoryScrollTrack');
+            if (!track) return;
+
+            var html = '';
+            for (var i = 0; i < messages.length; i++) {
+                html += '<div class="memory-scroll-item">'
+                    + '<span class="scroll-nick">' + escHtml(messages[i].nickname) + '：</span>'
+                    + escHtml(messages[i].content)
+                    + '</div>';
+            }
+            // 复制一份实现无缝循环
+            track.innerHTML = html + html;
+
+            // 根据内容量调整动画时长
+            var duration = Math.max(20, messages.length * 5);
+            track.style.animationDuration = duration + 's';
+        })
+        .catch(function() {});
+
+    function escHtml(s) {
+        if (!s) return '';
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+})();
+</script>
 </body>
 </html>

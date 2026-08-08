@@ -1,0 +1,105 @@
+/**
+ * PeaceHaven 回忆模式 — 岁月做旧视觉主题
+ * 
+ * 效果：暖黄旧纸色调 + 低饱和度 + 微弱噪点纹理 + 卡片暗角
+ */
+
+/* 覆盖日间主题色为旧纸色调 */
+:root, [data-theme="day"] {
+    --bg-primary: #F5ECD7;
+    --bg-secondary: #EDE3CC;
+    --bg-card: #FAF5E8;
+    --bg-card-hover: #F7F0DF;
+    --bg-navbar: rgba(245, 236, 215, 0.94);
+
+    --text-primary: #4A3728;
+    --text-secondary: #6B5644;
+    --text-muted: #8B7D6B;
+
+    --accent-primary: #C47D3F;
+    --accent-secondary: #D4955A;
+    --accent-tertiary: #DBAA66;
+    --accent-gold: #B8860B;
+
+    --border-card: 1px solid rgba(139, 90, 43, 0.15);
+    --border-subtle: rgba(139, 90, 43, 0.1);
+
+    --gradient-card: linear-gradient(145deg, #FAF5E8 0%, #F5ECD7 100%);
+    --gradient-hero: linear-gradient(135deg, #C47D3F 0%, #D4955A 40%, #DBAA66 100%);
+
+    --shadow-sm: 0 2px 8px rgba(74, 55, 40, 0.08);
+    --shadow-md: 0 4px 16px rgba(74, 55, 40, 0.1);
+    --shadow-lg: 0 8px 32px rgba(74, 55, 40, 0.12);
+}
+
+/* 夜间模式也做旧化 */
+[data-theme="night"] {
+    --bg-primary: #2A2218;
+    --bg-secondary: #332A1E;
+    --bg-card: #3A3024;
+    --bg-card-hover: #443828;
+    --bg-navbar: rgba(42, 34, 24, 0.94);
+
+    --text-primary: #D4C4A8;
+    --text-secondary: #B8A88C;
+    --text-muted: #8B7D6B;
+
+    --accent-primary: #C47D3F;
+    --accent-secondary: #D4955A;
+    --accent-gold: #B8860B;
+
+    --border-card: 1px solid rgba(196, 125, 63, 0.15);
+    --border-subtle: rgba(196, 125, 63, 0.1);
+}
+
+/* 全局饱和度降低 + 轻微泛黄（仅作用于页面内容，不影响 fixed 元素） */
+body > .hero,
+body > .section,
+body > .footer {
+    filter: saturate(0.75) sepia(0.12);
+}
+
+/* 噪点纹理叠加层 */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+}
+
+/* 卡片暗角效果 */
+.section, .card, .benefit-card, .activity-card, .team-card, .welfare-card {
+    box-shadow: var(--shadow-sm), inset 0 0 80px rgba(139, 90, 43, 0.04);
+}
+
+/* 页脚旧化 */
+.footer {
+    background: #3D2C1E !important;
+    filter: saturate(0.6);
+}
+
+/* 标题字体增加手写感 */
+.hero-title .title-cn,
+.section-title {
+    font-style: italic;
+}
+
+/* 图片旧化效果 */
+img {
+    filter: saturate(0.7) sepia(0.08) contrast(0.95);
+}
+
+/* Hero 区域旧化 */
+.hero .slide-overlay {
+    background: linear-gradient(to bottom, rgba(74, 55, 40, 0.3), rgba(74, 55, 40, 0.6)) !important;
+}
+
+/* 按钮旧化 */
+.btn-more, .hero-cta {
+    filter: saturate(0.7);
+}

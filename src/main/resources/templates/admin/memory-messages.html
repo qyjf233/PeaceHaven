@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>留言管理 - PeaceHaven Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/ph-dialog.css}">
+    <meta name="_csrf" th:content="${_csrf}">
+</head>
+<body>
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>💬 留言管理</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="/admin" class="btn-back">← 管理后台</a>
+            <a href="/" class="btn-back">← 返回前台</a>
+        </div>
+    </header>
+
+    <!-- Tab 切换 -->
+    <div style="margin-bottom:16px; display:flex; gap:8px;">
+        <button class="btn-primary" id="tabPending" onclick="switchTab('pending')">待审核 <span id="pendingBadge" style="background:#e74c3c;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.8rem;margin-left:4px;">0</span></button>
+        <button class="btn-secondary" id="tabAll" onclick="switchTab('all')">全部留言</button>
+    </div>
+
+    <!-- 待审核列表 -->
+    <div id="pendingSection">
+        <table class="admin-table" id="pendingTable">
+            <thead>
+            <tr>
+                <th style="width:60px">ID</th>
+                <th style="width:100px">昵称</th>
+                <th>留言内容</th>
+                <th style="width:160px">提交时间</th>
+                <th style="width:140px">操作</th>
+            </tr>
+            </thead>
+            <tbody id="pendingBody">
+            <tr><td colspan="5" style="text-align:center;color:#999;">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 全部留言列表 -->
+    <div id="allSection" style="display:none;">
+        <table class="admin-table" id="allTable">
+            <thead>
+            <tr>
+                <th style="width:60px">ID</th>
+                <th style="width:100px">昵称</th>
+                <th>留言内容</th>
+                <th style="width:80px">状态</th>
+                <th style="width:160px">提交时间</th>
+                <th style="width:80px">操作</th>
+            </tr>
+            </thead>
+            <tbody id="allBody">
+            <tr><td colspan="6" style="text-align:center;color:#999;">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:src="@{/js/ph-dialog.js}"></script>
+<script>
+var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+
+function switchTab(tab) {
+    document.getElementById('pendingSection').style.display = tab === 'pending' ? '' : 'none';
+    document.getElementById('allSection').style.display = tab === 'all' ? '' : 'none';
+    document.getElementById('tabPending').className = tab === 'pending' ? 'btn-primary' : 'btn-secondary';
+    document.getElementById('tabAll').className = tab === 'all' ? 'btn-primary' : 'btn-secondary';
+    if (tab === 'all') loadAll();
+}
+
+function loadPending() {
+    fetch('/admin/api/memory-messages/pending')
+        .then(r => r.json())
+        .then(data => {
+            var msgs = data.messages || [];
+            document.getElementById('pendingBadge').textContent = data.pendingCount || 0;
+            var tbody = document.getElementById('pendingBody');
+            if (msgs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">暂无待审核留言</td></tr>';
+                return;
+            }
+            tbody.innerHTML = msgs.map(m =>
+                '<tr>'
+                + '<td>' + m.id + '</td>'
+                + '<td><strong>' + esc(m.nickname) + '</strong></td>'
+                + '<td>' + esc(m.content) + '</td>'
+                + '<td>' + formatTime(m.createdAt) + '</td>'
+                + '<td>'
+                + '<button class="btn-primary btn-sm" onclick="approve(' + m.id + ')">通过</button> '
+                + '<button class="btn-danger btn-sm" onclick="reject(' + m.id + ')">拒绝</button>'
+                + '</td></tr>'
+            ).join('');
+        });
+}
+
+function loadAll() {
+    fetch('/admin/api/memory-messages/all')
+        .then(r => r.json())
+        .then(msgs => {
+            var tbody = document.getElementById('allBody');
+            if (msgs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">暂无留言</td></tr>';
+                return;
+            }
+            tbody.innerHTML = msgs.map(m => {
+                var statusBadge = m.status === 'APPROVED'
+                    ? '<span style="color:#27ae60;">已通过</span>'
+                    : m.status === 'REJECTED'
+                    ? '<span style="color:#e74c3c;">已拒绝</span>'
+                    : '<span style="color:#f39c12;">待审核</span>';
+                return '<tr>'
+                    + '<td>' + m.id + '</td>'
+                    + '<td><strong>' + esc(m.nickname) + '</strong></td>'
+                    + '<td>' + esc(m.content) + '</td>'
+                    + '<td>' + statusBadge + '</td>'
+                    + '<td>' + formatTime(m.createdAt) + '</td>'
+                    + '<td><button class="btn-danger btn-sm" onclick="del(' + m.id + ')">删除</button></td>'
+                    + '</tr>';
+            }).join('');
+        });
+}
+
+function approve(id) {
+    fetch('/admin/api/memory-messages/' + id + '/approve', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken } })
+        .then(r => r.json())
+        .then(data => { if (data.success) loadPending(); });
+}
+
+function reject(id) {
+    if (!confirm('确定拒绝该留言？')) return;
+    fetch('/admin/api/memory-messages/' + id + '/reject', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken } })
+        .then(r => r.json())
+        .then(data => { if (data.success) loadPending(); });
+}
+
+function del(id) {
+    if (!confirm('确定删除该留言？')) return;
+    fetch('/admin/api/memory-messages/' + id, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken } })
+        .then(r => r.json())
+        .then(data => { if (data.success) { loadAll(); loadPending(); } });
+}
+
+function formatTime(s) {
+    if (!s) return '';
+    return s.replace('T', ' ').substring(0, 16);
+}
+
+function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+// 初始化
+loadPending();
+</script>
+</body>
+</html>
